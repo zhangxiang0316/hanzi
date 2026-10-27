@@ -1,0 +1,102 @@
+<view class="page">
+  <view class="head">
+    <view class="avatar">🐣</view>
+    <view class="head-info">
+      <view class="head-name">小小识字家</view>
+      <view class="head-sub">已学习 {{days}} 天 · 连续 {{streak}} 天</view>
+    </view>
+  </view>
+
+  <view class="overview">
+    <view class="ov-item">
+      <text class="ov-num">{{learned}}</text>
+      <text class="ov-label">学过的字</text>
+    </view>
+    <view class="ov-line"></view>
+    <view class="ov-item">
+      <text class="ov-num">{{mastered}}</text>
+      <text class="ov-label">已掌握</text>
+    </view>
+    <view class="ov-line"></view>
+    <view class="ov-item">
+      <text class="ov-num">{{writeStars}}</text>
+      <text class="ov-label">描红星</text>
+    </view>
+  </view>
+
+  <view class="total-card">
+    <view class="total-top">
+      <text class="total-title">一二年级 1600 字</text>
+      <text class="total-pct">{{pct}}%</text>
+    </view>
+    <view class="progress">
+      <view class="progress-fill" style="width: {{pct}}%"></view>
+    </view>
+    <view class="total-desc">每天 5 个字，坚持 320 天就能全部学完</view>
+  </view>
+
+  <view class="section-head">
+    <view class="section-title">我的徽章</view>
+    <view class="section-sub">{{badgeGot}}/{{badges.length}}</view>
+  </view>
+  <view class="badges">
+    <view class="badge {{item.got ? 'got' : ''}}" wx:for="{{badges}}" wx:key="id">
+      <text class="badge-emoji">{{item.got ? item.emoji : '🔒'}}</text>
+      <text class="badge-name">{{item.name}}</text>
+      <text class="badge-desc">{{item.desc}}</text>
+    </view>
+  </view>
+
+  <view class="section-head">
+    <view class="section-title">学习设置</view>
+  </view>
+  <view class="settings">
+    <view class="setting">
+      <view class="setting-label">每天新学</view>
+      <view class="seg">
+        <view
+          class="seg-item {{dailyNew === item ? 'on' : ''}}"
+          wx:for="{{dailyOptions}}"
+          wx:key="*this"
+          data-n="{{item}}"
+          bindtap="onDaily"
+        >{{item}} 字</view>
+      </view>
+    </view>
+    <view class="setting">
+      <view class="setting-label">当前册次</view>
+      <view class="seg">
+        <view
+          class="seg-item {{book === item.id ? 'on' : ''}}"
+          wx:for="{{books}}"
+          wx:key="id"
+          data-id="{{item.id}}"
+          bindtap="onBook"
+        >{{item.short}}</view>
+      </view>
+    </view>
+    <view class="setting">
+      <view class="setting-label">显示组词拼音</view>
+      <switch checked="{{showPinyin}}" color="#3E8E7E" bindchange="onPinyin" />
+    </view>
+  </view>
+
+  <view class="links">
+    <view class="link tap" bindtap="onWrong">
+      <text class="link-name">错题本</text>
+      <text class="link-value">{{wrongCount}} 个字 ›</text>
+    </view>
+    <view class="link tap" bindtap="onAbout">
+      <text class="link-name">关于与数据来源</text>
+      <text class="link-value">›</text>
+    </view>
+    <view class="link tap" bindtap="onReset">
+      <text class="link-name danger">清空学习记录</text>
+      <text class="link-value">›</text>
+    </view>
+  </view>
+
+  <view class="footer">小小识字家 v{{version}} · 内容仅供学习使用</view>
+
+  <view class="safe-bottom"></view>
+</view>

@@ -1,0 +1,50 @@
+<view class="page">
+  <view class="bar">
+    <view class="bar-close tap" bindtap="onExit">✕</view>
+    <view class="bar-progress">
+      <view class="progress">
+        <view class="progress-fill" style="width: {{pct}}%"></view>
+      </view>
+    </view>
+    <view class="bar-count">{{index + 1}}/{{total}}</view>
+  </view>
+
+  <view class="q" wx:if="{{q}}">
+    <view class="q-tag">{{q.title}}</view>
+    <view class="q-sub">{{q.sub}}</view>
+
+    <view class="prompt {{q.promptKind}}">
+      <text class="prompt-text {{q.promptKind === 'pinyin' ? 'py' : ''}} {{q.promptKind === 'char' ? 'hanzi' : ''}}">{{q.prompt}}</text>
+    </view>
+
+    <view class="options {{q.promptKind === 'pinyin' ? 'two-col' : ''}}">
+      <view
+        class="option tap {{opt.state}}"
+        wx:for="{{q.options}}"
+        wx:key="v"
+        wx:for-item="opt"
+        data-v="{{opt.v}}"
+        bindtap="onOption"
+      >
+        <text class="option-label {{q.type === 'pinyin2char' || q.type === 'fillWord' ? 'hanzi' : ''}} {{q.type === 'char2pinyin' ? 'py' : ''}}">{{opt.label}}</text>
+        <text class="option-mark" wx:if="{{opt.state === 'correct'}}">✓</text>
+        <text class="option-mark" wx:if="{{opt.state === 'wrong'}}">✕</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="feedback {{feedbackState}}" wx:if="{{feedbackState}}">
+    <view class="feedback-head">
+      <text class="feedback-icon">{{feedbackState === 'ok' ? '🎉' : '💪'}}</text>
+      <text class="feedback-title">{{feedbackState === 'ok' ? '答对啦！' : '再想一想'}}</text>
+    </view>
+    <view class="feedback-body">{{q.explain}}</view>
+    <view class="feedback-actions">
+      <button class="btn btn-primary btn-block" hover-class="btn-hover" bindtap="onContinue">
+        {{isLast ? '看结果' : '继续'}}
+      </button>
+    </view>
+  </view>
+
+  <view class="safe-bottom"></view>
+</view>

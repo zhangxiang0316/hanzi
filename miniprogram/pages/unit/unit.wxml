@@ -1,0 +1,59 @@
+<view class="page">
+  <view class="head">
+    <view class="head-row">
+      <view class="head-text">
+        <view class="head-title">{{book.name}}</view>
+        <view class="head-sub">{{stat.learned}} / {{stat.total}} 字已学 · 共 {{book.stat.units}} 个单元 {{book.stat.lessons}} 课</view>
+      </view>
+      <view class="head-ring">
+        <text class="head-pct">{{stat.pct}}%</text>
+      </view>
+    </view>
+    <view class="progress head-progress">
+      <view class="progress-fill" style="width: {{stat.pct}}%"></view>
+    </view>
+    <view class="head-actions">
+      <view class="mini-btn tap" bindtap="onContinue">接着上次学</view>
+      <view class="mini-btn ghost tap" bindtap="onPractice">练这一册</view>
+    </view>
+  </view>
+
+  <view class="units">
+    <view class="unit" wx:for="{{units}}" wx:key="no" wx:for-item="unit">
+      <view class="unit-head">
+        <view class="unit-dot" style="background: {{unit.color}}"></view>
+        <view class="grow">
+          <view class="unit-title">{{unit.title}}</view>
+          <view class="unit-sub">{{unit.theme}} · {{unit.lessons.length}} 课 · {{unit.charCount}} 字</view>
+        </view>
+        <view class="unit-pct">{{unit.pct}}%</view>
+      </view>
+
+      <view class="lessons">
+        <view
+          class="lesson tap {{item.pct === 100 ? 'done' : ''}}"
+          wx:for="{{unit.lessons}}"
+          wx:key="id"
+          wx:for-item="item"
+          data-id="{{item.id}}"
+          bindtap="onLessonTap"
+        >
+          <view class="lesson-no">{{item.no}}</view>
+          <view class="lesson-body">
+            <view class="lesson-title">
+              <text>{{item.title}}</text>
+              <text class="lesson-kind" wx:if="{{item.kind !== '课文'}}">{{item.kind}}</text>
+            </view>
+            <view class="lesson-meta">{{item.charCount}} 字<text wx:if="{{item.learned > 0}}"> · 已学 {{item.learned}}</text></view>
+          </view>
+          <view class="lesson-state">
+            <text class="check" wx:if="{{item.pct === 100}}">✓</text>
+            <text class="arrow" wx:else>›</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="safe-bottom"></view>
+</view>

@@ -1,0 +1,307 @@
+.hero {
+  padding: 24rpx 32rpx 8rpx;
+}
+
+.hero-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 28rpx;
+}
+
+.hello {
+  font-size: 42rpx;
+  font-weight: 800;
+  letter-spacing: 1rpx;
+}
+
+.sub {
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  color: var(--ink-3);
+}
+
+.streak {
+  display: flex;
+  align-items: center;
+  height: 76rpx;
+  padding: 0 24rpx;
+  border-radius: 999rpx;
+  background: #f4efe4;
+  color: var(--ink-3);
+}
+
+.streak.on {
+  background: linear-gradient(135deg, #fdf2dd, #fbe6c9);
+  color: #a3762a;
+}
+
+.streak-fire {
+  font-size: 32rpx;
+  margin-right: 8rpx;
+}
+
+.streak-text {
+  display: flex;
+  align-items: baseline;
+}
+
+.streak-num {
+  font-size: 34rpx;
+  font-weight: 800;
+}
+
+.streak-unit {
+  font-size: 22rpx;
+  margin-left: 4rpx;
+}
+
+/* 今日任务卡 */
+.task-card {
+  position: relative;
+  overflow: hidden;
+  padding: 36rpx;
+  border-radius: 40rpx;
+  background: linear-gradient(150deg, #2f7d6d 0%, #3e8e7e 48%, #56a795 100%);
+  box-shadow: 0 18rpx 40rpx rgba(47, 125, 109, 0.26);
+  color: #ffffff;
+}
+
+.task-glow {
+  position: absolute;
+  right: -80rpx;
+  top: -110rpx;
+  width: 320rpx;
+  height: 320rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.task-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.task-tag {
+  display: inline-block;
+  padding: 6rpx 18rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 22rpx;
+  font-weight: 600;
+}
+
+.task-count {
+  font-size: 24rpx;
+  opacity: 0.85;
+}
+
+.task-title {
+  margin-top: 22rpx;
+  font-size: 44rpx;
+  font-weight: 800;
+  letter-spacing: 1rpx;
+}
+
+.task-desc {
+  margin-top: 10rpx;
+  font-size: 25rpx;
+  opacity: 0.82;
+}
+
+.task-progress {
+  margin-top: 26rpx;
+}
+
+.task-progress .progress {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.task-progress .progress-fill {
+  background: #ffe7ae;
+}
+
+.task-progress-label {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 22rpx;
+  opacity: 0.85;
+}
+
+.task-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 84rpx;
+  margin-top: 30rpx;
+  border-radius: 999rpx;
+  background: #ffffff;
+  color: var(--jade-deep);
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.task-btn-arrow {
+  margin-left: 10rpx;
+  font-weight: 700;
+}
+
+/* 册次 */
+.section {
+  padding: 0 32rpx;
+}
+
+.section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 44rpx 4rpx 20rpx;
+}
+
+.section-title {
+  font-size: 36rpx;
+  font-weight: 800;
+}
+
+.section-sub {
+  margin-top: 4rpx;
+  font-size: 24rpx;
+  color: var(--ink-3);
+}
+
+.book-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.book-card {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20rpx;
+  padding: 24rpx;
+  border-radius: 30rpx;
+  background: #ffffff;
+  border: 2rpx solid rgba(233, 223, 205, 0.8);
+  box-shadow: 0 8rpx 24rpx rgba(81, 66, 37, 0.05);
+}
+
+.book-card.active {
+  border-color: #cfe5df;
+  box-shadow: 0 10rpx 26rpx rgba(62, 142, 126, 0.12);
+}
+
+.book-badge {
+  flex: none;
+  width: 92rpx;
+  height: 92rpx;
+  margin-right: 22rpx;
+  border-radius: 24rpx;
+  color: #ffffff;
+  font-size: 22rpx;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.2;
+  padding: 0 6rpx;
+}
+
+.book-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.book-name {
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.book-meta {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: var(--ink-3);
+}
+
+.book-progress {
+  margin-top: 14rpx;
+  height: 10rpx;
+}
+
+.book-pct {
+  flex: none;
+  margin-left: 20rpx;
+  font-size: 28rpx;
+  font-weight: 800;
+}
+
+/* 今日一字 */
+.daily-card {
+  display: flex;
+  align-items: center;
+  padding: 28rpx;
+}
+
+.daily-char {
+  flex: none;
+  width: 150rpx;
+  height: 150rpx;
+  margin-right: 26rpx;
+  border-radius: 24rpx;
+  background: #fdfaf3;
+  border: 2rpx dashed #e6d9c1;
+  font-size: 96rpx;
+  line-height: 150rpx;
+  text-align: center;
+  color: var(--ink);
+}
+
+.daily-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.daily-py {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: var(--jade);
+  letter-spacing: 1rpx;
+}
+
+.daily-desc {
+  margin-top: 6rpx;
+  font-size: 23rpx;
+  color: var(--ink-3);
+}
+
+.daily-words {
+  margin-top: 16rpx;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.daily-words .pill {
+  margin-right: 10rpx;
+  margin-bottom: 8rpx;
+}
+
+.tip {
+  display: flex;
+  align-items: flex-start;
+  margin: 40rpx 32rpx 0;
+  padding: 24rpx 26rpx;
+  border-radius: 24rpx;
+  background: #f6f0e2;
+}
+
+.tip-icon {
+  margin-right: 12rpx;
+  font-size: 28rpx;
+}
+
+.tip-text {
+  flex: 1;
+  font-size: 24rpx;
+  line-height: 1.7;
+  color: #7d7360;
+}

@@ -1,0 +1,9 @@
+node_modules/
+.DS_Store
+project.private.config.json
+content/build/
+preview/dist/
+preview/screenshots/
+preview/renders/
+.npm-cache/
+*.log

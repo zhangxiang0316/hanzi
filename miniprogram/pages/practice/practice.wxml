@@ -1,0 +1,105 @@
+<view class="page">
+  <view class="head">
+    <view class="head-title">练一练</view>
+    <view class="head-sub">今天的复习，都是你学过的字</view>
+  </view>
+
+  <view class="stats">
+    <view class="stat">
+      <text class="stat-num">{{dueCount}}</text>
+      <text class="stat-label">待复习</text>
+    </view>
+    <view class="stat-line"></view>
+    <view class="stat">
+      <text class="stat-num">{{today.answers}}</text>
+      <text class="stat-label">今日答题</text>
+    </view>
+    <view class="stat-line"></view>
+    <view class="stat">
+      <text class="stat-num">{{today.rate}}<text class="stat-unit">%</text></text>
+      <text class="stat-label">正确率</text>
+    </view>
+  </view>
+
+  <view class="main-card tap" bindtap="onReview">
+    <view class="main-left">
+      <view class="main-tag">每日复习</view>
+      <view class="main-title">{{dueCount ? '有 ' + dueCount + ' 个字等你' : '今天已经复习完啦'}}</view>
+      <view class="main-desc">{{dueCount ? '复习过的字，记得更牢' : '去学几个新字，或者自由练习'}}</view>
+      <view class="main-btn">{{dueCount ? '开始复习' : '学新字'}} →</view>
+    </view>
+    <view class="main-art">
+      <text class="main-char hanzi">{{heroChar}}</text>
+    </view>
+  </view>
+
+  <view class="cards">
+    <view class="card-item tap" bindtap="onWrong">
+      <view class="card-icon wrong-icon">✍️</view>
+      <view class="card-title">错题本</view>
+      <view class="card-desc">{{wrongCount}} 个字</view>
+      <view class="card-badge" wx:if="{{wrongCount}}">{{wrongCount}}</view>
+    </view>
+    <view class="card-item tap" bindtap="onFree">
+      <view class="card-icon free-icon">🎲</view>
+      <view class="card-title">随机练习</view>
+      <view class="card-desc">{{bookName}}</view>
+    </view>
+  </view>
+
+  <view class="section-head">
+    <view class="section-title">按册来练</view>
+  </view>
+  <view class="book-row">
+    <view
+      class="book-chip tap {{item.learned ? '' : 'empty'}}"
+      wx:for="{{books}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="onBookPractice"
+    >
+      <text class="book-chip-name">{{item.name}}</text>
+      <text class="book-chip-sub">{{item.learned}}/{{item.chars}} 字</text>
+    </view>
+  </view>
+
+  <view class="section-head">
+    <view class="section-title">描红练字</view>
+    <view class="section-sub" bindtap="onWriteHint">写一写，记得更牢</view>
+  </view>
+  <view class="write-row">
+    <view class="write-card tap" bindtap="onWriteRandom">
+      <view class="write-title">随机练一个</view>
+      <view class="write-sub">从学过的字里挑</view>
+      <view class="write-char hanzi">{{writeChar}}</view>
+    </view>
+    <view class="write-list">
+      <view
+        class="write-item tap"
+        wx:for="{{recentChars}}"
+        wx:key="ch"
+        data-ch="{{item.ch}}"
+        bindtap="onWriteChar"
+      >
+        <text class="write-item-char hanzi">{{item.ch}}</text>
+        <text class="write-item-star" wx:if="{{item.stars}}">{{item.stars}}★</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="section-head">
+    <view class="section-title">最近 7 天</view>
+  </view>
+  <view class="chart">
+    <view class="chart-col" wx:for="{{days}}" wx:key="key">
+      <view class="chart-bar-wrap">
+        <view class="chart-bar" style="height: {{item.h}}%">
+          <text class="chart-num" wx:if="{{item.answers}}">{{item.answers}}</text>
+        </view>
+      </view>
+      <text class="chart-label">{{item.label}}</text>
+    </view>
+  </view>
+
+  <view class="safe-bottom"></view>
+</view>

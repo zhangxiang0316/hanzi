@@ -1,0 +1,198 @@
+.page {
+  padding: 20rpx 32rpx 0;
+}
+
+.hero {
+  position: relative;
+  padding: 40rpx 32rpx 44rpx;
+  border-radius: 40rpx;
+  background: linear-gradient(160deg, #ffffff 0%, #fbf5e8 100%);
+  border: 2rpx solid rgba(233, 223, 205, 0.9);
+  box-shadow: 0 16rpx 40rpx rgba(81, 66, 37, 0.07);
+  text-align: center;
+  overflow: hidden;
+}
+
+.hero-emoji {
+  font-size: 84rpx;
+  line-height: 1;
+  animation: pop 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.hero-title {
+  margin-top: 16rpx;
+  font-size: 30rpx;
+  color: var(--ink-2);
+  font-weight: 600;
+}
+
+.hero-rate {
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  color: var(--ink-3);
+}
+
+.stars {
+  display: flex;
+  justify-content: center;
+  margin-top: 14rpx;
+}
+
+.star {
+  font-size: 46rpx;
+  margin: 0 8rpx;
+  color: #e8e0d1;
+  transition: color 0.25s ease;
+}
+
+.star.on {
+  color: var(--gold);
+}
+
+.hero-msg {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: var(--ink-2);
+}
+
+.ring {
+  width: 260rpx;
+  height: 260rpx;
+  margin: 26rpx auto 0;
+  border-radius: 50%;
+  background: conic-gradient(var(--jade) 0deg, var(--jade) 0deg, #eef0e9 0deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 0 2rpx rgba(255, 255, 255, 0.6);
+}
+
+.ring-inner {
+  width: 206rpx;
+  height: 206rpx;
+  border-radius: 50%;
+  background: #fffdf8;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-content: center;
+  padding-top: 8rpx;
+}
+
+.ring-num {
+  font-size: 76rpx;
+  font-weight: 800;
+  color: var(--jade-deep);
+  line-height: 1;
+}
+
+.ring-pct {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: var(--jade);
+  margin-left: 2rpx;
+}
+
+.ring-label {
+  width: 100%;
+  text-align: center;
+  font-size: 20rpx;
+  color: var(--ink-3);
+  margin-top: 8rpx;
+}
+
+.wrong {
+  margin-top: 34rpx;
+}
+
+.wrong-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.wrong-title {
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.wrong-tip {
+  font-size: 21rpx;
+  color: var(--ink-3);
+}
+
+.wrong-list {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.wrong-item {
+  width: 158rpx;
+  margin: 0 16rpx 16rpx 0;
+  padding: 18rpx 0 14rpx;
+  border-radius: 24rpx;
+  background: #ffffff;
+  border: 2rpx solid #f0e6d6;
+  text-align: center;
+  box-shadow: 0 6rpx 16rpx rgba(81, 66, 37, 0.04);
+}
+
+.wrong-char {
+  display: block;
+  font-size: 58rpx;
+  line-height: 1.1;
+  color: var(--ink);
+}
+
+.wrong-py {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  color: var(--jade-deep);
+}
+
+.wrong-word {
+  display: block;
+  font-size: 19rpx;
+  color: var(--ink-3);
+}
+
+.all-right {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 40rpx;
+  padding: 26rpx;
+  border-radius: 26rpx;
+  background: var(--jade-soft);
+}
+
+.all-right-icon {
+  font-size: 36rpx;
+  margin-right: 12rpx;
+}
+
+.all-right-text {
+  font-size: 26rpx;
+  color: var(--jade-deep);
+  font-weight: 600;
+}
+
+.actions {
+  margin-top: 48rpx;
+}
+
+.action-row {
+  display: flex;
+  margin-top: 20rpx;
+}
+
+.action-row .btn {
+  flex: 1;
+}
+
+.action-row .btn + .btn {
+  margin-left: 18rpx;
+}

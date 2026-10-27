@@ -1,0 +1,41 @@
+<view class="page">
+  <view class="hero">
+    <view class="hero-char hanzi">字</view>
+    <view class="hero-title">小小识字家</view>
+    <view class="hero-version">v{{version}}</view>
+  </view>
+
+  <view class="block">
+    <view class="block-title">这是什么</view>
+    <view class="p">一个陪一二年级小朋友认字、写字的小工具。按统编版语文课本的顺序，一天认几个字，学完就练，练完会安排复习。</view>
+  </view>
+
+  <view class="block">
+    <view class="block-title">内容来源</view>
+    <view class="p">识字表、写字表与组词依据统编版（部编版）小学语文一年级上册至二年级下册，共 1600 个生字，其中 800 个要求会写。拼音与例词经过逐字校对，多音字按课文标注读音。</view>
+    <view class="p small">笔顺数据来自 Make Me a Hanzi（基于 Arphic 字体，遵循 Arphic Public License），仅用于笔顺演示与描红比对。</view>
+  </view>
+
+  <view class="block">
+    <view class="block-title">给家长的建议</view>
+    <view class="list">
+      <view class="li"><text class="li-dot">·</text><text>每次 10 分钟，比一次学半小时更有效。</text></view>
+      <view class="li"><text class="li-dot">·</text><text>先认后写：认字卡上读两遍，再去田字格里描一描。</text></view>
+      <view class="li"><text class="li-dot">·</text><text>错题本不要急着清空，隔一天再练效果更好。</text></view>
+      <view class="li"><text class="li-dot">·</text><text>孩子写歪了很正常，先夸坐姿和握笔，再提笔顺。</text></view>
+    </view>
+  </view>
+
+  <view class="block">
+    <view class="block-title">隐私</view>
+    <view class="p">所有学习记录只保存在这台手机的本地存储里，不上传服务器，也不收集任何个人信息。清除小程序缓存会同时清除记录。</view>
+  </view>
+
+  <view class="block">
+    <view class="block-title">开源许可</view>
+    <view class="p small">笔顺数据：Arphic Public License（见随包 LICENSE-ARPHIC.txt）。程序代码可自由用于学习和教学。</view>
+  </view>
+
+  <view class="footer">用 ❤️ 为小朋友做的识字工具</view>
+  <view class="safe-bottom"></view>
+</view>

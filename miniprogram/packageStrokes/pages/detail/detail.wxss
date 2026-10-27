@@ -1,0 +1,286 @@
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 32rpx 4rpx;
+}
+
+.crumb {
+  font-size: 24rpx;
+  color: var(--ink-2);
+  padding: 6rpx 0;
+}
+
+.counter {
+  font-size: 22rpx;
+  color: var(--ink-3);
+  background: #f2ecdf;
+  padding: 6rpx 18rpx;
+  border-radius: 999rpx;
+}
+
+.stage {
+  position: relative;
+  margin: 12rpx 32rpx 0;
+  padding: 20rpx;
+  border-radius: 40rpx;
+  background: linear-gradient(165deg, #ffffff 0%, #fdfaf2 100%);
+  box-shadow: 0 14rpx 36rpx rgba(81, 66, 37, 0.08);
+  border: 2rpx solid rgba(233, 223, 205, 0.9);
+}
+
+.stage-glow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 520rpx;
+  height: 520rpx;
+  margin: -260rpx 0 0 -260rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(62, 142, 126, 0.07), rgba(62, 142, 126, 0));
+  pointer-events: none;
+}
+
+.hz-canvas {
+  display: block;
+  width: 600rpx;
+  height: 600rpx;
+  margin: 0 auto;
+}
+
+.stage-tools {
+  display: flex;
+  justify-content: center;
+  padding: 6rpx 0 4rpx;
+}
+
+.tool {
+  display: flex;
+  align-items: center;
+  height: 64rpx;
+  padding: 0 26rpx;
+  margin: 0 10rpx;
+  border-radius: 999rpx;
+  background: #f6f1e5;
+  color: var(--ink-2);
+  font-size: 24rpx;
+}
+
+.tool.on {
+  background: var(--jade-soft);
+  color: var(--jade-deep);
+}
+
+.tool-icon {
+  margin-right: 8rpx;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.info {
+  padding: 30rpx 32rpx 0;
+}
+
+.py-row {
+  display: flex;
+  align-items: center;
+}
+
+.py {
+  font-size: 52rpx;
+  font-weight: 700;
+  color: var(--jade-deep);
+  letter-spacing: 2rpx;
+  margin-right: 16rpx;
+}
+
+.py-row .pill {
+  margin-right: 10rpx;
+}
+
+.attr-row {
+  display: flex;
+  margin-top: 22rpx;
+  padding: 22rpx 0;
+  border-top: 2rpx solid #f1e9da;
+  border-bottom: 2rpx solid #f1e9da;
+}
+
+.attr {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-right: 2rpx solid #f3ecdf;
+}
+
+.attr:last-child {
+  border-right: none;
+}
+
+.attr-label {
+  font-size: 21rpx;
+  color: var(--ink-3);
+}
+
+.attr-value {
+  margin-top: 6rpx;
+  font-size: 34rpx;
+  font-weight: 700;
+}
+
+.attr-value.small {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--jade-deep);
+  line-height: 1.9;
+}
+
+.stroke-strip {
+  padding: 28rpx 32rpx 0;
+}
+
+.strip-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 14rpx;
+}
+
+.strip-title {
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.strip-hint {
+  font-size: 21rpx;
+  color: var(--ink-3);
+}
+
+.strip {
+  white-space: nowrap;
+  width: 100%;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 66rpx;
+  height: 66rpx;
+  margin-right: 14rpx;
+  border-radius: 18rpx;
+  background: #ffffff;
+  border: 2rpx solid #ece3d2;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.chip.on {
+  background: var(--jade);
+  border-color: var(--jade);
+  color: #ffffff;
+}
+
+.block-title {
+  font-size: 28rpx;
+  font-weight: 700;
+  margin-bottom: 16rpx;
+}
+
+.words,
+.readings {
+  padding: 34rpx 32rpx 0;
+}
+
+.word-list {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.word {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 170rpx;
+  margin: 0 16rpx 16rpx 0;
+  padding: 16rpx 22rpx;
+  border-radius: 22rpx;
+  background: #ffffff;
+  border: 2rpx solid #efe7d7;
+}
+
+.word-text {
+  font-size: 40rpx;
+  letter-spacing: 2rpx;
+}
+
+.word-py {
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  color: var(--ink-3);
+  letter-spacing: 0.5rpx;
+}
+
+.reading-row {
+  display: flex;
+  align-items: center;
+  padding: 18rpx 0;
+  border-bottom: 2rpx solid #f3ecdf;
+}
+
+.reading-py {
+  width: 180rpx;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: var(--jade-deep);
+}
+
+.reading-lesson {
+  font-size: 23rpx;
+  color: var(--ink-3);
+}
+
+.actions {
+  padding: 40rpx 32rpx 0;
+}
+
+.action-row {
+  display: flex;
+  margin-top: 20rpx;
+}
+
+.action-row .btn {
+  flex: 1;
+}
+
+.action-row .btn + .btn {
+  margin-left: 18rpx;
+}
+
+.action-row .btn-block {
+  height: 88rpx;
+  font-size: 27rpx;
+}
+
+.pager {
+  display: flex;
+  justify-content: space-between;
+  padding: 34rpx 32rpx 0;
+}
+
+.pager-btn {
+  font-size: 25rpx;
+  color: var(--ink-2);
+  padding: 12rpx 8rpx;
+}
+
+.pager-btn.next {
+  color: var(--jade-deep);
+  font-weight: 600;
+}
+
+.pager-btn.off {
+  color: #d9d2c4;
+}

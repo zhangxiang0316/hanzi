@@ -1,0 +1,212 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 28rpx 10rpx;
+}
+
+.bar-close {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 50%;
+  background: #f1ebdd;
+  color: var(--ink-2);
+  font-size: 26rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.bar-progress {
+  flex: 1;
+  padding: 0 20rpx;
+}
+
+.bar-count {
+  flex: none;
+  font-size: 22rpx;
+  color: var(--ink-3);
+  min-width: 80rpx;
+  text-align: right;
+}
+
+.q {
+  padding: 20rpx 40rpx 0;
+  flex: 1;
+}
+
+.q-tag {
+  text-align: center;
+  font-size: 24rpx;
+  color: var(--jade-deep);
+  font-weight: 600;
+  letter-spacing: 1rpx;
+}
+
+.q-sub {
+  margin-top: 8rpx;
+  text-align: center;
+  font-size: 22rpx;
+  color: var(--ink-3);
+}
+
+.prompt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 300rpx;
+  margin: 20rpx 0 10rpx;
+}
+
+.prompt-text {
+  font-size: 150rpx;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 4rpx;
+}
+
+.prompt-text.py {
+  font-size: 96rpx;
+  color: var(--ink);
+  letter-spacing: 2rpx;
+  font-family: -apple-system, "PingFang SC", sans-serif;
+}
+
+.prompt-text.hanzi {
+  font-size: 190rpx;
+  color: var(--ink);
+}
+
+.prompt.word .prompt-text {
+  font-size: 92rpx;
+  letter-spacing: 8rpx;
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 10rpx;
+}
+
+.option {
+  position: relative;
+  width: calc(50% - 12rpx);
+  height: 150rpx;
+  margin-bottom: 24rpx;
+  border-radius: 28rpx;
+  background: #ffffff;
+  border: 3rpx solid #ece3d2;
+  box-shadow: 0 8rpx 20rpx rgba(81, 66, 37, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.option:nth-child(odd) {
+  margin-right: 24rpx;
+}
+
+.options.two-col .option {
+  height: 118rpx;
+}
+
+.option-label {
+  font-size: 62rpx;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.option-label.py {
+  font-size: 40rpx;
+  letter-spacing: 1rpx;
+}
+
+.option.correct {
+  background: #eaf6f1;
+  border-color: var(--jade);
+}
+
+.option.correct .option-label {
+  color: var(--jade-deep);
+}
+
+.option.wrong {
+  background: #fdeee9;
+  border-color: var(--cinnabar);
+}
+
+.option.wrong .option-label {
+  color: #b34a33;
+}
+
+.option-mark {
+  position: absolute;
+  right: 16rpx;
+  top: 12rpx;
+  font-size: 28rpx;
+  font-weight: 800;
+}
+
+.option.correct .option-mark {
+  color: var(--jade);
+}
+
+.option.wrong .option-mark {
+  color: var(--cinnabar);
+}
+
+.feedback {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 30rpx 40rpx calc(30rpx + env(safe-area-inset-bottom));
+  border-radius: 36rpx 36rpx 0 0;
+  background: #ffffff;
+  box-shadow: 0 -12rpx 40rpx rgba(81, 66, 37, 0.12);
+  animation: fadeUp 0.25s ease both;
+}
+
+.feedback.no {
+  background: #fffdf9;
+}
+
+.feedback-head {
+  display: flex;
+  align-items: center;
+}
+
+.feedback-icon {
+  font-size: 36rpx;
+  margin-right: 12rpx;
+}
+
+.feedback-title {
+  font-size: 32rpx;
+  font-weight: 800;
+}
+
+.feedback.ok .feedback-title {
+  color: var(--jade-deep);
+}
+
+.feedback.no .feedback-title {
+  color: #b34a33;
+}
+
+.feedback-body {
+  margin-top: 12rpx;
+  font-size: 25rpx;
+  line-height: 1.75;
+  color: var(--ink-2);
+}
+
+.feedback-actions {
+  margin-top: 24rpx;
+}

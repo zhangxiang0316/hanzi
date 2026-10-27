@@ -1,0 +1,69 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/unit/unit",
+    "pages/lesson/lesson",
+    "pages/practice/practice",
+    "pages/quiz/quiz",
+    "pages/result/result",
+    "pages/profile/profile",
+    "pages/wrong/wrong",
+    "pages/about/about"
+  ],
+  "subpackages": [
+    {
+      "root": "packageStrokes",
+      "name": "strokes",
+      "pages": [
+        "pages/detail/detail",
+        "pages/write/write"
+      ]
+    }
+  ],
+  "preloadRule": {
+    "pages/index/index": {
+      "network": "all",
+      "packages": ["strokes"]
+    },
+    "pages/lesson/lesson": {
+      "network": "all",
+      "packages": ["strokes"]
+    }
+  },
+  "window": {
+    "navigationBarBackgroundColor": "#FBF7EE",
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "小小识字家",
+    "backgroundColor": "#FBF7EE",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "color": "#A29C8F",
+    "selectedColor": "#3E8E7E",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "学字",
+        "iconPath": "images/tab-learn.png",
+        "selectedIconPath": "images/tab-learn-on.png"
+      },
+      {
+        "pagePath": "pages/practice/practice",
+        "text": "练习",
+        "iconPath": "images/tab-practice.png",
+        "selectedIconPath": "images/tab-practice-on.png"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的",
+        "iconPath": "images/tab-profile.png",
+        "selectedIconPath": "images/tab-profile-on.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents",
+  "sitemapLocation": "sitemap.json"
+}

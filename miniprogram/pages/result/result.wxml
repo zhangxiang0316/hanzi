@@ -1,0 +1,57 @@
+<view class="page">
+  <view class="hero">
+    <view class="hero-emoji">{{mood}}</view>
+    <view class="hero-title">{{title}}</view>
+    <view class="hero-rate">{{correct}} / {{total}} 题</view>
+    <view class="stars">
+      <text class="star {{rate >= 60 ? 'on' : ''}}">★</text>
+      <text class="star {{rate >= 85 ? 'on' : ''}}">★</text>
+      <text class="star {{rate >= 100 ? 'on' : ''}}">★</text>
+    </view>
+    <view class="hero-msg">{{message}}</view>
+    <view class="ring" style="{{ringStyle}}">
+      <view class="ring-inner">
+        <text class="ring-num">{{rate}}</text>
+        <text class="ring-pct">%</text>
+        <text class="ring-label">正确率</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="wrong" wx:if="{{wrongChars.length}}">
+    <view class="wrong-head">
+      <text class="wrong-title">这几个字还需要多看看</text>
+      <text class="wrong-tip">已放进错题本</text>
+    </view>
+    <view class="wrong-list">
+      <view
+        class="wrong-item tap"
+        wx:for="{{wrongChars}}"
+        wx:key="ch"
+        data-ch="{{item.ch}}"
+        bindtap="onOpenChar"
+      >
+        <text class="wrong-char hanzi">{{item.ch}}</text>
+        <text class="wrong-py">{{item.py}}</text>
+        <text class="wrong-word">{{item.word}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="all-right" wx:else>
+    <text class="all-right-icon">🏅</text>
+    <text class="all-right-text">全部答对，太厉害了！</text>
+  </view>
+
+  <view class="actions">
+    <button class="btn btn-primary btn-block" hover-class="btn-hover" bindtap="onAgain">
+      {{wrongChars.length ? '再练这几个字' : '再来一组'}}
+    </button>
+    <view class="action-row">
+      <button class="btn btn-ghost btn-block" hover-class="btn-hover" bindtap="onPractice">去练习页</button>
+      <button class="btn btn-soft btn-block" hover-class="btn-hover" bindtap="onHome">回首页</button>
+    </view>
+  </view>
+
+  <view class="safe-bottom"></view>
+</view>

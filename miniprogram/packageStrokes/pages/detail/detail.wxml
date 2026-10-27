@@ -1,0 +1,100 @@
+<view class="page">
+  <view class="topbar">
+    <view class="topbar-left">
+      <text class="crumb" bindtap="onBackLesson">{{lessonTitle}}</text>
+    </view>
+    <view class="counter">{{index + 1}} / {{total}}</view>
+  </view>
+
+  <view class="stage">
+    <view class="stage-glow"></view>
+    <canvas type="2d" id="hz" class="hz-canvas" bindtap="onCanvasTap"></canvas>
+    <view class="stage-tools">
+      <view class="tool tap {{showNumbers ? 'on' : ''}}" bindtap="onToggleNumbers">
+        <text class="tool-icon">①</text>
+        <text>笔顺</text>
+      </view>
+      <view class="tool tap" bindtap="onReplay">
+        <text class="tool-icon">↻</text>
+        <text>再写一遍</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="info">
+    <view class="py-row">
+      <text class="py">{{py}}</text>
+      <text class="pill pill-gold" wx:if="{{isPoly}}">多音字</text>
+      <text class="pill pill-jade" wx:if="{{learned}}">已学</text>
+    </view>
+    <view class="attr-row">
+      <view class="attr">
+        <text class="attr-label">部首</text>
+        <text class="attr-value hanzi">{{meta.r}}</text>
+      </view>
+      <view class="attr">
+        <text class="attr-label">笔画</text>
+        <text class="attr-value">{{meta.s}}</text>
+      </view>
+      <view class="attr">
+        <text class="attr-label">读音</text>
+        <text class="attr-value small">{{readingsText}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="stroke-strip" wx:if="{{strokeList.length > 1}}">
+    <view class="strip-head">
+      <text class="strip-title">按笔顺写</text>
+      <text class="strip-hint">点数字看这一笔</text>
+    </view>
+    <scroll-view class="strip" scroll-x enable-flex show-scrollbar="{{false}}">
+      <view
+        class="chip tap {{strokeActive === item.i ? 'on' : ''}}"
+        wx:for="{{strokeList}}"
+        wx:key="i"
+        data-i="{{item.i}}"
+        bindtap="onStrokeChip"
+      >{{item.i + 1}}</view>
+    </scroll-view>
+  </view>
+
+  <view class="words" wx:if="{{meta.w.length}}">
+    <view class="block-title">组词</view>
+    <view class="word-list">
+      <view class="word tap" wx:for="{{meta.w}}" wx:key="w">
+        <text class="word-text hanzi">{{item.w}}</text>
+        <text class="word-py" wx:if="{{showPinyin}}">{{item.p}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="readings" wx:if="{{readings.length > 1}}">
+    <view class="block-title">这个字的其他读音</view>
+    <view class="reading-row" wx:for="{{readings}}" wx:key="p">
+      <text class="reading-py">{{item.p}}</text>
+      <text class="reading-lesson">{{item.title}}</text>
+    </view>
+  </view>
+
+  <view class="actions">
+    <button class="btn btn-cinnabar btn-block" hover-class="btn-hover" bindtap="onWrite">
+      描红跟写
+    </button>
+    <view class="action-row">
+      <button class="btn btn-ghost btn-block" hover-class="btn-hover" bindtap="onQuizOne">
+        练这个字
+      </button>
+      <button class="btn btn-soft btn-block" hover-class="btn-hover" bindtap="onMarkKnown">
+        {{learned ? '已学会 ✓' : '我认识它了'}}
+      </button>
+    </view>
+  </view>
+
+  <view class="pager">
+    <view class="pager-btn tap {{hasPrev ? '' : 'off'}}" bindtap="onPrev">‹ 上一个</view>
+    <view class="pager-btn next tap {{hasNext ? '' : 'off'}}" bindtap="onNext">下一个 ›</view>
+  </view>
+
+  <view class="safe-bottom"></view>
+</view>

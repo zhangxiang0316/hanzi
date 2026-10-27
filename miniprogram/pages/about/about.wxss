@@ -1,0 +1,82 @@
+.page {
+  padding: 0 40rpx;
+}
+
+.hero {
+  padding: 50rpx 0 30rpx;
+  text-align: center;
+}
+
+.hero-char {
+  width: 150rpx;
+  height: 150rpx;
+  margin: 0 auto;
+  border-radius: 40rpx;
+  background: linear-gradient(150deg, #fdf3e2, #f8e6cb);
+  border: 2rpx solid #f0dcbd;
+  font-size: 96rpx;
+  line-height: 150rpx;
+  color: #8a5a2b;
+}
+
+.hero-title {
+  margin-top: 22rpx;
+  font-size: 36rpx;
+  font-weight: 800;
+  letter-spacing: 2rpx;
+}
+
+.hero-version {
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  color: var(--ink-3);
+}
+
+.block {
+  padding: 26rpx 0;
+  border-bottom: 2rpx solid #f1e9da;
+}
+
+.block-title {
+  font-size: 27rpx;
+  font-weight: 700;
+  margin-bottom: 12rpx;
+}
+
+.p {
+  font-size: 24rpx;
+  line-height: 1.85;
+  color: var(--ink-2);
+}
+
+.p.small {
+  margin-top: 12rpx;
+  font-size: 21rpx;
+  color: var(--ink-3);
+}
+
+.list {
+  padding-top: 4rpx;
+}
+
+.li {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 10rpx;
+  font-size: 24rpx;
+  line-height: 1.8;
+  color: var(--ink-2);
+}
+
+.li-dot {
+  margin-right: 10rpx;
+  color: var(--jade);
+  font-weight: 800;
+}
+
+.footer {
+  padding: 44rpx 0 20rpx;
+  text-align: center;
+  font-size: 19rpx;
+  color: #b9b0a1;
+}

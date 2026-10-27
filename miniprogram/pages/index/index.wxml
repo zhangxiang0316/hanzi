@@ -1,0 +1,98 @@
+<view class="page">
+  <view style="height: {{statusBarHeight}}px"></view>
+  <!-- 顶部问候 -->
+  <view class="hero">
+    <view class="hero-row">
+      <view class="grow">
+        <view class="hello">{{greeting}}，小朋友</view>
+        <view class="sub">{{dateLabel}} · {{weekday}}</view>
+      </view>
+      <view class="streak {{streak > 0 ? 'on' : ''}}">
+        <text class="streak-fire">🔥</text>
+        <view class="streak-text">
+          <text class="streak-num">{{streak}}</text>
+          <text class="streak-unit">天</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 今日任务 -->
+    <view class="task-card tap" bindtap="onTaskTap">
+      <view class="task-glow"></view>
+      <view class="task-top">
+        <text class="task-tag">{{task.type === 'review' ? '今日复习' : task.type === 'learn' ? '今日新学' : '今日完成'}}</text>
+        <text class="task-count" wx:if="{{task.type === 'review'}}">{{task.count}} 字</text>
+      </view>
+      <view class="task-title">{{task.title}}</view>
+      <view class="task-desc">{{task.desc}}</view>
+
+      <view class="task-progress" wx:if="{{task.type === 'learn'}}">
+        <view class="progress">
+          <view class="progress-fill" style="width: {{todayPct}}%"></view>
+        </view>
+        <text class="task-progress-label">今日已学 {{today.learned}}/{{dailyNew}}</text>
+      </view>
+
+      <view class="task-btn">
+        <text>{{task.action}}</text>
+        <text class="task-btn-arrow">→</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 选择册次 -->
+  <view class="section">
+    <view class="section-head">
+      <view>
+        <view class="section-title">选一册，开始学</view>
+        <view class="section-sub">统编版语文 · 一到二年级</view>
+      </view>
+    </view>
+
+    <view class="book-list">
+      <view
+        class="book-card tap {{book.id === currentBook ? 'active' : ''}}"
+        wx:for="{{books}}"
+        wx:key="id"
+        data-id="{{item.id}}"
+        bindtap="onBookTap"
+      >
+        <view class="book-badge" style="background: {{item.color}}">{{item.gradeText}}</view>
+        <view class="book-body">
+          <view class="book-name">{{item.name}}</view>
+          <view class="book-meta">{{item.learned}} / {{item.chars}} 字 · {{item.lessonCount}} 课</view>
+          <view class="progress book-progress">
+            <view class="progress-fill" style="width: {{item.pct}}%; background: {{item.color}}"></view>
+          </view>
+        </view>
+        <view class="book-pct" style="color: {{item.color}}">{{item.pct}}%</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 今日一字 -->
+  <view class="section" wx:if="{{dailyChar}}">
+    <view class="section-head">
+      <view class="section-title">今日一字</view>
+      <view class="section-sub" bindtap="onOpenDaily">看看这个字 →</view>
+    </view>
+    <view class="daily-card card tap" bindtap="onOpenDaily">
+      <view class="daily-char hanzi">{{dailyChar}}</view>
+      <view class="daily-info">
+        <view class="daily-py">{{dailyMeta.py}}</view>
+        <view class="daily-desc">{{dailyMeta.desc}}</view>
+        <view class="daily-words">
+          <text class="pill pill-jade" wx:for="{{dailyMeta.words}}" wx:key="w">{{item.w}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 学习小贴士 -->
+  <view class="tip">
+    <text class="tip-icon">💡</text>
+    <text class="tip-text">{{tip}}</text>
+  </view>
+
+  <view class="safe-bottom"></view>
+</view>

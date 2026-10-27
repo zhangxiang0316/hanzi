@@ -1,0 +1,32 @@
+<view class="page">
+  <view class="head">
+    <view class="head-title">错题本</view>
+    <view class="head-sub">答错的字会记在这里，练对 1 次就划掉一个</view>
+  </view>
+
+  <view class="empty" wx:if="{{!list.length}}">
+    <view class="empty-emoji">🌿</view>
+    <view class="empty-title">错题本是空的</view>
+    <view class="muted">真棒，说明你都记住了</view>
+  </view>
+
+  <view class="list" wx:else>
+    <view class="item" wx:for="{{list}}" wx:key="ch">
+      <view class="item-main tap" data-ch="{{item.ch}}" bindtap="onOpen">
+        <text class="item-char hanzi">{{item.ch}}</text>
+        <view class="item-info">
+          <view class="item-py">{{item.py}}</view>
+          <view class="item-meta">{{item.lessonTitle}} · 错 {{item.n}} 次</view>
+        </view>
+      </view>
+      <view class="item-write tap" data-ch="{{item.ch}}" bindtap="onWrite">描红</view>
+    </view>
+  </view>
+
+  <view class="actions" wx:if="{{list.length}}">
+    <button class="btn btn-primary btn-block" hover-class="btn-hover" bindtap="onPractice">重练这些字</button>
+    <button class="btn btn-soft btn-block clear" hover-class="btn-hover" bindtap="onClear">清空错题本</button>
+  </view>
+
+  <view class="safe-bottom"></view>
+</view>

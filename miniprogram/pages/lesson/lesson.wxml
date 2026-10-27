@@ -1,0 +1,51 @@
+<view class="page">
+  <view class="head">
+    <view class="crumb">{{bookName}} · 第 {{lesson.unit}} 单元</view>
+    <view class="title-row">
+      <view class="grow">
+        <view class="lesson-title">{{lesson.title}}</view>
+        <view class="lesson-sub">{{lesson.kind}} · 识字 {{chars.length}} 个<text wx:if="{{lesson.write.length}}"> · 会写 {{lesson.write.length}} 个</text></view>
+      </view>
+      <view class="round-pct">
+        <text class="round-pct-num">{{pct}}%</text>
+        <text class="round-pct-label">已学</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="grid">
+    <view
+      class="cell tap {{item.learned ? 'learned' : ''}} {{item.ch === focus ? 'focus' : ''}}"
+      wx:for="{{chars}}"
+      wx:key="ch"
+      data-ch="{{item.ch}}"
+      bindtap="onCharTap"
+    >
+      <view class="cell-box">
+        <text class="cell-char hanzi">{{item.ch}}</text>
+        <view class="cell-badge" wx:if="{{item.learned}}">
+          <text wx:if="{{item.mastered}}">★</text>
+          <text wx:elif="{{item.due}}">↻</text>
+          <text wx:else>✓</text>
+        </view>
+      </view>
+      <view class="cell-py">{{item.py}}</view>
+      <view class="cell-word">{{item.word}}</view>
+    </view>
+  </view>
+
+  <view class="words" wx:if="{{lesson.words.length}}">
+    <view class="words-title">本课词语</view>
+    <view class="words-list">
+      <text class="word-pill" wx:for="{{lesson.words}}" wx:key="*this">{{item}}</text>
+    </view>
+  </view>
+
+  <view class="bottom-space"></view>
+
+  <view class="footer">
+    <button class="btn btn-primary btn-block" hover-class="btn-hover" bindtap="onStart">
+      {{started ? '继续学习' : '开始学习'}}<text wx:if="{{nextChar}}"> · {{nextChar}}</text>
+    </button>
+  </view>
+</view>
