@@ -295,7 +295,7 @@ private fun BookTile(
                 Box(
                     Modifier
                         .size(17.dp)
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(RoundedCornerShape(5.dp))
                         .background(color.copy(alpha = 0.16f)),
                     contentAlignment = Alignment.Center
                 ) {
