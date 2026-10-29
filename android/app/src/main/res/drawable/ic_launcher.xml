@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 应用图标：田字格里一个「十」字，与小程序内的视觉语言一致。
+     用矢量而不是位图，省掉 mipmap 各密度目录。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path
+        android:fillColor="#3E8E7E"
+        android:pathData="M20,4h68a16,16 0 0 1 16,16v68a16,16 0 0 1 -16,16h-68a16,16 0 0 1 -16,-16v-68a16,16 0 0 1 16,-16z" />
+
+    <path
+        android:strokeColor="#FBF6EC"
+        android:strokeWidth="3"
+        android:strokeAlpha="0.45"
+        android:pathData="M54,18v72M18,54h72" />
+
+    <path
+        android:strokeColor="#FBF6EC"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:pathData="M54,26v56" />
+
+    <path
+        android:strokeColor="#FBF6EC"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:pathData="M28,54h52" />
+</vector>
