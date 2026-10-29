@@ -54,7 +54,8 @@
       </view>
     </view>
 
-    <view class="book-list">
+    <!-- 两列网格：8 册排成 4 行。整宽卡片一册一行时，八册要占掉一屏多 -->
+    <view class="book-grid">
       <view
         class="book-card tap {{book.id === currentBook ? 'active' : ''}}"
         wx:for="{{books}}"
@@ -62,15 +63,15 @@
         data-id="{{item.id}}"
         bindtap="onBookTap"
       >
-        <view class="book-badge" style="background: {{item.color}}">{{item.gradeText}}</view>
-        <view class="book-body">
+        <view class="book-top">
+          <view class="book-badge" style="background: {{item.color}}">{{item.shortGrade}}</view>
           <view class="book-name">{{item.name}}</view>
-          <view class="book-meta">{{item.learned}} / {{item.chars}} 字 · {{item.lessonCount}} 课</view>
-          <view class="progress book-progress">
-            <view class="progress-fill" style="width: {{item.pct}}%; background: {{item.color}}"></view>
-          </view>
+          <view class="book-pct" style="color: {{item.color}}">{{item.pct}}%</view>
         </view>
-        <view class="book-pct" style="color: {{item.color}}">{{item.pct}}%</view>
+        <view class="progress book-progress">
+          <view class="progress-fill" style="width: {{item.pct}}%; background: {{item.color}}"></view>
+        </view>
+        <view class="book-meta">{{item.learned}} / {{item.chars}} 字</view>
       </view>
     </view>
   </view>

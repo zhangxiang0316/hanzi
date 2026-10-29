@@ -547,6 +547,34 @@ async function shots() {
   if (wrongGrade) failures.push(`册次年级标签不匹配: ${wrongGrade}`);
   console.log(`  ✓ 首页八册  ${bookCards.names.join(' / ')}`);
 
+  // 八册排成两列四行。整宽卡片一册一行时要占掉一屏多，首页得滚很久才见到「今日一字」
+  const grid = await page.evaluate(() => {
+    const cards = [...document.querySelectorAll('.book-card')];
+    const boxes = cards.map((c) => {
+      const b = c.getBoundingClientRect();
+      return { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.width), h: Math.round(b.height) };
+    });
+    return {
+      rows: new Set(boxes.map((b) => b.y)).size,
+      cols: new Set(boxes.map((b) => b.x)).size,
+      top: Math.min(...boxes.map((b) => b.y)),
+      bottom: Math.max(...boxes.map((b) => b.y + b.h)),
+      widths: [...new Set(boxes.map((b) => b.w))],
+      overflow: cards.filter((c) => c.scrollWidth > c.clientWidth + 1).length,
+    };
+  });
+  if (grid.cols !== 2) failures.push(`册次应排成 2 列，实际 ${grid.cols} 列`);
+  if (grid.rows !== 4) failures.push(`册次应排成 4 行，实际 ${grid.rows} 行`);
+  if (grid.widths.length !== 1) failures.push(`同行册次应等宽，实际 ${grid.widths.join('/')}`);
+  if (grid.overflow) failures.push(`${grid.overflow} 张册次卡片内容溢出`);
+  // 回归护栏：整块不超过 400px，防止再改回大卡片
+  if (grid.bottom - grid.top > 400) {
+    failures.push(`册次区总高 ${grid.bottom - grid.top}px 超过 400px`);
+  }
+  console.log(
+    `  ✓ 册次网格  ${grid.cols} 列 ${grid.rows} 行，单卡 ${grid.widths[0]}px，整块 ${grid.bottom - grid.top}px`
+  );
+
   // 真机回归：app.json 的静态 preloadRule 一次预载三个分包共 2483KB，
   // 超「单页面预载 ≤ 2MB」，上传报 80058。改成 routes.preload(book) 按册预载后，
   // 进首页只应预载当前册所属的那一个包。

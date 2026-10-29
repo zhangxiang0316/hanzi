@@ -85,6 +85,8 @@ Page({
         id: b.id,
         name: b.name,
         gradeText: GRADE_TEXT[b.grade] || b.grade + '年级',
+        // 网格里用单字标色（一年级上册 → 一），独立色块太占地方
+        shortGrade: (GRADE_TEXT[b.grade] || b.grade + '年级').slice(0, 1),
         chars: p.total,
         learned: p.learned,
         pct: p.pct,

@@ -3,6 +3,7 @@ package com.xiaoxiao.hanzi.ui.pages
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,10 +23,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.xiaoxiao.hanzi.data.Repo
@@ -39,7 +42,6 @@ import com.xiaoxiao.hanzi.ui.LocalPalette
 import com.xiaoxiao.hanzi.ui.ProgressBar
 import com.xiaoxiao.hanzi.ui.Screen
 import com.xiaoxiao.hanzi.ui.SectionHead
-import com.xiaoxiao.hanzi.ui.TinyPill
 
 /**
  * 首页：问候 / 连续天数 / 今日任务 / 八册入口 / 今日一字。
@@ -166,20 +168,29 @@ fun IndexPage(app: AppState) {
         }
 
         SectionHead("跟课本学", gradeSpan())
-        Repo.books.forEach { book ->
-            BookRow(
-                bookId = book.id,
-                name = book.name,
-                gradeText = gradeName(book.grade),
-                learned = app.progress.counts(Repo.bookChars(book.id)).learned,
-                total = book.stat.chars,
-                lessonCount = book.stat.lessons,
-                active = book.id == app.currentBook
-            ) {
-                app.setBook(book.id)
-                app.nav.push(Screen.Unit(book.id))
+        // 两列网格：8 册排成 4 行。整宽卡片一册一行时，八册要占掉一屏多，
+        // 首页得滚很久才能看到「今日一字」。
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Repo.books.chunked(2).forEach { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    row.forEach { book ->
+                        BookTile(
+                            bookId = book.id,
+                            name = book.name,
+                            gradeText = gradeName(book.grade),
+                            learned = app.progress.counts(Repo.bookChars(book.id)).learned,
+                            total = book.stat.chars,
+                            active = book.id == app.currentBook,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            app.setBook(book.id)
+                            app.nav.push(Screen.Unit(book.id))
+                        }
+                    }
+                    // 补齐末行，避免最后一张被拉伸
+                    repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
+                }
             }
-            Spacer(Modifier.height(10.dp))
         }
 
         if (dailyMeta != null) {
@@ -244,59 +255,73 @@ private fun StreakBadge(streak: Int) {
     }
 }
 
+/**
+ * 册次卡片（两列网格里的一格）。
+ *
+ * 只保留「册名 + 进度」两件事：整宽卡片还有年级色块、课数和箭头，
+ * 放大到八册后高度压过了页面其他所有内容。
+ */
 @Composable
-private fun BookRow(
+private fun BookTile(
     bookId: String,
     name: String,
     gradeText: String,
     learned: Int,
     total: Int,
-    lessonCount: Int,
     active: Boolean,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     val p = LocalPalette.current
     val color = HanziColors.bookColor(bookId)
     val pct = if (total > 0) Math.round(learned * 100f / total) else 0
+    // 册名首字就是年级（一年级上册 → 一），网格里用单字标色，省掉独立色块
+    val short = gradeText.take(1)
 
     Surface(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(Dimens.radiusCard.dp))
+        modifier
+            .clip(RoundedCornerShape(Dimens.radiusInner.dp))
+            .testTag("index-book-$bookId")
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(Dimens.radiusCard.dp),
+        shape = RoundedCornerShape(Dimens.radiusInner.dp),
         color = p.card,
         border = BorderStroke(
             if (active) 2.dp else 1.dp,
             if (active) color.copy(alpha = 0.55f) else p.line.copy(alpha = 0.8f)
         )
     ) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(color.copy(alpha = 0.16f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(gradeText, fontSize = 11.sp, color = color, fontWeight = FontWeight.Bold)
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = p.ink1)
-                    if (active) {
-                        Spacer(Modifier.width(6.dp))
-                        TinyPill("当前", color)
-                    }
+        Column(Modifier.padding(horizontal = 11.dp, vertical = 10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier
+                        .size(17.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(color.copy(alpha = 0.16f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(short, fontSize = 10.sp, color = color, fontWeight = FontWeight.Bold)
                 }
-                Spacer(Modifier.height(3.dp))
-                Text("$learned / $total 字 · $lessonCount 课", fontSize = 12.sp, color = p.ink3)
-                Spacer(Modifier.height(7.dp))
-                ProgressBar(pct, color = color, height = 6)
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    name,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = p.ink1,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                Text("$pct%", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = color)
             }
-            Spacer(Modifier.width(10.dp))
-            Text("›", fontSize = 20.sp, color = p.ink3)
+            Spacer(Modifier.height(7.dp))
+            ProgressBar(pct, color = color, height = 5)
+            Spacer(Modifier.height(5.dp))
+            Text(
+                "$learned / $total 字",
+                fontSize = 10.sp,
+                color = p.ink3,
+                maxLines = 1
+            )
         }
     }
 }

@@ -215,6 +215,54 @@ class LayoutTest {
     }
 
     @Test
+    fun `首页八个册次排成两列四行且整体不占过多高度`() {
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+        compose.waitForIdle()
+
+        val ids = Repo.books.map { it.id }
+        val positions = ids.map { compose.onNodeWithTag("index-book-$it").getBoundsInRoot() }
+
+        // 两列网格。整宽卡片一册一行时，八册要占掉一屏多，
+        // 首页得滚很久才能看到「今日一字」。
+        val rows = positions.map { it.top.value.toInt() }.distinct()
+        val cols = positions.map { it.left.value.toInt() }.distinct()
+        assertEquals("应排成 4 行，实际 $rows", 4, rows.size)
+        assertEquals("应排成 2 列，实际 $cols", 2, cols.size)
+
+        // 同一行两张等宽，且不超出屏幕
+        positions.groupBy { it.top.value.toInt() }.forEach { (_, cards) ->
+            assertEquals("同一行应 2 张", 2, cards.size)
+            val widths = cards.map { (it.right - it.left).value }
+            assertTrue("同一行卡片应等宽，实际 $widths", widths.max() - widths.min() < 1f)
+            assertTrue(
+                "最右一张不应超出屏幕，实际 ${cards.maxOf { it.right.value }}dp",
+                cards.maxOf { it.right.value } <= screenWidthDp()
+            )
+        }
+
+        // 整块不应超过 400dp —— 回归护栏，防止再改回大卡片
+        val top = positions.minOf { it.top.value }
+        val bottom = positions.maxOf { it.bottom.value }
+        assertTrue(
+            "册次区总高应 <= 400dp，实际 ${(bottom - top).toInt()}dp",
+            bottom - top <= 400f
+        )
+    }
+
+    @Test
+    fun `首页册次卡片文字不被截断`() {
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+        compose.waitForIdle()
+
+        // 最长的册名（四年级上册）必须完整显示
+        listOf("一年级上册", "四年级下册", "三年级上册").forEach {
+            compose.onNodeWithText(it).assertExists()
+        }
+    }
+
+    @Test
     fun `我的页徽章排成四列两行且整体不占过多高度`() {
         val app = state()
         compose.setContent { HanziTheme { Root(app) } }
