@@ -1,0 +1,71 @@
+<view class="page">
+  <view class="head">
+    <view class="head-left">
+      <text class="head-char hanzi">{{ch}}</text>
+      <view class="head-meta">
+        <text class="head-py">{{py}}</text>
+        <text class="head-sub">{{meta.r}} · {{meta.s}} 笔 · 第 {{strokeIndex + 1}} 笔</text>
+      </view>
+    </view>
+    <view class="head-right">
+      <text class="head-score">{{liveScore}}</text>
+      <text class="head-score-label">分</text>
+    </view>
+  </view>
+
+  <view class="steps">
+    <view
+      class="step {{index < strokeIndex ? 'ok' : ''}} {{index === strokeIndex ? 'now' : ''}}"
+      wx:for="{{steps}}"
+      wx:key="*this"
+    ></view>
+  </view>
+
+  <view class="stage">
+    <canvas
+      type="2d"
+      id="trace"
+      class="trace-canvas"
+      disable-scroll="{{true}}"
+      bindtouchstart="onTouchStart"
+      catchtouchmove="onTouchMove"
+      bindtouchend="onTouchEnd"
+    ></canvas>
+  </view>
+
+  <view class="hint">
+    <text class="hint-dot"></text>
+    <text class="hint-text">{{hint}}</text>
+  </view>
+
+  <view class="tools">
+    <view class="tool tap" bindtap="onHint">
+      <text class="tool-emoji">💡</text>
+      <text>看这一笔</text>
+    </view>
+    <view class="tool tap" bindtap="onUndo">
+      <text class="tool-emoji">↩️</text>
+      <text>退一笔</text>
+    </view>
+    <view class="tool tap" bindtap="onReset">
+      <text class="tool-emoji">🧽</text>
+      <text>擦掉重写</text>
+    </view>
+  </view>
+
+  <view class="result-mask" wx:if="{{done}}">
+    <view class="result-card pop">
+      <view class="result-title">{{stars >= 2 ? '写得真棒！' : '完成啦！'}}</view>
+      <view class="result-char hanzi">{{ch}}</view>
+      <view class="result-stars">
+        <text class="star {{stars >= 1 ? 'on' : ''}}">★</text>
+        <text class="star {{stars >= 2 ? 'on' : ''}}">★</text>
+        <text class="star {{stars >= 3 ? 'on' : ''}}">★</text>
+      </view>
+      <view class="result-score">得分 {{score}} 分</view>
+      <view class="result-tip">{{resultTip}}</view>
+      <button class="btn btn-primary btn-block" hover-class="btn-hover" bindtap="onAgain">再写一次</button>
+      <button class="btn btn-ghost btn-block result-next" hover-class="btn-hover" bindtap="onNext">下一个字</button>
+    </view>
+  </view>
+</view>

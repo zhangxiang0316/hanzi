@@ -3,13 +3,27 @@ const progress = require('../../utils/progress');
 const plan = require('../../utils/plan');
 const day = require('../../utils/day');
 const routes = require('../../utils/routes');
+const navMetrics = require('../../utils/nav-metrics');
 
 const BOOK_COLORS = {
   '1a': '#e9a93c',
   '1b': '#df8a4a',
   '2a': '#4f9e8d',
   '2b': '#5a8fbf',
+  '3a': '#9b7fb8',
+  '3b': '#b8763f',
+  '4a': '#6f8fb8',
+  '4b': '#3f7d6a',
 };
+
+const GRADE_TEXT = { 1: '一年级', 2: '二年级', 3: '三年级', 4: '四年级', 5: '五年级', 6: '六年级' };
+
+/** 首页副标题的年级范围：按实际册次算，避免加年级后写死的文案变成假的 */
+function gradeSpanText() {
+  const grades = catalog.getBooks().map((b) => b.grade);
+  if (!grades.length) return '';
+  return `${GRADE_TEXT[Math.min(...grades)]}到${GRADE_TEXT[Math.max(...grades)]}`;
+}
 
 const TIPS = [
   '写字前先看清结构，左右、上下、还是独体字？',
@@ -35,18 +49,26 @@ Page({
     dailyMeta: null,
     tip: '',
     statusBarHeight: 20,
+    navHeight: navMetrics.DEFAULT_NAV_HEIGHT,
+    capsuleReserve: 0,
   },
 
   onLoad() {
     const settings = progress.getSettings();
-    let statusBarHeight = 20;
-    try {
-      const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
-      statusBarHeight = info.statusBarHeight || 20;
-    } catch (e) {
-      statusBarHeight = 20;
-    }
-    this.setData({ currentBook: settings.book || '1a', statusBarHeight });
+    // 首页是自定义导航（navigationStyle: custom），页面从屏幕顶端开始画。
+    // 微信右上角的胶囊按钮是系统浮层，会压住页面内容，所以必须按它的实际位置
+    // 把「状态栏 + 导航带」整条让出来，否则右上角的连续打卡药丸会被盖住。
+    const metrics = navMetrics.measureHeader(wx);
+    this.setData({
+      currentBook: settings.book || '1a',
+      statusBarHeight: metrics.statusBarHeight,
+      navHeight: metrics.navHeight,
+      capsuleReserve: metrics.capsuleReserve,
+      gradeSpan: gradeSpanText(),
+    });
+    // 提前把当前这册的笔顺分包下下来（替代 app.json 的 preloadRule，
+    // 静态规则会把三个分包一起预载，超过 2MB 上限）
+    routes.preload(settings.book || '1a');
     this.refresh();
   },
 
@@ -62,7 +84,7 @@ Page({
       return {
         id: b.id,
         name: b.name,
-        gradeText: b.grade === 1 ? '一年级' : '二年级',
+        gradeText: GRADE_TEXT[b.grade] || b.grade + '年级',
         chars: p.total,
         learned: p.learned,
         pct: p.pct,
@@ -164,7 +186,7 @@ Page({
 
   onShareAppMessage() {
     return {
-      title: '小小识字家 —— 一二年级识字练习',
+      title: '小小识字家 —— 小学识字练习',
       path: '/pages/index/index',
     };
   },

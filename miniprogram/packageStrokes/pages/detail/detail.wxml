@@ -48,7 +48,9 @@
       <text class="strip-title">按笔顺写</text>
       <text class="strip-hint">点数字看这一笔</text>
     </view>
-    <scroll-view class="strip" scroll-x enable-flex show-scrollbar="{{false}}">
+    <!-- 笔画多的字（最多 23 画）换行展示，不做横向滚动：
+         横滑需要用户先发现"这里能滑"，而且滑动时容易误触到数字 -->
+    <view class="strip">
       <view
         class="chip tap {{strokeActive === item.i ? 'on' : ''}}"
         wx:for="{{strokeList}}"
@@ -56,7 +58,7 @@
         data-i="{{item.i}}"
         bindtap="onStrokeChip"
       >{{item.i + 1}}</view>
-    </scroll-view>
+    </view>
   </view>
 
   <view class="words" wx:if="{{meta.w.length}}">

@@ -224,9 +224,15 @@
   border: 2rpx solid rgba(233, 223, 205, 0.8);
   display: flex;
   flex-direction: column;
+  /* 显式居中，不要指望继承 —— 之前这里能居中纯属撞上了全局 .empty 的
+     text-align: center，一旦某册有了学习记录（去掉 empty 类）文字就变左对齐了 */
+  align-items: center;
+  text-align: center;
 }
 
-.book-chip.empty {
+/* 还没学过任何字的册次：淡化。注意别再用 .empty 这个名字，
+   它和 app.wxss 的全局空状态工具类同名，会互相干扰。 */
+.book-chip.is-new {
   opacity: 0.62;
 }
 

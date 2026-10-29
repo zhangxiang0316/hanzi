@@ -3,8 +3,16 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const hc = require('../miniprogram/packageStrokes/utils/hanzi-canvas.js');
+const hc = require('../miniprogram/utils/hanzi-canvas.js');
 const trace = require('../miniprogram/utils/trace.js');
+const strokeStore = require('../miniprogram/utils/stroke-store.js');
+const routes = require('../miniprogram/utils/routes.js');
+
+// 笔顺数据在小程序里由分包页面按需注册；Node 环境下手动注册一遍
+for (const book of Object.keys(routes.PACK_OF_BOOK)) {
+  const pack = routes.packOf(book);
+  strokeStore.register(book, () => require('../miniprogram/' + pack + '/data/strokes-' + book + '.js'));
+}
 
 const BOX = 300;
 const CH = '天';

@@ -188,16 +188,68 @@
 
 .seg {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  /* 多个册次在 320px 宽的机型上放不下一行，允许换行而不是溢出被截断 */
+  max-width: 100%;
   padding: 4rpx;
+  /* 单行时这一条是胶囊形；一旦换行（高度超过两倍行高）必须改小圆角，
+     见下面的 .seg-grid —— 999rpx 在两行的方块上会让边缘格子压到弧线上 */
   border-radius: 999rpx;
   background: #f4efe4;
+}
+
+/* 八个册次：固定 4 列 × 2 行，上下对齐。
+   直接 flex-wrap 会得到 6+2 —— 第二行只有两个格子居中，看着像"飘在外面"；
+   而且整块还是胶囊圆角，第一行和最后一行的边缘格子都压在圆弧上。
+   这里用 flex + 25% 基宽而不是 grid：grid / gap 在本项目是首次引入，
+   老安卓 WebView 内核不一定认，一旦不认整条选择器会塌成竖排；
+   flexbox + 百分比是最老的能力。4 × 25% 正好一行四个，第 5 个自动换行。 */
+.seg-grid {
+  display: flex;
+  flex-wrap: wrap;
+  /* 占满整行才谈得上 25% 的基准，所以这一行改成"标签在上、选择器在下" */
+  flex: 0 0 100%;
+  width: 100%;
+  box-sizing: border-box;
+  /* 两行的方块用普通圆角矩形，不是胶囊 */
+  border-radius: 20rpx;
+  /* 内边距要够大：格子外角必须落在圆角弧线内侧，否则角落格子会露出米色轨道。
+     圆角 r 时需要 padding ≥ r × (1 - 1/√2)，20rpx 圆角对应 3.05px，取 8rpx ≈ 4.2px 留余量 */
+  padding: 8rpx;
+}
+
+/* 「当前册次」一行：标签独占一行，选择器铺满下一行 */
+.setting-col {
+  flex-wrap: wrap;
+}
+
+.setting-col .setting-label {
+  width: 100%;
+  margin-bottom: 14rpx;
 }
 
 .seg-item {
   padding: 10rpx 20rpx;
   border-radius: 999rpx;
   font-size: 21rpx;
-  color: var(--ink-3);
+  /* 未选中态也要看得清：ink-3 在米色底上对比度仅 2.2，太浅 */
+  color: var(--ink-2);
+  /* 显式居中：不写的话靠内边距"看起来"居中，窄屏被压缩后文字会跑到左边 */
+  text-align: center;
+  /* 六个册次在 320px 宽的机型上会被挤扁，宁可整条换行也不要压缩文字 */
+  flex: 0 0 auto;
+}
+
+/* 四列等宽：25% 基宽 + border-box，四个正好一行，第五个换行 */
+.seg-grid .seg-item {
+  flex: 0 0 25%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 贴边排列时用较小的圆角，选中态才不会看着像独立的药丸 */
+  border-radius: 14rpx;
 }
 
 .seg-item.on {

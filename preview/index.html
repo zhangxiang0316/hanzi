@@ -13,17 +13,19 @@
         <span class="status-icons">•••• ▮</span>
       </div>
       <div class="navbar">
-        <span class="nav-back">‹</span>
+        <button id="nav-back" class="nav-back" type="button" aria-label="返回">‹</button>
         <span id="nav-title">小小识字家</span>
         <span class="nav-menu">···</span>
       </div>
+      <!-- 系统胶囊按钮：真实设备上它永远浮在页面之上、不让位 -->
+      <div id="nav-capsule" class="capsule" hidden><span>···</span><span class="capsule-dot">◉</span></div>
       <div id="page-scroll" class="page-scroll">
         <div id="page-root"></div>
       </div>
       <div class="tabbar">
-        <a class="tab" href="#/pages/index/index"><span class="tab-icon">▦</span><span>学字</span></a>
-        <a class="tab" href="#/pages/practice/practice"><span class="tab-icon">✎</span><span>练习</span></a>
-        <a class="tab" href="#/pages/profile/profile"><span class="tab-icon">☺</span><span>我的</span></a>
+        <a class="tab" data-tab="/pages/index/index" href="#/pages/index/index"><span class="tab-icon">▦</span><span>学字</span></a>
+        <a class="tab" data-tab="/pages/practice/practice" href="#/pages/practice/practice"><span class="tab-icon">✎</span><span>练习</span></a>
+        <a class="tab" data-tab="/pages/profile/profile" href="#/pages/profile/profile"><span class="tab-icon">☺</span><span>我的</span></a>
       </div>
       <div class="home-indicator"></div>
     </div>

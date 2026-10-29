@@ -16,9 +16,17 @@ const { createCanvas } = require('@napi-rs/canvas');
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'preview/renders');
-const hc = require('../miniprogram/packageStrokes/utils/hanzi-canvas.js');
+const hc = require('../miniprogram/utils/hanzi-canvas.js');
 const catalog = require('../miniprogram/utils/catalog.js');
-const { Player } = require('../miniprogram/packageStrokes/utils/animation.js');
+const { Player } = require('../miniprogram/utils/animation.js');
+const strokeStore = require('../miniprogram/utils/stroke-store.js');
+const routes = require('../miniprogram/utils/routes.js');
+
+// 小程序里笔顺数据由分包页面按需注册；脚本环境手动注册全部册次
+for (const book of Object.keys(routes.PACK_OF_BOOK)) {
+  const pack = routes.packOf(book);
+  strokeStore.register(book, () => require('../miniprogram/' + pack + '/data/strokes-' + book + '.js'));
+}
 
 const SIZE = 320;
 const failures = [];
@@ -97,6 +105,65 @@ for (const ch of samples) {
   check(h > 0.4 && h < 0.95, `${ch} 字形高度异常 ${(h * 100).toFixed(0)}%`);
   check(s.box.minX >= 0 && s.box.maxX <= SIZE - 1, `${ch} 墨迹越出画布`);
   savePNG(`${ch}.png`, canvas);
+}
+
+// ---------- 1.5 字形上下方向：不能镜像 ----------
+// 源数据曾是字体坐标系（y 向上），直接当屏幕坐标用会把整字上下颠倒。
+// 用重心位置做双重校验：字对（与系统字体比）+ 字间（与彼此比）。
+{
+  const centroidOf = (ch, useFont) => {
+    const { ctx } = newCtx('#ffffff');
+    if (useFont) {
+      ctx.fillStyle = '#000';
+      ctx.font = `${Math.round(SIZE * 0.8)}px "PingFang SC", "Hiragino Sans GB", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(ch, SIZE / 2, SIZE / 2);
+    } else {
+      const d = hc.get(ch);
+      if (!d) return null;
+      hc.drawStrokes(ctx, d, SIZE, 0, 0, { completed: d.n, showGhost: false });
+    }
+    const { data } = ctx.getImageData(0, 0, SIZE, SIZE);
+    let n = 0;
+    let sy = 0;
+    for (let y = 0; y < SIZE; y++) {
+      for (let x = 0; x < SIZE; x++) {
+        const i = (y * SIZE + x) * 4;
+        const lum = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114) / 255;
+        const alpha = useFont ? data[i] < 140 : data[i + 3] > 40 && lum < 0.55;
+        if (alpha) {
+          n++;
+          sy += y;
+        }
+      }
+    }
+    return n ? sy / n / SIZE : null;
+  };
+
+  // (a) 字间：上的底部长横让它重心必定低于下
+  const up = centroidOf('上', false);
+  const down = centroidOf('下', false);
+  check(up != null && down != null, '上/下 渲染失败');
+  check(up > down + 0.08, `字形上下颠倒：“上”的重心(${up.toFixed(2)})应明显低于“下”(${down.toFixed(2)})`);
+
+  // (b) 字对：与系统字体渲染的重心比对，容忍字体差异
+  const compared = [];
+  for (const ch of ['上', '下', '天', '由', '甲', '春', '月']) {
+    const mine = centroidOf(ch, false);
+    const ref = centroidOf(ch, true);
+    if (mine == null || ref == null) continue;
+    compared.push({ ch, diff: Math.abs(mine - ref) });
+    check(
+      Math.abs(mine - ref) < 0.09,
+      `${ch} 垂直重心与系统字体相差 ${Math.abs(mine - ref).toFixed(2)}，疑似上下镜像`
+    );
+  }
+  check(compared.length >= 4, '可对比的字太少，方向检查无效');
+  console.log(
+    '  方向: ' +
+      compared.map((c) => `${c.ch}Δ${c.diff.toFixed(2)}`).join(' ')
+  );
 }
 
 // ---------- 2. 笔顺推进：墨迹必须递增 ----------

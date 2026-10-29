@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * 数据构建脚本
- * 输入：content/source/*（统编版 1-2 年级识字表、组词、部首、Make Me a Hanzi 笔顺）
+ * 输入：content/source/*（统编版 1-4 年级识字表、组词、部首、Make Me a Hanzi 笔顺）
  * 输出：miniprogram/data/*.js（小程序可直接 require 的 CommonJS 模块）
  *
  * 笔顺数据采用自定义二进制编码 + base64，压缩后约为原始 JSON 的 1/4。
@@ -20,11 +20,33 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = path.join(ROOT, 'content/source');
 const OUT = path.join(ROOT, 'miniprogram/data');
-const OUT_STROKES = path.join(ROOT, 'miniprogram/packageStrokes/data');
-const BOOK_IDS = ['1a', '1b', '2a', '2b'];
-const EXPECT = { '1a': 300, '1b': 400, '2a': 450, '2b': 450 };
-const VERSION = 2;
+// 笔顺数据按年级分包：单个分包上限 2MB，全塞一个会超
+const PACK_OF_BOOK = {
+  '1a': 'packageStrokes',
+  '1b': 'packageStrokes',
+  '2a': 'packageStrokes',
+  '2b': 'packageStrokes',
+  '3a': 'packageStrokes3',
+  '3b': 'packageStrokes3',
+  '4a': 'packageStrokes4',
+  '4b': 'packageStrokes4',
+};
+const packDir = (book) =>
+  path.join(ROOT, 'miniprogram', PACK_OF_BOOK[book], 'data');
+const BOOK_IDS = ['1a', '1b', '2a', '2b', '3a', '3b', '4a', '4b'];
+const EXPECT = { '1a': 300, '1b': 400, '2a': 450, '2b': 450, '3a': 250, '3b': 250, '4a': 250, '4b': 250 };
+const TOTAL_CHARS = Object.values(EXPECT).reduce((a, b) => a + b, 0);
+// 少数汉字会在高年级作为复习字再次出现（如「希/代/章」在 2a 学过，3b 又列一次；
+// 「兰/杀/兵」在 2a、「眠」在 3a、「仅/栖」在 3a，四年级又各列一次）。
+// 字库按首次出现去重，所以唯一字数 = 各册之和 - 跨册重复数。
+const CROSS_BOOK_REPEATS = ['希', '代', '章', '眠', '兰', '杀', '兵', '仅', '栖'];
+const UNIQUE_CHARS = TOTAL_CHARS - CROSS_BOOK_REPEATS.length;
+const VERSION = 3;
 const SCALE = 6; // 坐标量化步长：6/1024 ≈ 0.6%，人眼不可见，体积约省 1/3
+// Make Me a Hanzi 的路径坐标是字体坐标系：y 轴向上，基线在 y = 900。
+// 画布是 y 轴向下，所以必须翻转一次，否则整个字会上下镜像（“上”写成“下”）。
+// 标准变换即 SVG 里的 scale(1, -1) translate(0, -900)，等价于 y' = 900 - y。
+const FLIP_BASE = 900;
 const OP = { M: 0, L: 1, Q: 2, C: 3, Z: 4 };
 const ARGC = [2, 2, 4, 6, 0];
 
@@ -49,7 +71,9 @@ export function parsePath(d) {
   return cmds;
 }
 
-const quant = (v) => Math.max(0, Math.min(255, Math.round(v / SCALE)));
+const clampByte = (v) => Math.max(0, Math.min(255, v));
+const quantX = (v) => clampByte(Math.round(v / SCALE));
+const quantY = (v) => clampByte(Math.round((FLIP_BASE - v) / SCALE));
 
 function encodeChar(strokes, medians) {
   const parts = [];
@@ -62,7 +86,8 @@ function encodeChar(strokes, medians) {
     const bytes = [];
     for (const c of cmds) {
       bytes.push(c[0]);
-      for (let k = 1; k < c.length; k++) bytes.push(quant(c[k]));
+      // 参数成对出现（x, y），奇数位是 x，偶数位是 y
+      for (let k = 1; k < c.length; k++) bytes.push(k % 2 === 1 ? quantX(c[k]) : quantY(c[k]));
     }
     u16(bytes.length);
     for (const b of bytes) parts.push(b);
@@ -71,7 +96,7 @@ function encodeChar(strokes, medians) {
   for (const m of medians) {
     if (!m.length || m.length > 255) throw new Error('中线点数异常');
     u8(m.length);
-    for (const p of m) { parts.push(quant(p[0]), quant(p[1])); }
+    for (const p of m) { parts.push(quantX(p[0]), quantY(p[1])); }
   }
   return Buffer.from(parts).toString('base64');
 }
@@ -108,7 +133,9 @@ function main() {
   const wordDict = readJSON(path.join(SRC, 'words.json'));
   const radicals = readJSON(path.join(SRC, 'radicals.json'));
 
-  if (volumes.length !== 4) throw new Error(`册数异常: ${volumes.length}`);
+  if (volumes.length !== BOOK_IDS.length) {
+    throw new Error(`册数异常: ${volumes.length}，期望 ${BOOK_IDS.length}（${BOOK_IDS.join('/')}）`);
+  }
 
   const catalog = {
     version: 1,
@@ -205,6 +232,45 @@ function main() {
     }
   }
 
+  // 少数「会写字」并不在任何一课的识字表里（如「匀」「剩」：教材把字直接放进
+  // 写字表，默认学生已认识）。这些字照样要能点开认字/描红，所以补进字库。
+  const writeOnly = [];
+  for (const book of catalog.books) {
+    for (const lid of book.lessons) {
+      for (const c of catalog.lessons[lid].write) {
+        if (allChars.has(c)) continue;
+        const entry = rawChars[c];
+        if (!entry) throw new Error(`${lid} 写字表存在字典外汉字 ${c}`);
+        if (writeOnly.some((w) => w.ch === c)) continue;
+        writeOnly.push({ ch: c, book: entry.book, lesson: lid, entry });
+      }
+    }
+  }
+  for (const { ch, book, lesson, entry } of writeOnly) {
+    if (BOOK_IDS.indexOf(book) < 0) throw new Error(`${ch} 所属册次 ${book} 不在构建范围内`);
+    const file = path.join(SRC, 'strokes', `${ch.codePointAt(0).toString(16)}.json`);
+    if (!fs.existsSync(file)) throw new Error(`缺少笔顺数据: ${ch}`);
+    const stroke = readJSON(file);
+    if (!stroke.strokes?.length || stroke.strokes.length !== stroke.medians.length) {
+      throw new Error(`${ch} 笔顺数据异常`);
+    }
+    if (!radicals[ch]) throw new Error(`${ch} 缺少部首`);
+    const meta = {
+      py: entry.py,
+      w: pickWords(ch, entry, wordDict),
+      r: radicals[ch],
+      s: stroke.strokes.length,
+      b: book,
+      l: entry.first || lesson,
+      x: entry.write || lesson,
+    };
+    const extraReadings = (entry.readings || []).filter((r) => r.py && r.lesson);
+    if (extraReadings.length > 1) meta.rd = extraReadings.map((r) => ({ p: r.py, l: r.lesson }));
+    allChars.set(ch, meta);
+    charBook.set(ch, book);
+  }
+
+
   for (const [c, meta] of allChars) {
     const book = charBook.get(c);
     const file = path.join(SRC, 'strokes', `${c.codePointAt(0).toString(16)}.json`);
@@ -212,7 +278,20 @@ function main() {
     strokesByBook[book][c] = encodeChar(stroke.strokes, stroke.medians);
   }
 
-  if (allChars.size !== 1600) throw new Error(`字库总数 ${allChars.size} != 1600`);
+  // 去重后字数必须对得上，否则说明有字被漏掉或重复收录
+  if (allChars.size !== UNIQUE_CHARS + writeOnly.length) {
+    throw new Error(
+      `字库总数 ${allChars.size} != ${UNIQUE_CHARS + writeOnly.length}` +
+        `（各册识字合计 ${TOTAL_CHARS}，跨册重复 ${CROSS_BOOK_REPEATS.length}，仅写字表 ${writeOnly.length}）`
+    );
+  }
+  if (writeOnly.length) {
+    console.log('  仅出现在写字表的字:', writeOnly.map((w) => w.ch).join(''));
+  }
+  // 跨册复习字必须仍能取到数据，否则高年级课文会点不开
+  for (const c of CROSS_BOOK_REPEATS) {
+    if (!allChars.has(c)) throw new Error(`跨册复习字 ${c} 缺失`);
+  }
 
   fs.mkdirSync(OUT, { recursive: true });
   const write = (name, obj, dir) => {
@@ -220,12 +299,14 @@ function main() {
     fs.writeFileSync(path.join(dir || OUT, name), code);
     return Buffer.byteLength(code);
   };
-  fs.mkdirSync(OUT_STROKES, { recursive: true });
+  for (const book of BOOK_IDS) fs.mkdirSync(packDir(book), { recursive: true });
 
   const sizes = {};
   sizes['catalog.js'] = write('catalog.js', catalog);
   sizes['meta.js'] = write('meta.js', Object.fromEntries(allChars));
-  for (const book of BOOK_IDS) sizes[`strokes-${book}.js`] = write(`strokes-${book}.js`, strokesByBook[book], OUT_STROKES);
+  for (const book of BOOK_IDS) {
+    sizes[`strokes-${book}.js`] = write(`strokes-${book}.js`, strokesByBook[book], packDir(book));
+  }
 
   const total = Object.values(sizes).reduce((a, b) => a + b, 0);
   fs.mkdirSync(path.join(ROOT, 'content/build'), { recursive: true });

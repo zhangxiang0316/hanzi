@@ -1,5 +1,20 @@
+/* 自定义导航带：品牌名与右上角胶囊垂直居中对齐 */
+.nav-band {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  padding-left: 32rpx;
+}
+
+.nav-brand {
+  font-size: 32rpx;
+  font-weight: 700;
+  letter-spacing: 1rpx;
+  color: var(--ink-1);
+}
+
 .hero {
-  padding: 24rpx 32rpx 8rpx;
+  padding: 12rpx 32rpx 8rpx;
 }
 
 .hero-row {

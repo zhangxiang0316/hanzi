@@ -1,6 +1,7 @@
 const catalog = require('../../utils/catalog');
 const progress = require('../../utils/progress');
 const plan = require('../../utils/plan');
+const routes = require('../../utils/routes');
 
 const UNIT_COLORS = ['#e9a93c', '#4f9e8d', '#df8a4a', '#5a8fbf', '#8d7cc4', '#cf6f8d', '#6fa96a', '#c98a3f'];
 
@@ -15,6 +16,8 @@ Page({
     this.bookId = options.book || catalog.defaultBook();
     const book = catalog.getBook(this.bookId);
     wx.setNavigationBarTitle({ title: book ? book.name : '选一册' });
+    // 用户已经选定册次，这时预载对应分包最准，不会下多余的数据
+    routes.preload(this.bookId);
   },
 
   onShow() {

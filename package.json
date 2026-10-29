@@ -2,7 +2,7 @@
   "name": "hanzi-kids",
   "version": "1.0.0",
   "private": true,
-  "description": "小小识字家 —— 面向小学一二年级的汉字学习微信小程序",
+  "description": "小小识字家 —— 面向小学一到三年级（统编版）的汉字学习微信小程序",
   "scripts": {
     "build:data": "node scripts/build-data.mjs",
     "build:icons": "node scripts/gen-icons.mjs",
@@ -11,7 +11,8 @@
     "render:check": "node scripts/render-check.mjs",
     "preview": "node scripts/preview.mjs",
     "preview:shots": "node scripts/preview.mjs --shots",
-    "check": "npm run build:data && npm run lint && npm test && npm run render:check"
+    "check": "npm run build:data && npm run build:icons && npm run lint && npm test && npm run render:check",
+    "fetch:strokes": "node scripts/fetch-strokes.mjs"
   },
   "engines": {
     "node": ">=18"

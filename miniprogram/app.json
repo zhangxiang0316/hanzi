@@ -18,18 +18,24 @@
         "pages/detail/detail",
         "pages/write/write"
       ]
+    },
+    {
+      "root": "packageStrokes3",
+      "name": "strokes3",
+      "pages": [
+        "pages/detail/detail",
+        "pages/write/write"
+      ]
+    },
+    {
+      "root": "packageStrokes4",
+      "name": "strokes4",
+      "pages": [
+        "pages/detail/detail",
+        "pages/write/write"
+      ]
     }
   ],
-  "preloadRule": {
-    "pages/index/index": {
-      "network": "all",
-      "packages": ["strokes"]
-    },
-    "pages/lesson/lesson": {
-      "network": "all",
-      "packages": ["strokes"]
-    }
-  },
   "window": {
     "navigationBarBackgroundColor": "#FBF7EE",
     "navigationBarTextStyle": "black",

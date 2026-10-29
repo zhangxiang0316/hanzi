@@ -4,21 +4,46 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 const catalog = require('../miniprogram/utils/catalog.js');
-const { decode } = require('../miniprogram/packageStrokes/utils/stroke-codec.js');
+const { decode } = require('../miniprogram/utils/stroke-codec.js');
+const routes = require('../miniprogram/utils/routes.js');
 
-const BOOKS = ['1a', '1b', '2a', '2b'];
+/** 按册取笔顺数据；分包归属由 routes 统一决定，避免测试里再抄一份映射 */
+const strokeStoreOf = (book) =>
+  require('../miniprogram/' + routes.packOf(book) + '/data/strokes-' + book + '.js');
 
-test('四册共 1600 个生字', () => {
+const BOOKS = ['1a', '1b', '2a', '2b', '3a', '3b', '4a', '4b'];
+
+// 各册识字量（统编版）。少数汉字会在高年级作为复习字再次出现
+// （「希/代/章」2a 学过、3b 又列一次；「兰/杀/兵/眠/仅/栖」同理），
+// 字库按首次出现去重。
+const REPEATS = ['希', '代', '章', '眠', '兰', '杀', '兵', '仅', '栖'];
+const BOOK_SUM = 300 + 400 + 450 + 450 + 250 + 250 + 250 + 250;
+// 只出现在写字表、不在任何识字表，但也进字库（要能认、能描红）
+const WRITE_ONLY = ['匀', '剩', '训', '忧', '毒'];
+const UNIQUE = BOOK_SUM - REPEATS.length + WRITE_ONLY.length;
+
+test('八册去重后共 2596 个字（含仅写字表 5 字）', () => {
   const all = catalog.getAllChars();
-  assert.equal(all.length, 1600);
+  assert.equal(all.length, UNIQUE);
+  // 各册识字表的并集（不含仅写字表的 2 字）
   const union = new Set();
   for (const b of BOOKS) for (const ch of catalog.bookChars(b)) union.add(ch);
-  assert.equal(union.size, 1600);
+  assert.equal(union.size, UNIQUE - WRITE_ONLY.length);
+  // 字库是识字表并集 + 仅写字表的字
+  for (const ch of WRITE_ONLY) assert.ok(!union.has(ch), ch + ' 不应算作识字表');
+  // 跨册复习字、仅写字表的字都必须能取到完整数据，否则课文里点不开
+  for (const ch of REPEATS.concat(WRITE_ONLY)) {
+    assert.ok(catalog.getMeta(ch), '字库缺字: ' + ch);
+  }
 });
 
 test('每册字数与教材一致', () => {
-  assert.deepEqual(BOOKS.map((b) => catalog.bookStat(b).chars), [300, 400, 450, 450]);
-  assert.equal(catalog.getBooks().length, 4);
+  assert.deepEqual(
+    BOOKS.map((b) => catalog.bookStat(b).chars),
+    [300, 400, 450, 450, 250, 250, 250, 250]
+  );
+  assert.equal(catalog.getBooks().length, 8);
+  assert.equal(BOOKS.reduce((n, b) => n + catalog.bookStat(b).chars, 0), BOOK_SUM);
 });
 
 test('每个字都有拼音、部首、笔画数、组词和课文出处', () => {
@@ -52,12 +77,12 @@ test('写字表中的字都有练字标记', () => {
   assert.ok(count >= 800, '写字表数量异常: ' + count);
 });
 
-test('全部 1600 字笔顺数据可解码且与笔画数一致', () => {
+test('全部生字笔顺数据可解码且与笔画数一致', () => {
   const bad = [];
   let totalStrokes = 0;
   for (const ch of catalog.getAllChars()) {
     const m = catalog.getMeta(ch);
-    const store = require('../miniprogram/packageStrokes/data/strokes-' + m.b + '.js');
+    const store = strokeStoreOf(m.b);
     const raw = store[ch];
     if (!raw) { bad.push(ch + ':无笔顺'); continue; }
     const d = decode(raw);
@@ -106,4 +131,48 @@ test('课文顺序与单元结构完整', () => {
     }
     assert.equal(seen.size, b.lessons.length);
   }
+});
+
+test('笔顺坐标已翻转为屏幕坐标（y 向下），否则整字上下镜像', () => {
+  // 源数据是字体坐标系（y 向上、基线 900）。构建时必须翻转。
+  // 用部首位置固定的两个字做“地标”：
+  //   上 —— 第三笔是底部长横，必须落在下半格
+  //   下 —— 第一笔是顶部横画，必须落在上半格
+  const store = strokeStoreOf;
+  const yOf = (ch, strokeIndex) => {
+    const m = catalog.getMeta(ch);
+    const data = decode(store(m.b)[ch]);
+    const ys = data.medians[strokeIndex].map((p) => p[1]);
+    return (Math.min.apply(null, ys) + Math.max.apply(null, ys)) / 2;
+  };
+
+  const shangBottom = yOf('上', 2); // 0-based：第 3 笔
+  const xiaTop = yOf('下', 0); // 第 1 笔
+  assert.ok(
+    shangBottom > 1024 * 0.7,
+    '“上”的底横应落在下半格，实际 y=' + shangBottom.toFixed(0) + '（说明坐标未翻转）'
+  );
+  assert.ok(
+    xiaTop < 1024 * 0.35,
+    '“下”的顶横应落在上半格，实际 y=' + xiaTop.toFixed(0) + '（说明坐标未翻转）'
+  );
+
+  // 全部字的墨迹必须落在 0-1024 内且大致居中（翻转基准写错会整体偏移）
+  const off = [];
+  for (const ch of ['天', '地', '人', '日', '月', '水', '火', '山', '春', '花']) {
+    const m = catalog.getMeta(ch);
+    const data = decode(store(m.b)[ch]);
+    let min = Infinity;
+    let max = -Infinity;
+    for (const med of data.medians) {
+      for (const p of med) {
+        if (p[1] < min) min = p[1];
+        if (p[1] > max) max = p[1];
+      }
+    }
+    if (min < 0 || max > 1024) off.push(ch + ':越界 ' + min + '-' + max);
+    const mid = (min + max) / 2;
+    if (mid < 420 || mid > 620) off.push(ch + ':垂直偏离 ' + Math.round(mid));
+  }
+  assert.deepEqual(off, []);
 });

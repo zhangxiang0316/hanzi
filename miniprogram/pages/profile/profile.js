@@ -1,6 +1,8 @@
 const catalog = require('../../utils/catalog');
 const progress = require('../../utils/progress');
 
+const GRADE_TEXT = { 1: '一年级', 2: '二年级', 3: '三年级', 4: '四年级', 5: '五年级', 6: '六年级' };
+
 Page({
   data: {
     learned: 0,
@@ -29,12 +31,20 @@ Page({
     const settings = progress.getSettings();
     const learned = progress.totalLearned();
     const total = catalog.getAllChars().length;
+    // 年级范围不能写死"一到三年级"：加四年级后会变成假的。按实际册次算。
+    const grades = catalog.getBooks().map((b) => b.grade);
+    const gradeSpan = `${GRADE_TEXT[Math.min(...grades)]}到${GRADE_TEXT[Math.max(...grades)]}`;
+    // 按每天 5 个新字估算学完所需天数
+    const daysNeeded = Math.ceil(total / 5);
     const badges = progress.getBadges();
     const days = progress.activeDays();
     this.setData({
       learned,
       mastered: progress.totalMastered(),
       pct: Math.round((learned / total) * 100),
+      total,
+      gradeSpan,
+      daysNeeded,
       streak: progress.getStreak(),
       days,
       writeStars: progress.writeStarsTotal(),

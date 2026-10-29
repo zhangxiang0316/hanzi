@@ -47,6 +47,27 @@ function fillRect(c, x, y, w, h, color) {
   }
 }
 
+/**
+ * 擦除一块区域（把 alpha 归零）。
+ * 注意不能用 fillRect(…, [0,0,0]) 代替 —— 那是在涂黑色，会留下一条实心黑边。
+ * 传入的坐标必须是超采样空间的整数，落在 SS 的整数倍上，切边才不会发虚。
+ */
+function erase(c, x, y, w, h) {
+  const x0 = Math.max(0, Math.floor(x));
+  const y0 = Math.max(0, Math.floor(y));
+  const x1 = Math.min(c.w, Math.ceil(x + w));
+  const y1 = Math.min(c.h, Math.ceil(y + h));
+  for (let yy = y0; yy < y1; yy++) {
+    for (let xx = x0; xx < x1; xx++) {
+      const i = (yy * c.w + xx) * 4;
+      c.data[i] = 0;
+      c.data[i + 1] = 0;
+      c.data[i + 2] = 0;
+      c.data[i + 3] = 0;
+    }
+  }
+}
+
 /** 圆角矩形（实心或环形），用像素中心到圆角矩形的距离判断 */
 function roundRect(c, x, y, w, h, r, color, thickness) {
   const t = thickness || 0;
@@ -105,6 +126,34 @@ function line(c, x1, y1, x2, y2, width, color) {
   }
 }
 
+/** 擦除一条粗线段（圆头），用于在实心图形里切出缝隙 */
+function eraseLine(c, x1, y1, x2, y2, width) {
+  const r = width / 2;
+  const minX = Math.max(0, Math.floor(Math.min(x1, x2) - r - 2));
+  const maxX = Math.min(c.w, Math.ceil(Math.max(x1, x2) + r + 2));
+  const minY = Math.max(0, Math.floor(Math.min(y1, y2) - r - 2));
+  const maxY = Math.min(c.h, Math.ceil(Math.max(y1, y2) + r + 2));
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const len2 = dx * dx + dy * dy;
+  for (let yy = minY; yy < maxY; yy++) {
+    for (let xx = minX; xx < maxX; xx++) {
+      const px = xx + 0.5;
+      const py = yy + 0.5;
+      let t = len2 ? ((px - x1) * dx + (py - y1) * dy) / len2 : 0;
+      t = Math.max(0, Math.min(1, t));
+      const d = Math.hypot(px - (x1 + dx * t), py - (y1 + dy * t));
+      if (d <= r) {
+        const i = (yy * c.w + xx) * 4;
+        c.data[i] = 0;
+        c.data[i + 1] = 0;
+        c.data[i + 2] = 0;
+        c.data[i + 3] = 0;
+      }
+    }
+  }
+}
+
 function poly(c, pts, color) {
   const xs = pts.map((p) => p[0]);
   const ys = pts.map((p) => p[1]);
@@ -141,35 +190,45 @@ function iconLearn(c, color) {
 }
 
 function iconPractice(c, color) {
-  // 铅笔：斜向笔身 + 笔尖
-  const angle = -45 * (Math.PI / 180);
-  const cx = 40.5;
-  const cy = 43;
-  const L = 46;
-  const halfW = 9;
+  // 铅笔：斜 45° 摆在画面中间，笔尖朝左下。
+  // 几何全部先用「逻辑像素」算，最后统一乘 s() —— 直接传逻辑坐标会
+  // 把整支笔画到画布左上角的一小块里（这个 icon 曾经就是这样）。
+  const angle = -Math.PI / 4; // 轴向：右上
   const ux = Math.cos(angle);
   const uy = Math.sin(angle);
-  const px = -uy;
+  const px = -uy; // 垂直于轴向
   const py = ux;
-  const a = [cx + ux * L * 0.45, cy + uy * L * 0.45];
-  const b = [cx + ux * L * 0.45 + px * halfW, cy + uy * L * 0.45 + py * halfW];
-  const d = [a[0] - ux * L, a[1] - uy * L];
-  const e = [b[0] - ux * L, b[1] - uy * L];
-  const c2 = [d[0] + px * halfW, d[1] + py * halfW];
-  const f = [e[0] + px * halfW, e[1] + py * halfW];
-  poly(c, [a, b, f, c2], color);
-  // 笔尖
-  const tip = [c2[0] - ux * 10, c2[1] - uy * 10];
-  poly(c, [c2, f, tip], color);
-  // 笔帽
-  line(c, a[0] - ux * 4, a[1] - uy * 4, b[0] - ux * 4, b[1] - uy * 4, s(3), color);
-}
+  const cx = 40.5;
+  const cy = 40.5;
+  const half = 31; // 总长 62（45° 旋转后 bbox 约 47，与其它两个图标视觉体量接近）
+  const halfW = 6.5; // 宽 13
+  const tipLen = 15; // 笔尖长度
 
+  const at = (k, m) => [cx + ux * k + px * m, cy + uy * k + py * m];
+  const tip = at(-half, 0);
+  const base = at(-half + tipLen, 0); // 笔尖与笔身的分界
+  const end = at(half, 0);
+  const b1 = at(-half + tipLen, halfW);
+  const b2 = at(-half + tipLen, -halfW);
+  const e1 = at(half, halfW);
+  const e2 = at(half, -halfW);
+
+  const pts = (list) => list.map((q) => [s(q[0]), s(q[1])]);
+  poly(c, pts([b1, e1, e2, b2]), color); // 笔身
+  poly(c, pts([tip, b1, b2]), color); // 笔尖
+  // 笔尖与笔身之间擦出一道光缝：同色描线在实心块里是看不见的
+  const g1 = at(-half + tipLen, -halfW - 1);
+  const g2 = at(-half + tipLen, halfW + 1);
+  eraseLine(c, s(g1[0]), s(g1[1]), s(g2[0]), s(g2[1]), s(2.2));
+}
 function iconProfile(c, color) {
-  circle(c, s(40.5), s(28), s(13), color);
-  roundRect(c, s(16), s(46), s(49), s(34), s(17), color);
-  // 挖空底部，形成肩部
-  fillRect(c, s(0), s(72), s(81), s(9), [0, 0, 0], 0);
+  circle(c, s(40.5), s(27), s(13), color);
+  // 肩膀：圆角矩形，底部超出画布，靠下面的 erase 切平
+  roundRect(c, s(15), s(46), s(51), s(40), s(18), color);
+  // 切掉底部，形成"半身像"的平底。
+  // 必须用 erase（清 alpha）；用 fillRect 涂黑色会留下一条黑线，
+  // tabBar 上看起来就是「图标下面多了一条横线」。
+  erase(c, 0, s(73), c.w, c.h);
 }
 
 // ---------- PNG 编码 ----------

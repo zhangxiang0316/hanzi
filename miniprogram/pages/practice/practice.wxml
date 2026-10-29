@@ -52,7 +52,7 @@
   </view>
   <view class="book-row">
     <view
-      class="book-chip tap {{item.learned ? '' : 'empty'}}"
+      class="book-chip tap {{item.learned ? '' : 'is-new'}}"
       wx:for="{{books}}"
       wx:key="id"
       data-id="{{item.id}}"

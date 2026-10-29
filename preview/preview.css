@@ -61,9 +61,35 @@ body {
 }
 
 .nav-back {
-  width: 28px;
-  font-size: 22px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  margin-left: -6px;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: 24px;
   font-weight: 400;
+  line-height: 1;
+  color: #25332d;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.nav-back:hover {
+  background: rgba(37, 51, 45, 0.07);
+}
+
+.nav-back:active {
+  background: rgba(37, 51, 45, 0.14);
+}
+
+.nav-back[hidden] {
+  display: none;
+}
+
+.tabbar a.on {
+  color: #3e8e7e;
 }
 
 .nav-menu {
@@ -83,7 +109,51 @@ body {
 }
 
 .page-host {
+  display: block; /* <page> 是未知元素，默认 inline */
   min-height: 100%;
+}
+
+/* 系统胶囊按钮（自定义导航页面才显示，默认导航由 .nav-menu 代表） */
+.capsule {
+  position: absolute;
+  top: 48px;
+  right: 7px;
+  width: 87px;
+  height: 32px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(37, 51, 45, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+  color: #25332d;
+  font-size: 15px;
+  line-height: 1;
+  z-index: 6;
+}
+
+.capsule[hidden] {
+  display: none;
+}
+
+.capsule-dot {
+  font-size: 13px;
+}
+
+/* 自定义导航：微信不画导航栏，状态栏直接盖在页面内容上，页面从 y=0 开始 */
+body[data-nav-style="custom"] .navbar {
+  display: none;
+}
+
+body[data-nav-style="custom"] .statusbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  pointer-events: none;
 }
 
 .tabbar {

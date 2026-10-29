@@ -91,6 +91,16 @@
 
   const toasts = [];
   const screen = { width: 390, height: 844 };
+  window.__subpackageLog = window.__subpackageLog || [];
+
+  // 微信右上角胶囊按钮的真实几何（iPhone 上约 87×32，右边距 7，上沿距状态栏底 4）。
+  // 自定义导航页面必须按它让位，否则内容会被盖住。
+  const CAPSULE = { width: 87, height: 32, right: 7, topGap: 4 };
+  function capsuleRect() {
+    const top = 44 + CAPSULE.topGap;
+    const right = screen.width - CAPSULE.right;
+    return { top, bottom: top + CAPSULE.height, height: CAPSULE.height, width: CAPSULE.width, right, left: right - CAPSULE.width };
+  }
 
   const wx = {
     getStorageSync: (k) => {
@@ -107,6 +117,7 @@
       pixelRatio: Math.min(3, window.devicePixelRatio || 2),
       safeArea: { top: 44, bottom: screen.height - 34 },
     }),
+    getMenuButtonBoundingClientRect: () => capsuleRect(),
     getSystemInfoSync: () => ({
       windowWidth: screen.width,
       windowHeight: screen.height,
@@ -141,15 +152,20 @@
     },
     redirectTo: ({ url }) => {
       eventLog.push({ type: 'redirectTo', url });
-      runtime.navigate(url);
+      runtime.redirect(url);
     },
     switchTab: ({ url }) => {
       eventLog.push({ type: 'switchTab', url });
-      runtime.navigate(url);
+      runtime.switchTab(url);
     },
-    navigateBack: () => {
-      eventLog.push({ type: 'navigateBack' });
-      runtime.back();
+    reLaunch: ({ url }) => {
+      eventLog.push({ type: 'reLaunch', url });
+      runtime.switchTab(url);
+    },
+    navigateBack: (opts) => {
+      const d = (opts && opts.delta) || 1;
+      eventLog.push({ type: 'navigateBack', delta: d });
+      runtime.back(d);
     },
     showToast: (o) => {
       toasts.push(o.title);
@@ -158,6 +174,12 @@
     showModal: (o) => {
       // 预览里默认点“确定”
       if (o.success) o.success({ confirm: true, cancel: false });
+    },
+    // 分包在浏览器里早就都预加载好了，这里只记录调用，供断言检查
+    loadSubpackage: (opts) => {
+      const name = opts && opts.name ? opts.name : '';
+      if (name && window.__subpackageLog.indexOf(name) < 0) window.__subpackageLog.push(name);
+      if (opts && typeof opts.success === 'function') opts.success({});
     },
     setNavigationBarTitle: ({ title }) => {
       runtime.setTitle(title);
@@ -311,7 +333,9 @@
       return;
     }
     if (node.tag === 'canvas') {
-      // 复用同一个 canvas 元素：页面 JS 里保存的 node/ctx 在反复 setData 后依然有效
+      // 复用同一个 canvas 元素：页面 JS 里保存的 node/ctx 在反复 setData 后依然有效。
+      // 注意：绝不能删 width/height 属性 —— 那会把位图重置成默认的 300×150，
+      // 而 CSS 尺寸不变，于是画面被拉伸放大且裁切（点“笔顺”时的显示异常就是这个）。
       const pool = page.__canvasPool;
       const i = page.__canvasUsed++;
       if (!pool[i]) {
@@ -319,13 +343,21 @@
         c.setAttribute('type', '2d');
         c.width = 300;
         c.height = 150;
+        c.__listeners = [];
         pool[i] = c;
       } else {
-        // 复用：清掉上一轮的属性与类名，但保留位图与 ctx 变换
         const reuse = pool[i];
-        while (reuse.attributes.length) reuse.removeAttribute(reuse.attributes[0].name);
+        // 只清理可安全重置的属性，保留位图尺寸与像素内容
+        const keep = ['width', 'height'];
+        for (const attr of Array.from(reuse.attributes)) {
+          if (keep.indexOf(attr.name) >= 0) continue;
+          reuse.removeAttribute(attr.name);
+        }
         reuse.className = '';
         reuse.style.cssText = '';
+        // 解绑上一轮事件，否则每次 setData 都会叠加一份监听器
+        (reuse.__listeners || []).forEach(([type, fn]) => reuse.removeEventListener(type, fn));
+        reuse.__listeners = [];
       }
       el = pool[i];
     } else {
@@ -346,7 +378,7 @@
         const handler = interpolate(raw, data);
         if (handler) {
           const domEvt = evt === 'tap' ? 'click' : evt;
-          el.addEventListener(domEvt, (e) => {
+          const listener = (e) => {
             const custom = {
               type: evt,
               currentTarget: { dataset: datasetOf(node, data), id: a.id || '' },
@@ -364,7 +396,9 @@
             const fn = page.__handlers[handler];
             if (typeof fn === 'function') fn.call(page.__instance, custom);
             else console.warn('未找到事件处理函数', handler);
-          });
+          };
+          el.addEventListener(domEvt, listener);
+          if (el.__listeners) el.__listeners.push([domEvt, listener]);
         }
         continue;
       } else if (key === 'checked' || key === 'disabled' || key === 'scroll-x' || key === 'enable-flex') {
@@ -397,12 +431,37 @@
   }
 
   // ---------- 页面运行时 ----------
+  // tabBar 页面：小程序里没有返回按钮，预览也要一致
+  const TAB_PAGES = ['/pages/index/index', '/pages/practice/practice', '/pages/profile/profile'];
+
+  function parseUrl(url) {
+    const [rawPath, query] = String(url).split('?');
+    const options = {};
+    (query || '').split('&').forEach((pair) => {
+      if (!pair) return;
+      const [k, v] = pair.split('=');
+      options[k] = decodeURIComponent(v || '');
+    });
+    const path = rawPath.startsWith('/') ? rawPath : '/' + rawPath;
+    return { path, options };
+  }
+
+  function urlOf(path, options) {
+    const q = Object.keys(options || {})
+      .filter((k) => options[k] !== '' && options[k] != null)
+      .map((k) => k + '=' + encodeURIComponent(options[k]))
+      .join('&');
+    return '#' + path + (q ? '?' + q : '');
+  }
+
   const runtime = {
     current: null,
     options: {},
     title: '',
+    pageConfig: null,
     stack: [],
     app: null,
+    currentKey: '',
 
     setTitle(t) {
       this.title = t;
@@ -410,21 +469,70 @@
       if (bar) bar.textContent = t;
     },
 
-    navigate(url) {
-      const [path, query] = url.split('?');
-      const options = {};
-      (query || '').split('&').forEach((pair) => {
-        if (!pair) return;
-        const [k, v] = pair.split('=');
-        options[k] = decodeURIComponent(v || '');
+    /** 同步外壳：返回箭头只在「非 tab 页且栈里有内容」时出现 */
+    updateChrome() {
+      const back = document.getElementById('nav-back');
+      const path = this.currentPath || '';
+      const isTab = TAB_PAGES.indexOf(path) >= 0;
+      // 非 tab 页一律显示（微信里子页面也有返回/回首页按钮）；
+      // 栈为空时点它回首页，而不是没反应。
+      const canBack = !isTab;
+      if (back) {
+        back.hidden = !canBack;
+        back.setAttribute('aria-hidden', canBack ? 'false' : 'true');
+        back.setAttribute('title', this.stack.length ? '返回上一页' : '回到首页');
+      }
+      // 自定义导航：微信不给导航栏，页面从屏幕顶端开始画（状态栏盖在页面上），
+      // 只有胶囊按钮浮在最上层。外壳必须照做，否则预览里永远看不到遮挡问题。
+      const custom = this.pageConfig && this.pageConfig.navigationStyle === 'custom';
+      document.body.dataset.navStyle = custom ? 'custom' : 'default';
+      const capsule = document.getElementById('nav-capsule');
+      if (capsule) capsule.hidden = !custom;
+      document.body.dataset.canBack = canBack ? '1' : '0';
+      document.body.dataset.page = path;
+      document.querySelectorAll('.tabbar .tab').forEach((a) => {
+        a.classList.toggle('on', a.dataset.tab === path);
       });
+    },
+
+    /** 小程序 wx.navigateTo：入栈 */
+    navigate(url) {
+      const { path, options } = parseUrl(url);
       this.stack.push({ path: this.currentPath, options: this.options });
+      history.pushState({ app: true }, '', urlOf(path, options));
       loadPage(path, options);
     },
 
-    back() {
-      const prev = this.stack.pop();
-      if (prev && prev.path) loadPage(prev.path, prev.options || {});
+    /** 小程序 wx.redirectTo：替换当前页，不入栈 */
+    redirect(url) {
+      const { path, options } = parseUrl(url);
+      history.replaceState({ app: true }, '', urlOf(path, options));
+      loadPage(path, options);
+    },
+
+    /** 小程序 wx.switchTab：清空栈 */
+    switchTab(url) {
+      const { path, options } = parseUrl(url);
+      this.stack.length = 0;
+      history.replaceState({ app: true }, '', urlOf(path, options));
+      loadPage(path, options);
+    },
+
+    /** 小程序 wx.navigateBack */
+    back(delta) {
+      const d = Math.max(1, Number(delta) || 1);
+      if (this.stack.length >= d) {
+        history.go(-d); // popstate 负责加载目标页
+        return;
+      }
+      if (this.stack.length > 0) {
+        history.go(-this.stack.length);
+        return;
+      }
+      // 深链接直接打开、根本没有上一页：回首页，避免“点了没反应”
+      this.stack.length = 0;
+      history.replaceState({ app: true }, '', urlOf('/pages/index/index', {}));
+      loadPage('/pages/index/index', {});
     },
   };
 
@@ -441,36 +549,61 @@
     return { path: decodeURIComponent(path), options };
   }
 
-  function applyWxss(text) {
+  // 每个页面的样式各占一个 <style>，切换页面时只保留 app.wxss + 当前页。
+  // 微信里页面 WXSS 是页面级的，不会串到别的页；预览早期是把所有页面的
+  // <style> 一直留在 <head> 里，于是 about.wxss 的 `.page { padding: 0 40rpx }`
+  // 会"泄漏"到详情页上，把布局宽度算小 80rpx（实际不存在的内边距）。
+  const wxssEls = new Map(); // path -> HTMLStyleElement
+
+  function applyWxss(text, key) {
     // rpx → px：预览窗口宽 390，750rpx = 390px
     const px = (text || '').replace(/(-?[\d.]+)rpx/g, (_, n) => `${(parseFloat(n) * 390) / 750}px`);
-    const style = document.createElement('style');
+    let style = wxssEls.get(key);
+    if (!style) {
+      style = document.createElement('style');
+      style.dataset.wxss = key;
+      wxssEls.set(key, style);
+      document.head.appendChild(style);
+    }
     style.textContent = px;
-    document.head.appendChild(style);
+  }
+
+  /** 只启用 app.wxss 和当前页面的样式 */
+  function syncWxss(activePath) {
+    for (const [key, el] of wxssEls) {
+      el.disabled = !(key === '/app' || key === activePath);
+    }
   }
 
   const wxssLoaded = new Set();
 
   function loadWxss(path) {
+    const jobs = [];
     for (const p of [path, '/app']) {
       if (wxssLoaded.has(p)) continue;
       wxssLoaded.add(p);
       const file = p === '/app' ? '/miniprogram/app.wxss' : `/miniprogram${path}.wxss`;
-      fetch(file)
-        .then((r) => (r.ok ? r.text() : ''))
-        .then((t) => applyWxss(t));
+      jobs.push(
+        fetch(file)
+          .then((r) => (r.ok ? r.text() : ''))
+          .then((t) => applyWxss(t, p))
+      );
     }
+    // 等样式挂上再切，避免切换瞬间裸样式闪烁
+    return Promise.all(jobs).then(() => syncWxss(path));
   }
 
   async function loadPage(path, options) {
     const files = await fetchPage(path);
     runtime.currentPath = path;
     runtime.options = options;
-    loadWxss(path);
+    runtime.currentKey = urlOf(path, options);
+    await loadWxss(path);
 
     if (files.json) {
       try {
         const cfg = JSON.parse(files.json);
+        runtime.pageConfig = cfg;
         if (cfg.navigationBarTitleText) runtime.setTitle(cfg.navigationBarTitleText);
       } catch (e) {
         /* ignore */
@@ -483,7 +616,9 @@
 
     const root = document.getElementById('page-root');
     root.innerHTML = '';
-    const pageRoot = document.createElement('div');
+    // 必须是 <page> 元素：app.wxss 用 page { --jade: … } 定义设计变量，
+    // 换成 div 会让所有 var(--x) 失效，颜色退化成继承值（白底白字就是这么来的）
+    const pageRoot = document.createElement('page');
     pageRoot.className = 'page-host';
     root.appendChild(pageRoot);
 
@@ -533,6 +668,7 @@
     }
     if (typeof config.onShow === 'function') config.onShow();
     rerender();
+    runtime.updateChrome();
     window.__ready = true;
   }
 
@@ -546,8 +682,11 @@
 
   // ---------- 启动 ----------
   async function boot() {
-    screen.width = window.innerWidth;
-    screen.height = window.innerHeight;
+    // 用模拟器外壳的尺寸，而不是浏览器窗口：rpx 换算固定按 390px 宽，
+    // 窗口宽度若参与计算，胶囊位置就和页面布局对不上了
+    const device = document.querySelector('.device');
+    screen.width = device ? device.clientWidth : 390;
+    screen.height = device ? device.clientHeight : 844;
     await preloadModules();
     runtime.app = { globalData: {}, onLaunch() {} };
     const { path, options } = parseQuery();
@@ -556,9 +695,37 @@
     window.__modules = (p) => moduleOf(p);
   }
 
-  window.addEventListener('hashchange', () => {
+  // 浏览器前进/后退与手动改 hash 都走这里；用 key 去重，避免 popstate 与 hashchange 双触发
+  function syncFromLocation(popDelta) {
     const { path, options } = parseQuery();
+    const key = urlOf(path, options);
+    if (key === runtime.currentKey) return;
+    if (popDelta > 0) {
+      for (let i = 0; i < popDelta && runtime.stack.length; i++) runtime.stack.pop();
+    } else {
+      runtime.stack.length = 0;
+    }
     loadPage(path, options);
+  }
+
+  window.addEventListener('popstate', () => syncFromLocation(1));
+  window.addEventListener('hashchange', () => syncFromLocation(0));
+
+  // 外壳返回按钮：小程序导航栏的“‹”
+  document.addEventListener('DOMContentLoaded', () => {
+    const back = document.getElementById('nav-back');
+    if (back) {
+      back.addEventListener('click', (e) => {
+        e.preventDefault();
+        runtime.back(1);
+      });
+    }
+    document.querySelectorAll('.tabbar .tab').forEach((a) => {
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        runtime.switchTab(a.dataset.tab);
+      });
+    });
   });
 
   window.__preview = {
@@ -566,6 +733,10 @@
     load: (path, options) => loadPage(path, options),
     path: () => runtime.currentPath,
     options: () => runtime.options,
+    depth: () => runtime.stack.length,
+    back: () => runtime.back(1),
+    switchTab: (url) => runtime.switchTab(url),
+    redirect: (url) => runtime.redirect(url),
     events: eventLog,
     toasts,
     storage,

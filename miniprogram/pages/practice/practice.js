@@ -12,7 +12,7 @@ Page({
     wrongCount: 0,
     heroChar: '字',
     books: [],
-    bookName: '一年级上册',
+    bookName: '',
     recentChars: [],
     writeChar: '',
     days: [],

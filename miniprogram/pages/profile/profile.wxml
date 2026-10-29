@@ -26,13 +26,13 @@
 
   <view class="total-card">
     <view class="total-top">
-      <text class="total-title">一二年级 1600 字</text>
+      <text class="total-title">{{gradeSpan}} {{total}} 字</text>
       <text class="total-pct">{{pct}}%</text>
     </view>
     <view class="progress">
       <view class="progress-fill" style="width: {{pct}}%"></view>
     </view>
-    <view class="total-desc">每天 5 个字，坚持 320 天就能全部学完</view>
+    <view class="total-desc">每天 5 个字，坚持 {{daysNeeded}} 天就能全部学完</view>
   </view>
 
   <view class="section-head">
@@ -63,9 +63,9 @@
         >{{item}} 字</view>
       </view>
     </view>
-    <view class="setting">
+    <view class="setting setting-col">
       <view class="setting-label">当前册次</view>
-      <view class="seg">
+      <view class="seg seg-grid">
         <view
           class="seg-item {{book === item.id ? 'on' : ''}}"
           wx:for="{{books}}"

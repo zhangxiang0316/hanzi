@@ -158,17 +158,22 @@
 }
 
 .strip {
-  white-space: nowrap;
+  /* 换行而不是横滑：23 画的字最多 3 行，一屏放得下，
+     而且孩子不用先发现"这里可以滑" */
+  display: flex;
+  flex-wrap: wrap;
   width: 100%;
 }
 
 .chip {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
+  /* flex 布局下宽度会被压缩，必须禁止收缩，否则数字会被挤成椭圆 */
+  flex: 0 0 auto;
   width: 66rpx;
   height: 66rpx;
-  margin-right: 14rpx;
+  margin: 0 14rpx 14rpx 0;
   border-radius: 18rpx;
   background: #ffffff;
   border: 2rpx solid #ece3d2;
@@ -261,6 +266,7 @@
 
 .action-row .btn-block {
   height: 88rpx;
+  line-height: 88rpx;
   font-size: 27rpx;
 }
 
@@ -282,5 +288,6 @@
 }
 
 .pager-btn.off {
-  color: #d9d2c4;
+  /* 禁用态：仍然要读得出来，否则用户以为按钮坏了 */
+  color: #b3a894;
 }

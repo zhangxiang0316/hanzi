@@ -1,5 +1,5 @@
 {
-  "description": "小小识字家 —— 一二年级汉字学习小程序",
+  "description": "小小识字家 —— 小学一到四年级（统编版）汉字学习小程序",
   "miniprogramRoot": "miniprogram/",
   "compileType": "miniprogram",
   "appid": "touristappid",

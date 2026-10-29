@@ -23,6 +23,7 @@ Page({
     }
     const book = catalog.getBook(lesson.book);
     wx.setNavigationBarTitle({ title: lesson.title });
+    routes.preload(lesson.book);
     this.setData({ lesson, bookName: book ? book.short : '' });
     if (options.start) this.setData({ focus: decodeURIComponent(options.start) });
     this.refresh();
