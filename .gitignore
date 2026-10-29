@@ -19,6 +19,8 @@ android/app/build/
 android/app/release/
 *.apk
 *.aab
+# dist/ 下是刻意发布的成品包，供直接下载安装；其余位置的 APK/AAB 一律忽略
+!android/dist/*.apk
 # 只忽略发布密钥；debug.keystore 是公开的调试密钥，进仓库才能「克隆即可构建」
 *.jks
 android/keystore/release.*
