@@ -1,5 +1,13 @@
 package com.xiaoxiao.hanzi.ui.pages
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -20,6 +28,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -28,7 +37,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -42,6 +53,7 @@ import com.xiaoxiao.hanzi.ui.BtnStyle
 import com.xiaoxiao.hanzi.ui.Dimens
 import com.xiaoxiao.hanzi.ui.HanziButton
 import com.xiaoxiao.hanzi.ui.LocalPalette
+import com.xiaoxiao.hanzi.ui.Motion
 import com.xiaoxiao.hanzi.ui.ProgressBar
 import com.xiaoxiao.hanzi.ui.Screen
 
@@ -110,6 +122,7 @@ fun QuizPage(app: AppState, mode: String, bookId: String, lessonId: String?) {
     Column(
         Modifier
             .fillMaxSize()
+            .testTag("quiz-root")
             .verticalScroll(scroll)
             .padding(horizontal = Dimens.pagePad.dp)
     ) {
@@ -181,21 +194,49 @@ fun QuizPage(app: AppState, mode: String, bookId: String, lessonId: String?) {
                         val isCorrect = opt.value == q.answer
                         val isPicked = opt.value == picked
                         // 答对之后：正确项标绿；答错时同时标出自己选错的
-                        val bg = when {
+                        val bgTarget = when {
                             !answered -> p.card
                             isCorrect -> p.jadeSoft
                             isPicked -> p.claySoft
                             else -> p.card
                         }
-                        val border = when {
+                        val borderTarget = when {
                             !answered -> p.line
                             isCorrect -> p.jade
                             isPicked -> p.clay
                             else -> p.line
                         }
+                        // 颜色渐变而不是瞬间翻色：低年级孩子需要"看见变化发生"
+                        val bg by animateColorAsState(bgTarget, tween(Motion.NORMAL), label = "optBg")
+                        val border by animateColorAsState(
+                            borderTarget,
+                            tween(Motion.NORMAL),
+                            label = "optBorder"
+                        )
+
+                        // 被选中的那一项按下时轻微回缩再弹回，给一个"点到了"的确认
+                        val press = remember { Animatable(1f) }
+                        LaunchedEffect(picked, answered) {
+                            if (answered && isPicked) {
+                                press.snapTo(0.96f)
+                                press.animateTo(
+                                    1f,
+                                    spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessMedium
+                                    )
+                                )
+                            }
+                        }
+
                         Surface(
                             Modifier
                                 .weight(1f)
+                                .testTag("quiz-opt")
+                                .graphicsLayer {
+                                    scaleX = press.value
+                                    scaleY = press.value
+                                }
                                 .clip(RoundedCornerShape(14.dp))
                                 .clickable(enabled = !answered) {
                                     picked = opt.value
@@ -227,13 +268,26 @@ fun QuizPage(app: AppState, mode: String, bookId: String, lessonId: String?) {
                                     else FontWeight.Medium,
                                     color = p.ink1
                                 )
-                                if (answered && isCorrect) {
-                                    Spacer(Modifier.width(6.dp))
-                                    Text("✓", fontSize = 14.sp, color = p.jade)
+                                // ✓/✕ 淡入并轻微放大，避免"突然多出一个符号"的跳变
+                                AnimatedVisibility(
+                                    visible = answered && isCorrect,
+                                    enter = fadeIn(tween(Motion.QUICK)) +
+                                        scaleIn(tween(Motion.QUICK), initialScale = 0.5f)
+                                ) {
+                                    Row {
+                                        Spacer(Modifier.width(6.dp))
+                                        Text("✓", fontSize = 14.sp, color = p.jade)
+                                    }
                                 }
-                                if (answered && isPicked && !isCorrect) {
-                                    Spacer(Modifier.width(6.dp))
-                                    Text("✕", fontSize = 14.sp, color = p.clay)
+                                AnimatedVisibility(
+                                    visible = answered && isPicked && !isCorrect,
+                                    enter = fadeIn(tween(Motion.QUICK)) +
+                                        scaleIn(tween(Motion.QUICK), initialScale = 0.5f)
+                                ) {
+                                    Row {
+                                        Spacer(Modifier.width(6.dp))
+                                        Text("✕", fontSize = 14.sp, color = p.clay)
+                                    }
                                 }
                             }
                         }
@@ -243,14 +297,19 @@ fun QuizPage(app: AppState, mode: String, bookId: String, lessonId: String?) {
             }
         }
 
-        // 反馈区
-        if (showFeedback) {
-            Spacer(Modifier.height(18.dp))
-            Surface(
-                Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(Dimens.radiusCard.dp),
-                color = if (picked == q.answer) p.jadeSoft else p.claySoft
-            ) {
+        // 反馈区：只淡入，不做高度动画。高度动画会让下方按钮位置抖动，
+        // 既影响观感，也会影响按几何位置断言的测试
+        AnimatedVisibility(
+            visible = showFeedback,
+            enter = fadeIn(tween(Motion.NORMAL))
+        ) {
+            Column {
+                Spacer(Modifier.height(18.dp))
+                Surface(
+                    Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(Dimens.radiusCard.dp),
+                    color = if (picked == q.answer) p.jadeSoft else p.claySoft
+                ) {
                 Column(Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(if (picked == q.answer) "🎉" else "💪", fontSize = 16.sp)
@@ -285,6 +344,7 @@ fun QuizPage(app: AppState, mode: String, bookId: String, lessonId: String?) {
                             showFeedback = false
                         }
                     }
+                }
                 }
             }
         }

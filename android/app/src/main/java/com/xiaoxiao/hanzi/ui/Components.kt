@@ -1,5 +1,8 @@
 package com.xiaoxiao.hanzi.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -18,9 +21,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -111,25 +117,45 @@ fun HanziButton(
     }
 }
 
-/** 进度条，对应小程序 .progress / .progress-fill */
+/**
+ * 进度条，对应小程序 .progress / .progress-fill。
+ *
+ * 宽度从 0 缓动到目标值：孩子刚学几个字时进度只有几个百分点，直接静态画出来
+ * 就是一条几乎看不见的细线，动一下才看得出「在涨」。动画只跑一次，不循环。
+ */
 @Composable
 fun ProgressBar(
     pct: Int,
     modifier: Modifier = Modifier,
     color: Color = LocalPalette.current.jade,
-    height: Int = 8
+    height: Int = 8,
+    animated: Boolean = true
 ) {
     val p = LocalPalette.current
+    val target = (pct.coerceIn(0, 100)) / 100f
+    // 关掉动画时（截图、纯几何断言）直接给终值，省掉等待
+    val fill = remember { Animatable(if (animated) 0f else target) }
+
+    LaunchedEffect(target, animated) {
+        if (animated) {
+            fill.animateTo(target, tween(Motion.PROGRESS, easing = Motion.EaseOut))
+        } else {
+            fill.snapTo(target)
+        }
+    }
+
     Box(
         modifier
             .fillMaxWidth()
             .height(height.dp)
             .clip(CircleShape)
             .background(p.track)
+            .testTag("pb-track")
     ) {
         Box(
             Modifier
-                .fillMaxWidth((pct.coerceIn(0, 100)) / 100f)
+                .testTag("pb-fill")
+                .fillMaxWidth(fill.value)
                 .height(height.dp)
                 .clip(CircleShape)
                 .background(color)
@@ -200,15 +226,51 @@ fun EmptyState(emoji: String, title: String, desc: String? = null, modifier: Mod
     }
 }
 
-/** 星级，用于描红成绩 */
+/**
+ * 星级，用于描红成绩与闯关结果。
+ *
+ * 三颗星错开时间逐个弹出，比「啪一下三颗全在」更有获得的感觉。
+ * 用 keyframes 而不是 delay 来做错峰：keyframes 走帧时钟，测试里
+ * waitForIdle 能稳定等它结束；delay 依赖协程调度，时序不好把控。
+ */
 @Composable
-fun Stars(count: Int, size: Int = 16) {
+fun Stars(count: Int, size: Int = 16, animated: Boolean = true) {
+    val p = LocalPalette.current
     Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
         repeat(3) { i ->
+            val filled = i < count
+            val scale = remember { Animatable(1f) }
+
+            LaunchedEffect(count, animated) {
+                if (!animated || !filled) {
+                    // 没拿到的星保持原样，不做任何强调
+                    scale.snapTo(1f)
+                    return@LaunchedEffect
+                }
+                val start = i * Motion.STAR_STAGGER
+                scale.snapTo(0.3f)
+                scale.animateTo(
+                    1f,
+                    keyframes {
+                        durationMillis = start + Motion.STAR_POP
+                        if (start > 0) {
+                            0.3f at 0
+                            0.3f at start
+                        }
+                        // 略微过冲再落回 1，像"弹"出来
+                        1.12f at start + Motion.STAR_POP - 90
+                    }
+                )
+            }
+
             Text(
-                if (i < count) "★" else "☆",
+                if (filled) "★" else "☆",
                 fontSize = size.sp,
-                color = if (i < count) LocalPalette.current.amber else LocalPalette.current.line
+                color = if (filled) p.amber else p.line,
+                modifier = Modifier.graphicsLayer {
+                    scaleX = scale.value
+                    scaleY = scale.value
+                }
             )
         }
     }

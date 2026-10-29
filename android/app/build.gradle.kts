@@ -14,8 +14,8 @@ android {
         applicationId = "com.xiaoxiao.hanzi"
         minSdk = 24
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.0.4"
+        versionCode = 6
+        versionName = "1.0.5"
     }
 
     // debug 签名默认落在 ~/.android/debug.keystore，放在工程内便于沙箱环境和 CI 复用
@@ -115,6 +115,10 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.foundation:foundation")
+    // 动画（animate*AsState / Animatable / AnimatedVisibility）。
+    // foundation 会传递进来 animation-core，但那是间接依赖，直接用到就显式声明，
+    // 免得以后升级时被顺手裁掉。
+    implementation("androidx.compose.animation:animation")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.activity:activity-compose:1.10.1")
     implementation("androidx.core:core-ktx:1.15.0")

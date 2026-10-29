@@ -22,7 +22,7 @@
 | **用起来** | 用微信开发者工具导入本目录（见下方） | **[下载 APK](https://github.com/zhangxiang0316/hanzi/releases/latest)** · 3.9 MB · Android 7.0+ |
 | **源码** | [`miniprogram/`](miniprogram/) | [`android/`](android/) |
 | **环境** | 微信开发者工具，基础库 3.5.5+ | JDK 17 + Android SDK 36 |
-| **测试** | 69 个（node:test） | 133 个（Robolectric + Compose UI Test） |
+| **测试** | 69 个（node:test） | 141 个（Robolectric + Compose UI Test） |
 
 > APK 可直接安装使用，用仓库内的公开 debug 密钥签名，**不适合上架应用商店**。
 > 正式发布请按 [android/keystore/README.md](android/keystore/README.md) 生成 release 密钥后重新构建。
@@ -77,10 +77,10 @@ cd hanzi
 （首次需允许「安装未知来源应用」）。或用 adb：
 
 ```bash
-adb install -r xiaoxiao-hanzi-1.0.4.apk
+adb install -r xiaoxiao-hanzi-1.0.5.apk
 ```
 
-当前版本 **v1.0.4** · 仓库内也留了一份 [`android/dist/`](android/dist/)。
+当前版本 **v1.0.5** · 仓库内也留了一份 [`android/dist/`](android/dist/)。
 
 ### 从源码构建 Android
 
@@ -313,6 +313,7 @@ Android 测试全部跑在 JVM 上（Robolectric + Compose UI Test），**不需
 
 | 版本 | 内容 |
 | --- | --- |
+| **1.0.5** | Android 加动效：答题选中有回弹与渐变、成绩星星逐颗弹出、进度条缓动增长 |
 | **1.0.4** | Android 新增朗读：详情页生字与组词可点读（系统 TTS，零体积、免权限） |
 | **1.0.3** | Android 底部导航从 74dp 压到 52dp，页面内容区多出 22dp |
 | **1.0.2** | 首页「跟课本学」改为两列网格（原八册整宽卡片占一屏多），小程序与 App 同步 |
