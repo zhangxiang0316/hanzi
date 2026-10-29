@@ -170,6 +170,29 @@ class LayoutTest {
     }
 
     @Test
+    fun `详情页工具条三个芯片等宽且文字放得下`() {
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+        app.nav.push(Screen.Detail("日", null))
+        compose.waitForIdle()
+
+        // 加了「朗读」之后工具条变成三块，每块从 1/2 变成 1/3，
+        // 「再写一遍」是最长的标签，必须确认没被挤掉
+        val chip = compose.onNodeWithTag("btn-speak").getBoundsInRoot()
+        val chipW = (chip.right - chip.left).value
+
+        for (label in listOf("朗读", "笔顺", "再写一遍")) {
+            val b = compose.onNodeWithText(label, useUnmergedTree = true).getBoundsInRoot()
+            val textW = (b.right - b.left).value
+            // 图标(14) + 间距(6) + 文字，还要留点余量
+            assertTrue(
+                "「$label」宽 ${textW}dp 在 ${chipW}dp 的芯片里放不下",
+                textW + 20f + 6f < chipW
+            )
+        }
+    }
+
+    @Test
     fun `底部导航高度不超过 56dp 且每个 tab 仍可点击`() {
         val app = state()
         compose.setContent { HanziTheme { Root(app) } }

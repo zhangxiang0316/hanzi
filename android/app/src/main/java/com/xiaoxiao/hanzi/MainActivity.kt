@@ -13,6 +13,12 @@ import com.xiaoxiao.hanzi.ui.Root
 
 class MainActivity : ComponentActivity() {
 
+    /**
+     * 提成字段是为了在 onDestroy 里释放 TTS 引擎。
+     * 引擎绑定的是系统服务，不 shutdown 会一直占着内存和音频焦点。
+     */
+    private lateinit var state: AppState
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -21,7 +27,7 @@ class MainActivity : ComponentActivity() {
         window.statusBarColor = Color.Transparent.toArgb()
         window.navigationBarColor = Color.Transparent.toArgb()
 
-        val state = AppState(application)
+        state = AppState(application)
 
         setContent {
             HanziTheme {
@@ -29,5 +35,10 @@ class MainActivity : ComponentActivity() {
                 Root(app)
             }
         }
+    }
+
+    override fun onDestroy() {
+        if (::state.isInitialized) state.tts.shutdown()
+        super.onDestroy()
     }
 }

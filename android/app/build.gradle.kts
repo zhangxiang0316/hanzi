@@ -14,8 +14,8 @@ android {
         applicationId = "com.xiaoxiao.hanzi"
         minSdk = 24
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.0.3"
+        versionCode = 5
+        versionName = "1.0.4"
     }
 
     // debug 签名默认落在 ~/.android/debug.keystore，放在工程内便于沙箱环境和 CI 复用

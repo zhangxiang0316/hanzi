@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.xiaoxiao.hanzi.data.Repo
 import com.xiaoxiao.hanzi.data.StrokeCodec
+import com.xiaoxiao.hanzi.logic.Tts
 import com.xiaoxiao.hanzi.ui.AppState
 import com.xiaoxiao.hanzi.ui.BtnStyle
 import com.xiaoxiao.hanzi.ui.Dimens
@@ -94,6 +96,19 @@ fun DetailPage(app: AppState, ch: String, lessonId: String?) {
     var playToken by remember(ch) { mutableIntStateOf(0) }
 
     val count = strokes?.count ?: 0
+
+    // 进页面就预热 TTS 引擎（异步初始化几十到几百毫秒），
+    // 免得第一次点朗读要等，也顺便尽早发现「没有中文语音包」
+    LaunchedEffect(Unit) { app.tts.warmUp() }
+
+    // 订阅朗读状态：初始化是异步的，必须真的订阅，否则「读完才变成不可用」
+    // 这种情况界面不会更新，用户点了没声音还看不到任何说明
+    var ttsState by remember(app.tts) { mutableStateOf(app.tts.state) }
+    DisposableEffect(app.tts) {
+        ttsState = app.tts.state
+        val remove = app.tts.addListener { ttsState = it }
+        onDispose { remove() }
+    }
 
     // 自动书写动画：一笔一笔写。定格时立即停。
     LaunchedEffect(ch, playToken, frozenStroke) {
@@ -186,6 +201,14 @@ fun DetailPage(app: AppState, ch: String, lessonId: String?) {
         // 工具条
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ToolChip(
+                icon = "🔊",
+                label = "朗读",
+                on = false,
+                modifier = Modifier.weight(1f).testTag("btn-speak")
+            ) {
+                app.tts.speak(ch)
+            }
+            ToolChip(
                 icon = "①",
                 label = "笔顺",
                 on = showNumbers,
@@ -203,6 +226,12 @@ fun DetailPage(app: AppState, ch: String, lessonId: String?) {
                 frozenStroke = -1
                 playToken++
             }
+        }
+
+        // 设备没有中文语音包时常驻提示：不能让「点了没声音」还查不出原因
+        Tts.unavailableHint(ttsState)?.let { hint ->
+            Spacer(Modifier.height(8.dp))
+            Text(hint, fontSize = 11.sp, color = p.clay, modifier = Modifier.testTag("tts-hint"))
         }
 
         Spacer(Modifier.height(16.dp))
@@ -284,7 +313,11 @@ fun DetailPage(app: AppState, ch: String, lessonId: String?) {
         // 组词
         if (meta.words.isNotEmpty()) {
             Spacer(Modifier.height(18.dp))
-            Text("组词", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = p.ink1)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("组词", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = p.ink1)
+                Spacer(Modifier.weight(1f))
+                Text("点一下听读音", fontSize = 11.sp, color = p.ink3)
+            }
             Spacer(Modifier.height(8.dp))
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -292,6 +325,10 @@ fun DetailPage(app: AppState, ch: String, lessonId: String?) {
             ) {
                 meta.words.take(8).forEach { w ->
                     Surface(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { app.tts.speak(w.word) }
+                            .testTag("word-${w.word}"),
                         shape = RoundedCornerShape(12.dp),
                         color = p.card,
                         border = BorderStroke(1.dp, p.line)
