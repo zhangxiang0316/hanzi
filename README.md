@@ -22,7 +22,7 @@
 | **用起来** | 用微信开发者工具导入本目录（见下方） | **[下载 APK](https://github.com/zhangxiang0316/hanzi/releases/latest)** · 3.9 MB · Android 7.0+ |
 | **源码** | [`miniprogram/`](miniprogram/) | [`android/`](android/) |
 | **环境** | 微信开发者工具，基础库 3.5.5+ | JDK 17 + Android SDK 36 |
-| **测试** | 69 个（node:test） | 108 个（Robolectric + Compose UI Test） |
+| **测试** | 69 个（node:test） | 109 个（Robolectric + Compose UI Test） |
 
 > APK 可直接安装使用，用仓库内的公开 debug 密钥签名，**不适合上架应用商店**。
 > 正式发布请按 [android/keystore/README.md](android/keystore/README.md) 生成 release 密钥后重新构建。
@@ -77,10 +77,10 @@ cd hanzi
 （首次需允许「安装未知来源应用」）。或用 adb：
 
 ```bash
-adb install -r xiaoxiao-hanzi-1.0.2.apk
+adb install -r xiaoxiao-hanzi-1.0.3.apk
 ```
 
-当前版本 **v1.0.2** · 仓库内也留了一份 [`android/dist/`](android/dist/)。
+当前版本 **v1.0.3** · 仓库内也留了一份 [`android/dist/`](android/dist/)。
 
 ### 从源码构建 Android
 
@@ -207,7 +207,7 @@ hanzi/
 | Android `RepoTest` | 13 | 教材数据完整性、笔画数、多音字、跨册重复 |
 | Android `LogicTest` | 24 | SRS、描红评分、出题器（与小程序同种子等价） |
 | Android `AppUiTest` | 22 | 11 个页面渲染、按钮可点、文案正确 |
-| Android `LayoutTest` | 13 | 几何断言：按钮满宽居中、册次与徽章网格、tab 均分 |
+| Android `LayoutTest` | 14 | 几何断言：按钮满宽居中、册次与徽章网格、tab 均分与底栏高度 |
 | Android `CanvasRenderTest` | 5 | 像素级：汉字真画出来了、没有上下倒置、配色正确 |
 | Android `E2ETest` | 5 | 真实手势走完描红评分与存档 |
 | Android `WritePageTest` | 7 | 描红状态机：最后一笔实心、抖动也能过、写错有原因 |
@@ -313,6 +313,7 @@ Android 测试全部跑在 JVM 上（Robolectric + Compose UI Test），**不需
 
 | 版本 | 内容 |
 | --- | --- |
+| **1.0.3** | Android 底部导航从 74dp 压到 52dp，页面内容区多出 22dp |
 | **1.0.2** | 首页「跟课本学」改为两列网格（原八册整宽卡片占一屏多），小程序与 App 同步 |
 | **1.0.1** | 「我的」页徽章改为 4 列 2 行（原 2 列 4 行占近半屏），未解锁卡片改用暖灰以拉开对比 |
 | **1.0.0** | Android 原生版首发；小程序支持一～四年级；描红最后一笔修复 |

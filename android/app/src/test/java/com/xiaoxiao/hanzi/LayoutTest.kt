@@ -170,6 +170,26 @@ class LayoutTest {
     }
 
     @Test
+    fun `底部导航高度不超过 56dp 且每个 tab 仍可点击`() {
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+        compose.waitForIdle()
+
+        // 底栏原先是 74dp（19sp 表情行高 + 双层 6dp 内边距），加系统导航条后
+        // 逼近 100dp，显得笨重。现在压到 52dp。
+        val bar = compose.onNodeWithTag("bottom-bar").getBoundsInRoot()
+        val h = (bar.bottom - bar.top).value
+        assertTrue("底栏高度应 <= 56dp，实际 ${h}dp", h <= 56f)
+
+        // 但每个 tab 的可点区域不能低于 Material 的最小点击尺寸 48dp
+        listOf("首页", "练习", "我的").forEach { label ->
+            val b = compose.onNodeWithText(label).getBoundsInRoot()
+            val itemH = (b.bottom - b.top).value
+            assertTrue("$label 的点击区应 >= 48dp，实际 ${itemH}dp", itemH >= 48f)
+        }
+    }
+
+    @Test
     fun `非 tab 页面显示返回栏且 tab 页面不显示`() {
         val app = state()
         compose.setContent { HanziTheme { Root(app) } }

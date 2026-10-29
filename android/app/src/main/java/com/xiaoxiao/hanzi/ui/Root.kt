@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -144,12 +145,12 @@ private fun TopBar(title: String, onBack: () -> Unit) {
 @Composable
 private fun BottomBar(current: Screen, onSelect: (Screen) -> Unit) {
     val p = LocalPalette.current
-    Surface(color = p.card, shadowElevation = 10.dp) {
+    Surface(color = p.card, shadowElevation = 10.dp, modifier = Modifier.testTag("bottom-bar")) {
         Row(
             Modifier
                 .fillMaxWidth()
                 .windowInsetsPadding(WindowInsets.navigationBars)
-                .padding(vertical = 6.dp)
+                .padding(vertical = 2.dp)
         ) {
             TabItem("🏠", "首页", current is Screen.Index, Modifier.weight(1f)) {
                 onSelect(Screen.Index)
@@ -176,14 +177,18 @@ private fun TabItem(
     Column(
         modifier
             .clickable(onClick = onClick)
+            // 6dp 内边距 + 36dp 内容 = 48dp，正好是 Material 的最小点击尺寸；
+            // 再高就只是留白变多，底栏整体显得笨重
             .padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(emoji, fontSize = 19.sp)
-        Spacer(Modifier.height(2.dp))
+        // 19sp 的表情行高约 26dp，是底栏偏高的主因；缩到 17sp 并收紧行距
+        Text(emoji, fontSize = 17.sp, lineHeight = 19.sp)
+        Spacer(Modifier.height(1.dp))
         Text(
             label,
             fontSize = 10.sp,
+            lineHeight = 12.sp,
             color = if (on) p.jade else p.ink3,
             fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal
         )
