@@ -19,7 +19,7 @@
 
 | | 微信小程序 | Android 原生 |
 | --- | --- | --- |
-| **用起来** | 用微信开发者工具导入本目录（见下方） | **[下载 APK](android/dist/xiaoxiao-hanzi-1.0.0.apk)** · 3.9 MB · Android 7.0+ |
+| **用起来** | 用微信开发者工具导入本目录（见下方） | **[下载 APK](https://github.com/zhangxiang0316/hanzi/releases/latest)** · 3.9 MB · Android 7.0+ |
 | **源码** | [`miniprogram/`](miniprogram/) | [`android/`](android/) |
 | **环境** | 微信开发者工具，基础库 3.5.5+ | JDK 17 + Android SDK 36 |
 | **测试** | 69 个（node:test） | 104 个（Robolectric + Compose UI Test） |
@@ -73,12 +73,15 @@ cd hanzi
 
 ### 直接装 Android 版
 
-[**下载 APK**](android/dist/xiaoxiao-hanzi-1.0.0.apk)，传到手机点击安装
+到 [**Releases**](https://github.com/zhangxiang0316/hanzi/releases/latest) 页面下载最新 APK，传到手机点击安装
 （首次需允许「安装未知来源应用」）。或用 adb：
 
 ```bash
 adb install -r xiaoxiao-hanzi-1.0.0.apk
 ```
+
+当前版本 **[v1.0.0](https://github.com/zhangxiang0316/hanzi/releases/tag/v1.0.0)** ·
+SHA-256 `1eae7014…b825b45c` · 仓库内也留了一份 [`android/dist/`](android/dist/)。
 
 ### 从源码构建 Android
 

@@ -1,5 +1,8 @@
 # 安装包
 
+> **推荐从 [Releases](https://github.com/zhangxiang0316/hanzi/releases/latest) 下载**，
+> 那里有版本说明且不占 git 历史。本目录留一份是为了离线可用与可追溯。
+
 直接下载安装，无需 Android Studio。
 
 | 文件 | 版本 | 大小 | 最低系统 |
