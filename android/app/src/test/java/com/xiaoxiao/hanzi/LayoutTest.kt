@@ -215,6 +215,64 @@ class LayoutTest {
     }
 
     @Test
+    fun `我的页徽章排成四列两行且整体不占过多高度`() {
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+        app.nav.switchTab(Screen.Profile)
+        compose.waitForIdle()
+
+        val ids = listOf("sprout", "ten", "fifty", "hundred", "five", "streak", "perfect", "write")
+        val positions = ids.map { compose.onNodeWithTag("badge-$it").getBoundsInRoot() }
+
+        // 4 列 × 2 行，与小程序一致（width: calc(25% - 16rpx)）。
+        // 早先是 2 列 4 行，单卡宽度翻倍、整块占掉近半屏，所以看着太大。
+        val rows = positions.map { it.top.value.toInt() }.distinct()
+        val cols = positions.map { it.left.value.toInt() }.distinct()
+        assertEquals("应排成 2 行，实际 $rows", 2, rows.size)
+        assertEquals("应排成 4 列，实际 $cols", 4, cols.size)
+
+        // 同一行四张卡等宽，且不超出屏幕
+        val byRow = positions.groupBy { it.top.value.toInt() }
+        byRow.forEach { (_, cards) ->
+            assertEquals("同一行应 4 张", 4, cards.size)
+            val widths = cards.map { (it.right - it.left).value }
+            val spread = widths.max() - widths.min()
+            assertTrue("同一行卡片应等宽，实际 $widths", spread < 1f)
+            assertTrue(
+                "最右一张不应超出屏幕，实际 ${cards.maxOf { it.right.value }}dp",
+                cards.maxOf { it.right.value } <= screenWidthDp()
+            )
+        }
+
+        // 整块徽章区（含行间距）不应超过 160dp —— 回归护栏，防止再做成大卡片
+        val top = positions.minOf { it.top.value }
+        val bottom = positions.maxOf { it.bottom.value }
+        assertTrue(
+            "徽章区总高应 <= 160dp，实际 ${(bottom - top).toInt()}dp",
+            bottom - top <= 160f
+        )
+    }
+
+    @Test
+    fun `我的页徽章文字不被截断`() {
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+        app.nav.switchTab(Screen.Profile)
+        compose.waitForIdle()
+
+        // 最长的徽章名与说明都要完整显示（不确定字数，逐条验证存在且非空）
+        for ((name, desc) in listOf(
+            "破土而出" to "认识 1 个汉字",
+            "汉字收藏家" to "认识 500 个汉字",
+            "满分小状元" to "闯关全部答对",
+            "小小书法家" to "描红获得 10 颗星"
+        )) {
+            compose.onNodeWithText(name).assertExists()
+            compose.onNodeWithText(desc).assertExists()
+        }
+    }
+
+    @Test
     fun `按钮高度足够手指点击`() {
         val app = state()
         compose.setContent { HanziTheme { Root(app) } }

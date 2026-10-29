@@ -36,6 +36,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.xiaoxiao.hanzi.data.Repo
@@ -137,45 +138,57 @@ fun ProfilePage(app: AppState) {
         }
 
         SectionHead("我的徽章", "$gotCount/${badges.size}")
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            badges.chunked(2).forEach { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // 4 列 × 2 行，与小程序一致（那边是 width: calc(25% - 16rpx)）。
+        // Android 版早先做成 2 列 4 行，单行高度翻倍，整块占了半屏，所以显得过大。
+        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            badges.chunked(4).forEach { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     row.forEach { b ->
                         Surface(
                             Modifier
                                 .weight(1f)
-                                .clip(RoundedCornerShape(Dimens.radiusInner.dp)),
-                            shape = RoundedCornerShape(Dimens.radiusInner.dp),
-                            color = if (b.got) p.jadeSoft else p.card,
+                                .testTag("badge-${b.id}")
+                                .clip(RoundedCornerShape(11.dp)),
+                            shape = RoundedCornerShape(11.dp),
+                            // 未解锁用暖灰（对应小程序 .badge 的 #f5f0e5）。
+                            // 原来用纯白，和米色纸底只差几阶，卡片缩到 1/4 宽后几乎看不见了。
+                            color = if (b.got) p.jadeSoft else p.track,
                             border = BorderStroke(
                                 1.dp,
                                 if (b.got) p.jade.copy(alpha = 0.4f) else p.line
                             )
                         ) {
                             Column(
-                                Modifier.padding(11.dp),
+                                Modifier.padding(vertical = 7.dp, horizontal = 3.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text(if (b.got) b.emoji else "🔒", fontSize = 22.sp)
-                                Spacer(Modifier.height(5.dp))
+                                Text(if (b.got) b.emoji else "🔒", fontSize = 18.sp)
+                                Spacer(Modifier.height(3.dp))
                                 Text(
                                     b.name,
-                                    fontSize = 12.sp,
+                                    fontSize = 10.sp,
+                                    lineHeight = 12.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = if (b.got) p.ink1 else p.ink3,
-                                    textAlign = TextAlign.Center
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
-                                Spacer(Modifier.height(2.dp))
+                                Spacer(Modifier.height(1.dp))
                                 Text(
                                     b.desc,
-                                    fontSize = 10.sp,
+                                    fontSize = 8.sp,
+                                    lineHeight = 10.sp,
                                     color = p.ink3,
-                                    textAlign = TextAlign.Center
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
                     }
-                    if (row.size == 1) Spacer(Modifier.weight(1f))
+                    // 补齐末行，避免最后一行卡片被拉伸
+                    repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }
