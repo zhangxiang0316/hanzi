@@ -7,3 +7,23 @@ preview/screenshots/
 preview/renders/
 .npm-cache/
 *.log
+content/cache/
+
+# ---- Android 原生工程 ----
+# Android Studio 的个人配置（workspace.xml 里是窗口布局、最近打开的文件等）
+android/.idea/
+android/local.properties
+android/.gradle/
+android/build/
+android/app/build/
+android/app/release/
+*.apk
+*.aab
+# 只忽略发布密钥；debug.keystore 是公开的调试密钥，进仓库才能「克隆即可构建」
+*.jks
+android/keystore/release.*
+*.keystore
+!android/keystore/debug.keystore
+
+# 站内工具链（Gradle 发行版 + 依赖缓存 + Robolectric 字体/依赖），体积很大，不进仓库
+.tools/
