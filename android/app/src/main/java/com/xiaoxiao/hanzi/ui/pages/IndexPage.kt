@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -299,7 +300,13 @@ private fun BookTile(
                         .background(color.copy(alpha = 0.16f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(short, fontSize = 10.sp, color = color, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = short,
+                        modifier = Modifier.wrapContentSize(Alignment.Center),
+                        fontSize = 10.sp,
+                        lineHeight = 10.sp,
+                        color = color,
+                        fontWeight = FontWeight.Bold)
                 }
                 Spacer(Modifier.width(6.dp))
                 Text(
