@@ -1,14 +1,19 @@
 import SwiftUI
 
-/// 根视图：侧边栏 + 内容列。
+/// 根视图。手机端是底部 tab，iPad 上是侧边栏 + 内容列。
 ///
-/// 结构选择说明：
-/// Android 用底部三个 tab（首页/练习/我的），是因为手机屏幕窄、列不出更多入口。
-/// iPad 上底部导航离手太远、且横屏有大量横向空间，`NavigationSplitView` 的侧边栏
-/// 是更自然的形态——左侧常驻导航，右侧内容可以一路 push 下去。
+/// **为什么按设备而不是按尺寸类分支。**
 ///
-/// 侧边栏同时承担「课本选择」：8 册课本直接列在侧边栏里，
-/// 比藏在首页的宫格里少一次跳转。
+/// SwiftUI 常规建议是按 `horizontalSizeClass` 自适应，但导航范式不适合这么做：
+/// iPhone Pro Max 横屏时宽度 932pt，尺寸类会变成 `.regular`，
+/// 于是「转一下手机，整个导航从底部 tab 变成侧边栏」——同一台设备上导航模型突变，
+/// 用户还得重新学一遍怎么切页面。
+///
+/// 所以这里分开处理：
+/// - **导航范式**按设备定：手机永远底部 tab，iPad 永远侧边栏。
+/// - **页面内部布局**（详情页分不分栏、网格几列）按宽度定，走 `LayoutRules`。
+///
+/// 这样手机横过来只是内容变宽（详情页可以分栏），不会换掉整个导航。
 struct RootView: View {
     @State private var app: AppState
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
@@ -20,24 +25,45 @@ struct RootView: View {
     }
 
     var body: some View {
+        Group {
+            if AppLayout.isPhone {
+                PhoneRootView()
+            } else {
+                padRoot
+            }
+        }
+        .tint(Palette.jade)
+        .environment(app)
+    }
+
+    private var padRoot: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             SidebarView()
                 .navigationSplitViewColumnWidth(min: 210, ideal: 245, max: 300)
         } detail: {
-            NavigationStack(path: Bindable(app).path) {
+            NavigationStack(path: app.pathBinding(app.section)) {
                 rootContent
                     .appRoutes()
             }
             .id(app.section)   // 切 section 时重置该列的滚动位置与栈
         }
         .navigationSplitViewStyle(.balanced)
-        .tint(Palette.jade)
-        .environment(app)
     }
 
-    @ViewBuilder
     private var rootContent: some View {
-        switch app.section {
+        SectionRootView(section: app.section)
+    }
+}
+
+/// 某个分区对应的根页面。
+///
+/// 抽出来是因为手机和 iPad 都要用它：iPad 跟着 `app.section` 走，
+/// 手机则是每个 tab 固定一个分区。写在 RootView 里的私有属性手机端用不到。
+struct SectionRootView: View {
+    let section: AppState.Section
+
+    var body: some View {
+        switch section {
         case .home:
             HomePageView()
                 .navigationTitle("小小识字家")

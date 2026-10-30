@@ -21,7 +21,7 @@ struct QuizPageView: View {
     var body: some View {
         GeometryReader { geo in
             VStack(spacing: 0) {
-                progressHeader
+                progressHeader(geo.size.width)
                 if questions.isEmpty {
                     Spacer()
                     EmptyState(emoji: "🎉", title: "没有可以练习的字",
@@ -78,7 +78,7 @@ struct QuizPageView: View {
 
     // MARK: - 头部
 
-    private var progressHeader: some View {
+    private func progressHeader(_ width: CGFloat) -> some View {
         VStack(spacing: 8) {
             HStack {
                 Text("第 \(min(index + 1, questions.count)) / \(questions.count) 题")
@@ -94,7 +94,7 @@ struct QuizPageView: View {
                 height: 6
             )
         }
-        .padding(.horizontal, 28)
+        .padding(.horizontal, Dimens.pagePad(width))
         .padding(.top, 14)
         .padding(.bottom, 10)
     }
@@ -136,7 +136,7 @@ struct QuizPageView: View {
                     feedback(q)
                 }
             }
-            .padding(.horizontal, 28)
+            .padding(.horizontal, Dimens.pagePad(geo.size.width))
             .padding(.bottom, 30)
             .frame(maxWidth: .infinity)
         }

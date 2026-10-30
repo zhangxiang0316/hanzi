@@ -13,6 +13,7 @@ struct ProfilePageView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     header
                     statsGrid
+                    studyLinks
                     badgeSection
                     settingsSection
                     aboutRow
@@ -141,6 +142,49 @@ struct ProfilePageView: View {
             RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
                 .strokeBorder(b.got ? Palette.amber.opacity(0.5) : Palette.line, lineWidth: 1)
         )
+    }
+
+    /// 学习入口：错题本。
+    ///
+    /// iPad 上错题本在侧边栏里单独一栏，手机上没有侧边栏，
+    /// 所以收进「我的」——和 Android `ProfilePage.kt:272` 的 LinkRow 一致。
+    /// 不带红色角标会让孩子忽略它，所以把待复习字数直接写在右侧。
+    private var studyLinks: some View {
+        let n = app.progress.wrongCount
+        return VStack(alignment: .leading, spacing: 12) {
+            SectionHead("学习")
+
+            Button {
+                app.push(AppState.WrongRoute())
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.bubble")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(n > 0 ? Palette.clay : Palette.ink3)
+                        .frame(width: 22)
+                    Text("错题本")
+                        .font(Fonts.body)
+                        .foregroundStyle(Palette.ink1)
+                    Spacer()
+                    Text(n > 0 ? "\(n) 个字" : "还没有错字")
+                        .font(Fonts.caption)
+                        .foregroundStyle(n > 0 ? Palette.clay : Palette.ink3)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Palette.ink3)
+                }
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
+                        .fill(Palette.card)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
+                        .strokeBorder(Palette.line, lineWidth: 1)
+                )
+            }
+            .buttonStyle(PressableStyle())
+        }
     }
 
     private var settingsSection: some View {

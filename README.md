@@ -2,7 +2,7 @@
 
 跟着统编版课本，一笔一笔把字写对。
 
-面向小学一～四年级的汉字学习应用，提供**微信小程序**、**Android 原生**、**iPad 原生**三种形态，
+面向小学一～四年级的汉字学习应用，提供**微信小程序**、**Android 原生**、**iOS 原生**三种形态，
 内容、算法、交互手感完全一致。
 
 <p align="center">
@@ -17,27 +17,36 @@
 
 ## 立即使用
 
-| | 微信小程序 | Android 原生 | iPad 原生 |
+| | 微信小程序 | Android 原生 | iOS 原生（iPad + iPhone） |
 | --- | --- | --- | --- |
 | **用起来** | 用微信开发者工具导入本目录（见下方） | **[下载 APK](https://github.com/zhangxiang0316/hanzi/releases/latest)** · 3.9 MB · Android 7.0+ | 用 Xcode 构建（见 [ios/README.md](ios/README.md)） · iOS 17+ |
 | **源码** | [`miniprogram/`](miniprogram/) | [`android/`](android/) | [`ios/`](ios/) |
 | **环境** | 微信开发者工具，基础库 3.5.5+ | JDK 17 + Android SDK 36 | Xcode 27 + Swift 6.4 |
-| **测试** | 69 个（node:test） | 141 个（Robolectric + Compose UI Test） | 145 个（@MainActor XCTest） |
+| **测试** | 69 个（node:test） | 141 个（Robolectric + Compose UI Test） | 155 个（@MainActor XCTest） |
 
 > APK 可直接安装使用，用仓库内的公开 debug 密钥签名，**不适合上架应用商店**。
 > 正式发布请按 [android/keystore/README.md](android/keystore/README.md) 生成 release 密钥后重新构建。
 
-### iPad 版长这样
+### iOS 版长这样
 
 <p align="center">
-  <img src="ios/docs/screenshots/01-home.png" width="24%" alt="首页" />
-  <img src="ios/docs/screenshots/05-detail.png" width="24%" alt="生字详情" />
-  <img src="ios/docs/screenshots/06-write.png" width="24%" alt="描红" />
-  <img src="ios/docs/screenshots/11-profile.png" width="24%" alt="我的" />
+  <img src="ios/docs/screenshots/01-home.png" width="24%" alt="iPad 首页" />
+  <img src="ios/docs/screenshots/05-detail.png" width="24%" alt="iPad 生字详情" />
+  <img src="ios/docs/screenshots/06-write.png" width="24%" alt="iPad 描红" />
+  <img src="ios/docs/screenshots/11-profile.png" width="24%" alt="iPad 我的" />
 </p>
 
-用 `NavigationSplitView` 侧边栏代替底部 tab，横屏纵向都按窗口宽度自适应。
-[全部 12 张界面截图 →](ios/README.md#界面)
+<p align="center">
+  <img src="ios/docs/screenshots/phone/01-home.png" width="11%" alt="iPhone 首页" />
+  <img src="ios/docs/screenshots/phone/03-detail.png" width="11%" alt="iPhone 生字详情" />
+  <img src="ios/docs/screenshots/phone/04-write.png" width="11%" alt="iPhone 描红" />
+  <img src="ios/docs/screenshots/phone/05-quiz.png" width="11%" alt="iPhone 答题" />
+  <img src="ios/docs/screenshots/phone/06-profile.png" width="11%" alt="iPhone 我的" />
+</p>
+
+iPad 用 `NavigationSplitView` 侧边栏；iPhone 用底部三个 tab、单列内容。
+内容区窄时单列、宽了自动分栏，都按窗口宽度算。
+[全部界面截图 →](ios/README.md#界面)
 
 ---
 
@@ -127,9 +136,9 @@ npm run preview      # http://127.0.0.1:8788
 
 ## 技术栈
 
-| 层 | 小程序 | Android | iPad |
+| 层 | 小程序 | Android | iOS |
 | --- | --- | --- | --- |
-| UI | WXML / WXSS | Jetpack Compose（BOM 2025.09.01） | SwiftUI（`NavigationSplitView` 侧边栏） |
+| UI | WXML / WXSS | Jetpack Compose（BOM 2025.09.01） | SwiftUI（iPad 侧边栏 / iPhone 底部 tab） |
 | 语言 | 原生 JS（CommonJS） | Kotlin 2.2.20 | Swift 6.4 |
 | 构建 | 微信开发者工具 | Gradle 8.14.3 + AGP 8.13.1 | Xcode 27（手写 pbxproj） |
 | 笔顺渲染 | Canvas 2D | `android.graphics.Canvas`（自定义 `HanziPainter`） | SwiftUI `Canvas`（自定义 `HanziDraw`） |
@@ -197,17 +206,18 @@ hanzi/
 │   ├── app/src/test/            141 个测试（Robolectric + Compose UI）
 │   └── dist/                    发布的 APK
 │
-├── ios/                         SwiftUI 原生 iPad 版
+├── ios/                         SwiftUI 原生 iOS 版（iPad + iPhone）
 │   ├── HanziPad/
-│   │   ├── App/                 入口、AppState（路由）、RootView（侧边栏）
+│   │   ├── App/                 入口、AppState（路由）、RootView（iPad 侧边栏）、
+│   │   │                        PhoneRootView（iPhone 底部 tab）
 │   │   ├── Data/                Models / Repo / StrokeCodec
 │   │   ├── Logic/               Srs / Trace / Quiz / Plan / Progress / Store
 │   │   ├── UI/                  HanziCanvas / HanziDraw / 组件 / 主题 / 布局规则
 │   │   ├── Platform/            朗读（AVSpeechSynthesizer）
 │   │   ├── Pages/               11 个页面
 │   │   └── Resources/           catalog.json / meta.json / strokes.json（复用同一份）
-│   ├── Checks/                  145 个测试（SPM + XCTest，macOS 原生跑）
-│   ├── docs/screenshots/        界面截图
+│   ├── Checks/                  155 个测试（SPM + XCTest，macOS 原生跑）
+│   ├── docs/screenshots/        界面截图（含 phone/ 子目录）
 │   └── README.md                iPad 版实现记录
 │
 ├── content/source/              原始数据（不打包，可复现构建）
@@ -317,9 +327,10 @@ Android 测试全部跑在 JVM 上（Robolectric + Compose UI Test），**不需
 数据里已经是四年级了（8 册）。再加年级 = 加数据 + 一条分包映射，代码不用改。
 
 **Q：iOS 版？**
-有，是原生 SwiftUI 的 **iPad 版**（[`ios/`](ios/)，见 [ios/README.md](ios/README.md)），
-侧边栏分栏导航、适配大屏，最低 iOS 17。**没有做 iPhone 专属布局**——
-手机屏太小，放不下描红和笔顺并排的界面，iPhone 上用小程序即可。
+有，原生 SwiftUI，**iPad 与 iPhone 通用**（[`ios/`](ios/)，见 [ios/README.md](ios/README.md)），最低 iOS 17。
+iPad 上是侧边栏分栏布局（8 册课本直接列在侧边栏里）；iPhone 上是底部三个 tab、
+单列内容。导航范式按设备分而不是按屏幕尺寸分——否则手机横过来就会
+从底部 tab 突变成侧边栏。
 
 ---
 
@@ -333,7 +344,7 @@ Android 测试全部跑在 JVM 上（Robolectric + Compose UI Test），**不需
 | [测试与验收](docs/04-测试与验收.md) | 五层验证怎么做、怎么跑、覆盖了什么、没覆盖什么 |
 | [朗读功能方案](docs/05-朗读功能方案.md) | 插件选型、体积账本、多音字策略、接口设计（待评审，未实现） |
 | [Android 原生版](docs/06-Android原生版.md) | 迁移动机、工程结构、关键实现、构建运行、发布清单 |
-| [iPad 原生版](ios/README.md) | SwiftUI 实现记录：绘制验证、描红判分、自适应布局、上架准备 |
+| [iOS 原生版](ios/README.md) | SwiftUI 实现记录：绘制验证、描红判分、自适应布局、手机端适配、上架准备 |
 
 ---
 

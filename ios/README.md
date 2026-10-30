@@ -1,6 +1,7 @@
-# 小小识字家 · iPad 版
+# 小小识字家 · iOS 版
 
-面向小学一二年级的识字 App，SwiftUI 原生实现，**以 iPad 大屏为主**，不做 iPhone 专属紧凑布局。
+面向小学一二年级的识字 App，SwiftUI 原生实现，**iPad 与 iPhone 通用**。
+iPad 上是侧边栏分栏布局，iPhone 上是底部 tab 加单列内容。
 
 数据与小程序、Android 版共用同一份（统编版 8 册、2600 生字、276 课），三端的
 学习记录、出题、判分逻辑逐条对齐。
@@ -23,6 +24,10 @@
 
 12 个页面。`Pages/` 下 11 个文件，课本页（`CoursesPageView`）写在 `App/RootView.swift` 里。
 
+### iPad
+
+侧边栏 + 内容列。内容列宽了会自动分栏：详情页左右各一栏，描红画布与面板并排。
+
 | | | |
 |:---:|:---:|:---:|
 | <img src="docs/screenshots/01-home.png" width="270"><br>**首页** 今日任务 + 课本入口 | <img src="docs/screenshots/02-courses.png" width="270"><br>**课本** 8 册进度 | <img src="docs/screenshots/03-unit.png" width="270"><br>**单元** 课文列表 |
@@ -30,9 +35,36 @@
 | <img src="docs/screenshots/07-practice.png" width="270"><br>**练习** 今日复习 / 自由选书 | <img src="docs/screenshots/08-quiz.png" width="270"><br>**答题** 四选一 | <img src="docs/screenshots/09-result.png" width="270"><br>**结果** 星级与本轮错字 |
 | <img src="docs/screenshots/10-wrong.png" width="270"><br>**错题本** 答错的字 | <img src="docs/screenshots/11-profile.png" width="270"><br>**我的** 统计 / 徽章 / 设置 | <img src="docs/screenshots/12-about.png" width="270"><br>**关于** |
 
-导航用 `NavigationSplitView` 侧边栏，不用底部 tab：Android 用底部三 tab 是因为手机屏幕窄、
-列不出更多入口；iPad 上底部导航离手远，横屏又有大量横向空间，侧边栏更自然。
-侧边栏同时承担课本选择，8 册直接列出来，比藏在首页宫格里少一次跳转。
+### iPhone
+
+底部三个 tab（首页 / 练习 / 我的），每个 tab 各自一条导航栈，内容单列。
+
+| | | | |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/phone/01-home.png" width="180"><br>**首页** | <img src="docs/screenshots/phone/02-unit.png" width="180"><br>**单元** | <img src="docs/screenshots/phone/03-detail.png" width="180"><br>**生字详情** | <img src="docs/screenshots/phone/04-write.png" width="180"><br>**描红** |
+| <img src="docs/screenshots/phone/05-quiz.png" width="180"><br>**答题** | <img src="docs/screenshots/phone/06-profile.png" width="180"><br>**我的** | | |
+
+### 导航为什么按设备分，而不是按尺寸类
+
+SwiftUI 常规建议是按 `horizontalSizeClass` 自适应，但**导航范式不适合这么做**：
+iPhone Pro Max 横屏宽度 932pt，尺寸类会变成 `.regular`，于是「转一下手机，
+整个导航从底部 tab 变成侧边栏」——同一台设备上导航模型突变，用户还得重新学一遍怎么切页面。
+
+所以拆成两条线：
+
+- **导航范式按设备定**：手机永远底部 tab，iPad 永远侧边栏。
+- **页面内部布局按宽度定**：详情页分不分栏、网格几列、留白多少，走 `LayoutRules`。
+
+这样手机横过来只是内容变宽（详情页可以分栏、少滚一屏），不会换掉整个导航。
+
+**手机只放三个 tab。** 五个 tab 在 320pt 的屏幕上每个只剩 64pt，中文标签会挤成一团。
+错题本和关于收进「我的」——错题本作为带待复习字数的入口行（与 Android
+`ProfilePage.kt:272` 的 LinkRow 一致），关于在「我的」底部。
+
+**每个 tab 一条独立导航栈。** 原本只有一条 `path`，因为 iPad 只有一个内容列。
+改成 TabView 后三个 `NavigationStack` 会同时存在，共用一条 path 的话：
+在「首页」里推到某个单元，切到「我的」会看到同一个单元页。所以 `AppState`
+改成 `paths: [Section: NavigationPath]`，并提供 `pathBinding(_:)` 按分区取绑定。
 
 ## 构建
 
@@ -51,7 +83,7 @@ xcodebuild -project HanziPad.xcodeproj -scheme HanziPad \
   在已经受限的环境里会报 `sandbox_apply: Operation not permitted`，导致 `@State`、`#Preview`
   等 SwiftUI 宏全部「could not be found」。在正常的开发机上这两个参数都不需要。
 
-仅 iPad（`TARGETED_DEVICE_FAMILY = 2`），最低 iOS 17，版本 1.0.0。
+通用（`TARGETED_DEVICE_FAMILY = "1,2"`），最低 iOS 17，版本 1.0.0。
 
 ## 测试
 
@@ -61,7 +93,7 @@ xcodebuild -project HanziPad.xcodeproj -scheme HanziPad \
 cd ios && swift test --disable-sandbox
 ```
 
-**145 个测试**：数据 28 / 逻辑 41 / 绘制 21 / 描红 33 / 布局 11 / 朗读 4 / 设置 7。
+**155 个测试**：数据 28 / 逻辑 41 / 绘制 21 / 描红 33 / 布局 11 / 手机布局 10 / 朗读 4 / 设置 7。
 
 `--disable-sandbox` 只在受限环境需要，正常开发机去掉即可。
 
@@ -72,7 +104,8 @@ Xcode 的 XCTest target 在沙箱里跑不起来（`IDEPseudoTerminalDomain` 伪
 
 ```
 HanziPad/
-  App/        入口、AppState（导航/路由）、RootView（侧边栏 + 课本页）
+  App/        入口、AppState（导航/路由）、RootView（iPad 侧边栏）、
+              PhoneRootView（手机底部 tab）、SectionRootView、AppLayout
   Data/       Arcade 模型、数据加载、笔顺解码
   Logic/      SRS、学习计划、出题、描红判分、进度存储（纯逻辑，可单测）
   UI/         画布、绘制、组件、主题、自适应规则
@@ -82,7 +115,8 @@ HanziPad/
 Checks/       SPM 测试
 Tools/
   render-probe.swift   离线渲染探针，不经过模拟器直接出图
-docs/screenshots/      界面截图
+docs/screenshots/      界面截图（iPad）
+  phone/               界面截图（iPhone）
 ```
 
 ### 怎么重新生成截图
@@ -469,7 +503,72 @@ displayName: 小小识字家
 结果页星级用像素验证：满分 10/10 渲染出 **3 颗星**（43×42，x=1197/1255/1313），
 7/10 渲染出 **2 颗星**；对照 `ResultPageView.stars` 的阈值（≥90 三星、≥70 二星）一致。
 
-最终状态：**145 个测试全绿，`BUILD SUCCEEDED`，工作区干净。**
+最终状态：**155 个测试全绿，`BUILD SUCCEEDED`，工作区干净。**
+
+## 加入 iPhone 支持（2026-10-30）
+
+原本工程是 iPad 专用（`TARGETED_DEVICE_FAMILY = 2`），这一轮做成通用。
+
+### 设备族改成通用后，iPad 行为必须验证没坏
+
+改 `TARGETED_DEVICE_FAMILY = "1,2"` 是一行的事，但风险在于「iPad 上会不会
+也走进手机分支」。验证方式是跑 iPad 回归截图，确认侧边栏还在：
+
+在 2064px 宽的截图里扫竖向分界线，x=460–489 一路都是深色像素连成一条竖线——
+这就是侧边栏与内容区的分界（245pt @2x = 490px）。首页/我的/详情/描红四页
+内容占比与改造前完全一致（10.83% / 7.22% / 4.20% / 4.75%）。
+
+### 手机上原本到不了错题本和关于
+
+这是改完才发现的问题。截图时注意到 `错题本`、`关于`、`我的` 三个页面
+**内容像素占比完全相同**，做像素 diff 只差标题栏那 133×38 区域——说明它们
+其实都在显示「我的」页。
+
+原因是手机上 `SectionRootView` 只有三个 tab 承载 home/practice/profile，
+`wrong` 和 `about` 没有入口（iPad 靠侧边栏进）。修法是：
+
+- 给 `AppState` 加 `WrongRoute`（原有 `AboutRoute` 已经能 push）
+- 「我的」页加一个「学习」分组，放错题本入口行，右侧显示待复习字数，
+  0 个字时显示「还没有错字」并转成灰色
+- 错题本入口的红字与图标用 `Palette.clay`，与 Android 的角标一致
+
+修完后 `-startRoute wrong` 和 `-startRoute about` 截图像素差 131 万，
+确认是两个不同的页面了。
+
+### 补了手机端的真实机型宽度测试
+
+新增 `Checks/PhoneLayoutTests.swift`（10 个），按 iPhone SE(320) / 13 mini(375) /
+17(393) / 17 Pro(402) / Pro Max(440) / Pro Max 横屏(932) 六种宽度验证分栏、
+留白、网格列数、画布尺寸。
+
+**其中一条断言我写错了，被测试自己纠正。** 最初写「生字网格至少 3 列」，
+SE 和 13 mini 直接失败。查了一下：SE 可用宽度 320 − 20×2 = 280pt，
+放 3 列需要 3×108 + 2×12 = 348pt，物理上放不下。2 列、每列 134pt 才是正解，
+卡片更大、孩子更好点中。所以真正该守的不是列数而是**卡片不小于 108pt 最小宽**，
+改成这个断言后全绿。
+
+### 横屏这次真的验证到了
+
+上一轮 iPad 上没能旋转模拟器（`osascript` 被权限拦、强制横屏的 plist 生效但
+窗口尺寸不跟随），只能用 `LayoutRules` 的边界测试代替。
+
+这次手机上成功了：用
+`INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone="...LandscapeLeft LandscapeRight"`
+构建，截图出来是 **2622×1206**（横向），确认横屏生效。横屏下首页内容变宽、
+描红页自动分栏（左画布、右面板），正是设计预期的行为。
+
+差别在于 iPhone 的界面方向是跟随设备方向的，而 iPadOS 26 是窗口化的——
+后者窗口尺寸不随方向变，所以同样的办法在 iPad 上没用。
+
+### 验证结果
+
+| 项 | 结果 |
+| --- | --- |
+| iPhone 17 Pro 逐页截图 | 12/12 进程存活、内容正常、右侧无裁切 |
+| iPhone 17e（1170×2532） | 布局正常，底部 tab 三项完整 |
+| 横屏 2622×1206 | 生效，详情/描红自动分栏 |
+| iPad 回归 | 侧边栏仍在，4 页内容占比与改造前一致 |
+| 测试 | 155 个全绿（新增 10 个手机布局测试） |
 
 ## 已知限制
 
@@ -479,3 +578,6 @@ displayName: 小小识字家
   但替代不了在真机上拖一下窗口。
 - **朗读只验证到「发起成功」。** 音频会话配置、中文语音存在、进程不崩都确认了，
   但声音本身没法在模拟器里听到。
+- **手机端也没在真机上试过。** 同上，描红手感要真机确认。另外手机屏小，
+  描红画布在 SE 上只有约 280pt（容差约 21pt），判定会比 iPad 上更严——
+  这是按比例缩放的自然结果，但真机手感需要试。

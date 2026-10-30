@@ -35,8 +35,30 @@ final class AppState {
     }
 
     var section: Section = .home
-    /// 详情列的返回栈
-    var path = NavigationPath()
+    /// 每个分区各自一条导航栈。
+    ///
+    /// 原本只有一条 `path`，因为 iPad 上只有一个内容列。手机端改成底部 tab 后，
+    /// 三个 tab 各有一个 `NavigationStack`——如果还共用一条 path，
+    /// 在「首页」里推到某个单元，切到「我的」会看到同一个单元页，
+    /// 再切回来栈已经乱了。
+    private var paths: [Section: NavigationPath] = [:]
+
+    /// 当前分区的导航栈。push/pop 都作用在这里。
+    var path: NavigationPath {
+        get { paths[section] ?? NavigationPath() }
+        set { paths[section] = newValue }
+    }
+
+    /// 取某个分区的栈绑定，给各自的 NavigationStack 用。
+    ///
+    /// 必须是「按分区取」而不是读 `path`：TabView 会把三个 tab 的视图树都建起来，
+    /// 三个 NavigationStack 同时求值时，只有这个能保证各自读到自己那条。
+    func pathBinding(_ s: Section) -> Binding<NavigationPath> {
+        Binding(
+            get: { [weak self] in self?.paths[s] ?? NavigationPath() },
+            set: { [weak self] in self?.paths[s] = $0 }
+        )
+    }
 
     func go(_ section: Section) {
         self.section = section
@@ -153,6 +175,10 @@ final class AppState {
                 }
             case "write":
                 if parts.count > 1 { push(WriteRoute(ch: parts[1])) }
+            case "wrong":
+                push(WrongRoute())
+            case "about":
+                push(AboutRoute())
             case "result":
                 // result:对/总/错字数，用于核对结果页
                 let correct = Int(parts.count > 1 ? parts[1] : "8") ?? 8
@@ -229,6 +255,8 @@ final class AppState {
     struct WriteRoute: Hashable { let ch: String }
     struct BookRoute: Hashable { let id: String }
     struct AboutRoute: Hashable {}
+    /// 错题本。iPad 上在侧边栏里直接切分区，手机上只能 push，所以需要一条路由。
+    struct WrongRoute: Hashable {}
 }
 
 /// 详情列的路由目的地。集中在一处，新增页面时不容易漏。
@@ -258,6 +286,9 @@ struct AppRoutes: ViewModifier {
             .navigationDestination(for: AboutRoute.self) { _ in
                 AboutPageView()
             }
+            .navigationDestination(for: WrongRoute.self) { _ in
+                WrongPageView()
+            }
     }
 }
 
@@ -267,6 +298,7 @@ typealias LessonRoute = AppState.LessonRoute
 typealias CharRoute = AppState.CharRoute
 typealias WriteRoute = AppState.WriteRoute
 typealias AboutRoute = AppState.AboutRoute
+typealias WrongRoute = AppState.WrongRoute
 
 extension View {
     func appRoutes() -> some View { modifier(AppRoutes()) }
