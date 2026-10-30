@@ -42,8 +42,26 @@ final class WriteSession: ObservableObject {
 
     /// 容差：画布边长的 7.5%（与 Android 一致）
     var tolerance: CGFloat { box * 0.075 }
-    /// 短于这个长度就不算一笔
+    /// 短于这个长度就不算一笔（画布比例的兜底值）
     var minLength: CGFloat { box * 0.04 }
+
+    /// 这一笔「算一笔」所需的最短长度。
+    ///
+    /// 不能只用画布比例。点画（点）本身就很短——「玉」「太」的末笔中线只有
+    /// 52-55px（画布 400 时），而 `box * 0.04 = 16px` 要求至少画出它的三成。
+    /// 孩子把点写成一个更小的点时，长度卡在门槛下，就会被判「太短」，
+    /// 而**被判太短不消耗笔画**——于是永远停在这一笔上。
+    ///
+    /// 所以取「画布比例」与「目标笔画长度的 35%」里更小的一个：
+    /// 长笔画仍按画布比例兜底，短笔画按自身长度放宽。
+    /// 这不改变长笔画的严格度，只让本来就短的笔画有活路。
+    func minLength(forStroke i: Int) -> CGFloat {
+        let base = minLength
+        guard let t = targetPoints(for: i) else { return base }
+        let targetLen = CGFloat(Trace.polylineLength(t))
+        guard targetLen > 0 else { return base }
+        return min(base, targetLen * 0.35)
+    }
 
     init(ch: String, strokes: StrokeCodec.CharStrokes?, box: CGFloat) {
         self.ch = ch
@@ -85,8 +103,12 @@ final class WriteSession: ObservableObject {
         //
         // 早先 Android 这里什么都不做，孩子会以为「写了没反应」——
         // 而点（点画）恰恰经常是最后一笔，于是就成了「最后一笔写不上」。
-        if points.count < 4 || CGFloat(Trace.polylineLength(points)) < minLength {
-            message = "这一笔太短了，沿着虚线完整写一遍"
+        if points.count < 4 || CGFloat(Trace.polylineLength(points)) < minLength(forStroke: index) {
+            // 提示要能指导下一步：只说「太短」孩子不知道该怎么办。
+            // 点一下（只有一个采样点）是常见情况，单独说明。
+            message = points.count < 4
+                ? "这一笔没采到线——按住别松手，沿着虚线划一小段"
+                : "这一笔太短了，沿着虚线完整写一遍"
             return .tooShort
         }
 

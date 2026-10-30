@@ -228,6 +228,21 @@ final class Repo {
 
     var strokeCharCount: Int { rawStrokes.count }
 
+    /// 所有有笔顺数据的字（按教材顺序，教材外的按字典序补在后面）。
+    /// 描红相关的全量校验用得到。
+    func allCharsWithStrokes() -> [String] {
+        var seen = Set<String>()
+        var out: [String] = []
+        for ch in allChars where rawStrokes[ch] != nil {
+            if seen.insert(ch).inserted { out.append(ch) }
+        }
+        for ch in rawStrokes.keys.sorted() where !seen.contains(ch) {
+            seen.insert(ch)
+            out.append(ch)
+        }
+        return out
+    }
+
     // MARK: - 全部字（搜索用，M5 的搜索页会用到）
 
     /// 全部字（教材顺序）。出题时用作最后一档干扰项来源，与 Android 的 Repo.allChars 对应

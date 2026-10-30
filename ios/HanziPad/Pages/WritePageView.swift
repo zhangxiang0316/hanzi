@@ -4,6 +4,8 @@ import SwiftUI
 ///
 /// 与 M4 探针的区别：这里有真实的保存逻辑、上/下字导航、
 /// 以及写完后的星级反馈面板。
+///
+/// **结构上刻意拆成两层**，原因见 `WritePageBody`。
 struct WritePageView: View {
     let ch: String
     @Environment(AppState.self) private var app
@@ -16,7 +18,8 @@ struct WritePageView: View {
         GeometryReader { geo in
             Group {
                 if let session {
-                    content(session, geo)
+                    WritePageBody(session: session, geo: geo, ch: ch,
+                                  showResult: $showResult)
                 } else {
                     ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -30,33 +33,85 @@ struct WritePageView: View {
             if session == nil {
                 session = WriteSession(ch: ch, strokes: app.repo.strokes(ch), box: 400)
             }
-        }
-        .sheet(isPresented: $showResult) {
-            if let session { resultSheet(session) }
+            #if DEBUG
+            // 自检：进页面后自动用完美笔迹写 N 笔。
+            // 用来确认「状态推进后界面有没有跟着刷新」——这一条光看代码看不出来。
+            if let n = DebugArgs.writeAuto, let s = session, n > 0 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    for _ in 0..<n where !s.isDone {
+                        if let t = s.targetPoints(for: s.index) { _ = s.submit(t) }
+                    }
+                    TapTargetProbe.shared.record(
+                        "描红-自动写\(n)笔后",
+                        CGSize(width: CGFloat(s.index), height: CGFloat(s.scores.count))
+                    )
+                    TapTargetProbe.shared.flush()
+                }
+            }
+            #endif
         }
     }
+}
 
-    private func content(_ session: WriteSession, _ geo: GeometryProxy) -> some View {
+/// 描红页主体。
+///
+/// **为什么必须单独拆出来**：`WritePageView` 用 `@State` 持有 `WriteSession`，
+/// 而 `@State` 不订阅 `ObservableObject` 的变化——状态推进时页面根本不会刷新。
+///
+/// 实测（`-writeAuto 2` 自动写完两笔后截图）：画布那一块像素变了（笔画填上了），
+/// 但表头「第 X / Y 笔」、进度条、每笔得分的区域**像素差为 0**，完全没动。
+/// 后果是：孩子被判不合格时，那句「起笔的位置不太对」「没写完整」的提示
+/// 永远不会显示，画布上也没有变化——看起来就是「这一笔写不上」。
+///
+/// 把读 `session` 的部分放进一个带 `@ObservedObject` 的视图，由它订阅，
+/// 问题从根上消失。
+private struct WritePageBody: View {
+    @ObservedObject var session: WriteSession
+    let geo: GeometryProxy
+    let ch: String
+    @Binding var showResult: Bool
+
+    @Environment(AppState.self) private var app
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        content
+            .sheet(isPresented: $showResult) {
+                WriteResultSheet(
+                    session: session,
+                    onRestart: {
+                        session.restart()
+                        showResult = false
+                    },
+                    onDone: {
+                        showResult = false
+                        dismiss()
+                    }
+                )
+            }
+    }
+
+    private var content: some View {
         let wide = LayoutRules.writeIsSplit(geo.size.width)
 
         return ScrollView {
             VStack(spacing: 18) {
-                header(session)
+                header
 
                 HStack(alignment: .top, spacing: 22) {
                     WriteCanvasHost(session: session) { pts in
-                        handle(session, session.submit(pts))
+                        handle(session.submit(pts))
                     }
                     .frame(maxWidth: wide ? 480 : 560, maxHeight: wide ? 480 : 560)
 
                     if wide {
-                        sidePanel(session).frame(maxWidth: 320)
+                        sidePanel.frame(maxWidth: 320)
                     }
                 }
 
-                if !wide { sidePanel(session) }
+                if !wide { sidePanel }
 
-                footer(session)
+                footer
             }
             .padding(.horizontal, Dimens.pagePad(geo.size.width))
             .padding(.vertical, 20)
@@ -65,7 +120,7 @@ struct WritePageView: View {
         }
     }
 
-    private func header(_ session: WriteSession) -> some View {
+    private var header: some View {
         HStack(spacing: 14) {
             Text(session.ch)
                 .font(.system(size: 32, weight: .semibold))
@@ -84,13 +139,13 @@ struct WritePageView: View {
                 .buttonStyle(.plain)
             }
             Spacer()
-            Text("第 \(min(session.index + 1, session.count)) / \(session.count) 笔")
+            Text("第 \(min(session.index + 1, max(session.count, 1))) / \(session.count) 笔")
                 .font(.system(size: 14, weight: .semibold).monospacedDigit())
                 .foregroundStyle(Palette.ink2)
         }
     }
 
-    private func sidePanel(_ session: WriteSession) -> some View {
+    private var sidePanel: some View {
         VStack(alignment: .leading, spacing: 14) {
             // 进度
             VStack(alignment: .leading, spacing: 7) {
@@ -106,7 +161,7 @@ struct WritePageView: View {
                 ProgressBar(value: session.progress, height: 7)
             }
 
-            // 提示
+            // 提示：这一块是「被判不合格」时唯一的反馈，必须随状态刷新
             if !session.message.isEmpty {
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "exclamationmark.circle.fill")
@@ -172,7 +227,7 @@ struct WritePageView: View {
         return Palette.clay
     }
 
-    private func footer(_ session: WriteSession) -> some View {
+    private var footer: some View {
         HStack(spacing: 12) {
             let prev = app.repo.prevInLesson(app.repo.meta(ch)?.lesson, ch)
             let next = app.repo.nextInLesson(app.repo.meta(ch)?.lesson, ch)
@@ -212,7 +267,25 @@ struct WritePageView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private func resultSheet(_ session: WriteSession) -> some View {
+    private func handle(_ outcome: WriteSession.Outcome) {
+        if case .finished = outcome {
+            showResult = true
+        }
+    }
+}
+
+/// 写完后的星级面板。
+///
+/// 同样要 `@ObservedObject`：`session.restart()` 之后分数会变回 0，
+/// 面板要跟着变，否则「再写一遍」后还显示上一次的成绩。
+private struct WriteResultSheet: View {
+    @ObservedObject var session: WriteSession
+    let onRestart: () -> Void
+    let onDone: () -> Void
+
+    @Environment(AppState.self) private var app
+
+    var body: some View {
         VStack(spacing: 20) {
             Spacer()
             Text(session.finalStars == 3 ? "🏆" : session.finalStars > 0 ? "🎉" : "🌱")
@@ -221,7 +294,7 @@ struct WritePageView: View {
             Text("\(session.finalScore) 分")
                 .font(.system(size: 32, weight: .bold))
                 .foregroundStyle(Palette.ink1)
-            Text(resultText(session))
+            Text(resultText)
                 .font(Fonts.body)
                 .foregroundStyle(Palette.ink2)
                 .multilineTextAlignment(.center)
@@ -230,14 +303,8 @@ struct WritePageView: View {
             Spacer()
 
             VStack(spacing: 10) {
-                HanziButton(title: "再写一遍", fullWidth: true) {
-                    session.restart()
-                    showResult = false
-                }
-                HanziButton(title: "完成", kind: .secondary, fullWidth: true) {
-                    showResult = false
-                    dismiss()
-                }
+                HanziButton(title: "再写一遍", fullWidth: true, action: onRestart)
+                HanziButton(title: "完成", kind: .secondary, fullWidth: true, action: onDone)
             }
             .padding(.horizontal, 30)
             .padding(.bottom, 26)
@@ -246,23 +313,17 @@ struct WritePageView: View {
         .presentationDragIndicator(.visible)
         .onAppear {
             // 一次描红只记一次成绩
-            app.progress.saveWrite(ch, score: session.finalScore)
-            SpareParts.speak(ch, rate: app.progress.settings.speechRate)
+            app.progress.saveWrite(session.ch, score: session.finalScore)
+            SpareParts.speak(session.ch, rate: app.progress.settings.speechRate)
         }
     }
 
-    private func resultText(_ session: WriteSession) -> String {
+    private var resultText: String {
         switch session.finalStars {
         case 3: return "一笔一画都很到位，太棒了！"
         case 2: return "写得不错，有几笔再稳一点就更好"
         case 1: return "形状大致对了，慢慢写会更准"
         default: return "再试一次吧，沿着淡灰色的字慢慢描"
-        }
-    }
-
-    private func handle(_ session: WriteSession, _ outcome: WriteSession.Outcome) {
-        if case .finished = outcome {
-            showResult = true
         }
     }
 }
