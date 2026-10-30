@@ -1,6 +1,38 @@
 # 小小识字家 · iPad 版
 
-SwiftUI 原生实现，**以 iPad 大屏为主**，不做 iPhone 专属紧凑布局。
+面向小学一二年级的识字 App，SwiftUI 原生实现，**以 iPad 大屏为主**，不做 iPhone 专属紧凑布局。
+
+数据与小程序、Android 版共用同一份（统编版 8 册、2600 生字、276 课），三端的
+学习记录、出题、判分逻辑逐条对齐。
+
+![界面概览](docs/screenshots/00-overview.png)
+
+## 功能
+
+- **跟课本学** —— 按统编版 8 册 / 64 单元 / 276 课组织，生字带拼音、组词、笔顺
+- **笔顺动画** —— 逐笔播放，可暂停、可停在任意一笔
+- **描红** —— 手指照着底字写，逐笔判定、打分、给星；写错的笔会被指出
+- **间隔复习** —— 8 个箱位的 SRS，按掌握度安排今天该复习哪些字
+- **练习与答题** —— 看拼音选字 / 看字选拼音 / 组词，每次 10 题
+- **错题本** —— 自动收集答错的字，可单独重练
+- **学习统计** —— 连续天数、累计识字量、掌握度、描红星数、徽章墙
+- **朗读** —— 系统中文语音，语速可调
+- **无网络** —— 全部离线，不收集任何数据，学习记录只存在本机
+
+## 界面
+
+12 个页面。`Pages/` 下 11 个文件，课本页（`CoursesPageView`）写在 `App/RootView.swift` 里。
+
+| | | |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/01-home.png" width="270"><br>**首页** 今日任务 + 课本入口 | <img src="docs/screenshots/02-courses.png" width="270"><br>**课本** 8 册进度 | <img src="docs/screenshots/03-unit.png" width="270"><br>**单元** 课文列表 |
+| <img src="docs/screenshots/04-lesson.png" width="270"><br>**课文** 本课生字 | <img src="docs/screenshots/05-detail.png" width="270"><br>**生字详情** 笔顺 / 组词 / 掌握度 | <img src="docs/screenshots/06-write.png" width="270"><br>**描红** 逐笔判定 |
+| <img src="docs/screenshots/07-practice.png" width="270"><br>**练习** 今日复习 / 自由选书 | <img src="docs/screenshots/08-quiz.png" width="270"><br>**答题** 四选一 | <img src="docs/screenshots/09-result.png" width="270"><br>**结果** 星级与本轮错字 |
+| <img src="docs/screenshots/10-wrong.png" width="270"><br>**错题本** 答错的字 | <img src="docs/screenshots/11-profile.png" width="270"><br>**我的** 统计 / 徽章 / 设置 | <img src="docs/screenshots/12-about.png" width="270"><br>**关于** |
+
+导航用 `NavigationSplitView` 侧边栏，不用底部 tab：Android 用底部三 tab 是因为手机屏幕窄、
+列不出更多入口；iPad 上底部导航离手远，横屏又有大量横向空间，侧边栏更自然。
+侧边栏同时承担课本选择，8 册直接列出来，比藏在首页宫格里少一次跳转。
 
 ## 构建
 
@@ -19,20 +51,72 @@ xcodebuild -project HanziPad.xcodeproj -scheme HanziPad \
   在已经受限的环境里会报 `sandbox_apply: Operation not permitted`，导致 `@State`、`#Preview`
   等 SwiftUI 宏全部「could not be found」。在正常的开发机上这两个参数都不需要。
 
+仅 iPad（`TARGETED_DEVICE_FAMILY = 2`），最低 iOS 17，版本 1.0.0。
+
+## 测试
+
+数据层与逻辑层零 UIKit 依赖，用 SPM 在 macOS 上原生跑，不需要模拟器：
+
+```bash
+cd ios && swift test --disable-sandbox
+```
+
+**145 个测试**：数据 28 / 逻辑 41 / 绘制 21 / 描红 33 / 布局 11 / 朗读 4 / 设置 7。
+
+`--disable-sandbox` 只在受限环境需要，正常开发机去掉即可。
+
+Xcode 的 XCTest target 在沙箱里跑不起来（`IDEPseudoTerminalDomain` 伪终端错误），
+所以逻辑测试全部走 SPM。界面层用模拟器截图核对，见下。
+
 ## 工程结构
 
 ```
 HanziPad/
-  App/        入口
+  App/        入口、AppState（导航/路由）、RootView（侧边栏 + 课本页）
   Data/       Arcade 模型、数据加载、笔顺解码
-  Logic/      SRS、学习计划、出题、描红判分（纯逻辑，可单测）
-  UI/         界面与画布
+  Logic/      SRS、学习计划、出题、描红判分、进度存储（纯逻辑，可单测）
+  UI/         画布、绘制、组件、主题、自适应规则
+  Platform/   朗读（AVSpeechSynthesizer）
+  Pages/      11 个页面
   Resources/  catalog.json / meta.json / strokes.json（与 Android 共用同一份）
+Checks/       SPM 测试
 Tools/
   render-probe.swift   离线渲染探针，不经过模拟器直接出图
+docs/screenshots/      界面截图
 ```
 
-## M0 结论（2026-10-30）
+### 怎么重新生成截图
+
+调试版 App 支持几个启动参数（全部包在 `#if DEBUG` 里，Release 包不含），
+用来跳过点击直接进到某个页面：
+
+```bash
+xcrun simctl launch booted com.xiaoxiao.hanzi \
+  -seedDemo -startSection courses -startRoute char:天:1a-s1
+xcrun simctl io booted screenshot page.png
+```
+
+| 参数 | 作用 |
+| --- | --- |
+| `-startSection home\|courses\|practice\|wrong\|profile\|about` | 直接切到某个侧边栏分区 |
+| `-startRoute book:1a` / `lesson:1a-s1` / `char:天:1a-s1` / `write:天` / `quiz:review:1a` / `result:7:10` | 直接推入某个详情页 |
+| `-seedDemo` | 造一批学习记录（会先 `resetAll`，保证可重复） |
+| `-setPinyin 0\|1` | 开关组词注音，用于对比验证设置是否生效 |
+| `-reportBundle` | 导出运行时的本地化配置 |
+| `-selfTestSpeech` | 设备上真调一次朗读，验证音频会话能配起来 |
+
+`-seedDemo` 开头先 `resetAll` 是有原因的：进度是落盘的，不重置的话每次启动都在上次
+数据上叠加，同一个参数两次截图画面都不一样，没法做像素对比。修完之后两次同参数截图
+**逐像素相同（差异 0）**。
+
+---
+
+# 实现记录
+
+按里程碑记录判断依据和踩过的坑。都写在「所以为什么这么做」上，
+而不是「做了哪些文件」——后者看目录就行。
+
+## M0 工程骨架 + 绘制可行性验证（2026-10-30）
 
 在写一行界面代码之前先验证了地基，结论如下。
 
@@ -70,24 +154,14 @@ PingFang 是黑体，字重和笔形都不同。
 - Android 版用的是系统字体画底字（`drawGhostChar` → `drawText`），这一点上
   iOS 版会比 Android 更准，属于有意为之的改进
 
+（CoreText 字形轮廓 `GlyphOutline` 保留着，用作没有笔画数据时的兜底。）
+
 ### 4. 工程文件
 
 没有 xcodegen/tuist，`project.pbxproj` 是手写的。用 Xcode 16+ 的
 `PBXFileSystemSynchronizedRootGroup`（文件系统同步组），新增源文件不需要改工程文件。
 
-## 测试
-
-数据层与逻辑层零 UIKit 依赖，用 SPM 在 macOS 上原生跑，不需要模拟器：
-
-```bash
-cd ios && swift test --disable-sandbox
-```
-
-（`--disable-sandbox` 只在受限环境需要，正常开发机去掉即可。）
-
-界面层的截图测试需要模拟器，留到后续阶段单独处理。
-
-### M1 数据层结论（2026-10-30）
+## M1 数据层（2026-10-30）
 
 28 个测试全绿，逐条对照 Android 侧已验证的数字：
 
@@ -111,7 +185,7 @@ cd ios && swift test --disable-sandbox
 而所有访问都来自 SwiftUI 视图。用 actor 隔离比手写锁更难出错——这是 Swift 6
 严格并发检查给出的提示，顺手采纳了。
 
-### M2 逻辑层结论（2026-10-30）
+## M2 核心逻辑（2026-10-30）
 
 SRS / 描红评分 / 出题 / 计划 / 进度，全部照搬 Android 的实现，41 个测试对照
 Android `LogicTest.kt` 的断言逐条验证。三处值得记的：
@@ -131,7 +205,7 @@ Android `LogicTest.kt` 的断言逐条验证。三处值得记的：
    （signal 5）。改成 `Repo.overrideShared(_:)` 注入后正常——这也说明逻辑层
    不该直接依赖全局单例，依赖注入不只是为了测试好看。
 
-### M3 绘制层结论（2026-10-30）
+## M3 汉字绘制（2026-10-30）
 
 `HanziCanvas`（坐标映射）+ `HanziDraw`（渲染）+ `HanziView`（视图与动画）。
 
@@ -187,7 +261,7 @@ PNG，再用 `simctl get_app_container` 拉出来——每张图就是一个待�
 缓动用 `1-(1-t)^1.6`（起笔快、收笔慢）。只影响观感，不参与任何判分——
 判分用的是用户自己的笔迹。
 
-### M4 描红结论（2026-10-30）
+## M4 描红（2026-10-30）
 
 `WriteSession`（判定状态机）+ `StrokeSmoothing`（平滑去抖）+ `WriteCanvas`（触点采集）。
 
@@ -238,15 +312,7 @@ iPad 从 mini（约 700pt 画布）到 13 寸（过千 pt）边长能差一倍�
 
 这证明「采集回调 → 状态机 → 评分」这条线在设备上是通的，而不只是单测通过。
 
-### M5 / M6 界面层结论（2026-10-30）
-
-11 个页面：首页 / 课本 / 单元 / 课文 / 详情 / 描红 / 练习 / 答题 / 结果 / 错题本 / 我的 / 关于。
-
-**导航形态：侧边栏而不是底部 tab。**
-
-Android 用底部三 tab 是因为手机屏幕窄、列不出更多入口。iPad 上底部导航离手远，
-横屏又有大量横向空间，`NavigationSplitView` 的侧边栏是更自然的形态。
-侧边栏同时承担课本选择——8 册直接列出来，比藏在首页宫格里少一次跳转。
+## M5 界面 / M6 朗读（2026-10-30）
 
 **iPadOS 26 是窗口化的，所以「横屏/竖屏」不再是布局语境。**
 
@@ -272,21 +338,11 @@ Android 用底部三 tab 是因为手机屏幕窄、列不出更多入口。iPad
 新增 `Palette.edge`（#B8A583，2.23:1）专用于可点击元素，并给选项加了轻阴影
 做第二重提示。修完后用连通域检测确认 4 个选项的边框都清晰可见。
 
-**验证结果（8 个页面在 iPad Pro 13 寸上逐一截图）：**
-
-| 页面 | 内容区非背景像素 |
-| --- | --- |
-| 首页 | 10.83% |
-| 我的 | 7.00% |
-| 描红 | 4.75% |
-| 单元 | 4.44% |
-| 详情 | 4.19% |
-| 课文 | 3.03% |
-| 练习 | 1.96% |
-| 答题 | 1.45% |
-
-答题页占比最低是正常的——它本身就是「几个选项 + 大量留白」的结构。
-另外在 iPad mini（内容区 447pt）上验证了单列布局生效。
+**逐页验证：** 每个页面在 iPad Pro 13 寸上单独启动截图，按「内容区非背景像素」
+判断是不是真的渲染了内容（首页 11.0% / 我的 7.2% / 描红 4.9% / 单元 4.6% /
+详情 4.4% / 课文 3.2% / 练习 2.1% / 答题 1.6%）。答题页占比最低是正常的——
+它本身就是「几个选项 + 大量留白」的结构。另外在 iPad mini（内容区 447pt）上
+验证了单列布局生效。
 
 **朗读**（`Platform/Speech.swift`，`AVSpeechSynthesizer`）：
 - 初始化时就把音频会话配成 `.playback` + `.duckOthers` 并激活。
@@ -300,9 +356,7 @@ Android 用底部三 tab 是因为手机屏幕窄、列不出更多入口。iPad
 **版本号从 Bundle 读**，不写死。Android 侧曾在两个页面硬编码 `"v1.0.0"`，
 与实际 1.0.5 脱节，这个坑不重踩。
 
-新增 15 个测试（布局 11 + 朗读 4），累计 **138 个全绿**。
-
-### M8 上架准备（2026-10-30）
+## M8 上架准备（2026-10-30）
 
 **App 图标是画出来的，不是贴的。**
 
@@ -354,7 +408,7 @@ HanziPad.app/
   UIDeviceFamily              [2]  仅 iPad
 ```
 
-### 复查补漏（2026-10-30）
+## 复查补漏（2026-10-30）
 
 M8 之后回头核查「设置项是否真的生效」，发现两个问题。
 
@@ -371,10 +425,6 @@ M8 之后回头核查「设置项是否真的生效」，发现两个问题。
 | --- | --- |
 | 拼音开 | 195 / 197 / 170 / 183 px（词 + 拼音，第 4 个换行） |
 | 拼音关 | 96 / 96 / 96 / 96 px（纯词，4 个排一行） |
-
-顺带发现 `-seedDemo` 的坑：进度是落盘的，不先 reset 的话每次启动都在上次数据上
-叠加，同一个参数两次截图画面都不一样。加了 `resetAll()` 后，两次同参数截图
-**逐像素相同（差异 0）**，才能做可靠的像素对比。
 
 **二、设置项零测试覆盖。**
 
@@ -402,9 +452,7 @@ displayName: 小小识字家
 日期/星期的格式化**不依赖 locale**——`DayUtil` 手工拼「周四」「10月30日」，
 不用 `DateFormatter`。所以在英文系统的 iPad 上也不会冒出 "Thursday"。
 
-测试累计 **145 个全绿**。
-
-### 最终验收（2026-10-30）
+## 最终验收（2026-10-30）
 
 目标四项约束逐条核对：
 
@@ -413,12 +461,21 @@ displayName: 小小识字家
 | 仅 iPad，不做 iPhone 专属布局 | `TARGETED_DEVICE_FAMILY = 2`；代码里 `userInterfaceIdiom` / `UIDevice.current` 出现 **0** 次 | ✓ 全部自适应，无设备分支 |
 | 侧边栏分栏导航 | `NavigationSplitView` 用于根视图 | ✓ |
 | 不做压感笔锋 | `pressure`/`force`/`PencilKit`/`PKStroke` 搜索命中 **0** | ✓ 只取触点位置 |
-| 11 页界面 | `Pages/` 下 11 个文件 | ✓ |
+| 界面页面 | `Pages/` 下 11 个文件 + 课本页在 `RootView.swift` | ✓ 共 12 个页面 |
 
-12 个可到达的页面状态逐一在 iPad Pro 13 寸上启动截图（结果页有满分/有错两个状态），
-**进程全部存活、内容区全部有渲染**，无一崩溃或白屏。
+12 个页面逐一在 iPad Pro 13 寸上启动截图，**进程全部存活、内容区全部有渲染**，
+无一崩溃或白屏。
 
 结果页星级用像素验证：满分 10/10 渲染出 **3 颗星**（43×42，x=1197/1255/1313），
 7/10 渲染出 **2 颗星**；对照 `ResultPageView.stars` 的阈值（≥90 三星、≥70 二星）一致。
 
 最终状态：**145 个测试全绿，`BUILD SUCCEEDED`，工作区干净。**
+
+## 已知限制
+
+- **没在真机上试写过。** 全程在模拟器验证，M4 的容差（`box*0.075`）是按 Android
+  实测的 47 个采样点定的。真实手指 / Apple Pencil 的描红手感需要真机确认。
+- **没真正验证过横屏。** 如 M5 一节所述，改用 `LayoutRules` 的边界测试覆盖，
+  但替代不了在真机上拖一下窗口。
+- **朗读只验证到「发起成功」。** 音频会话配置、中文语音存在、进程不崩都确认了，
+  但声音本身没法在模拟器里听到。

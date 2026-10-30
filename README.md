@@ -2,7 +2,7 @@
 
 跟着统编版课本，一笔一笔把字写对。
 
-面向小学一～四年级的汉字学习应用，提供**微信小程序**与**Android 原生**两种形态，
+面向小学一～四年级的汉字学习应用，提供**微信小程序**、**Android 原生**、**iPad 原生**三种形态，
 内容、算法、交互手感完全一致。
 
 <p align="center">
@@ -17,15 +17,27 @@
 
 ## 立即使用
 
-| | 微信小程序 | Android 原生 |
-| --- | --- | --- |
-| **用起来** | 用微信开发者工具导入本目录（见下方） | **[下载 APK](https://github.com/zhangxiang0316/hanzi/releases/latest)** · 3.9 MB · Android 7.0+ |
-| **源码** | [`miniprogram/`](miniprogram/) | [`android/`](android/) |
-| **环境** | 微信开发者工具，基础库 3.5.5+ | JDK 17 + Android SDK 36 |
-| **测试** | 69 个（node:test） | 141 个（Robolectric + Compose UI Test） |
+| | 微信小程序 | Android 原生 | iPad 原生 |
+| --- | --- | --- | --- |
+| **用起来** | 用微信开发者工具导入本目录（见下方） | **[下载 APK](https://github.com/zhangxiang0316/hanzi/releases/latest)** · 3.9 MB · Android 7.0+ | 用 Xcode 构建（见 [ios/README.md](ios/README.md)） · iOS 17+ |
+| **源码** | [`miniprogram/`](miniprogram/) | [`android/`](android/) | [`ios/`](ios/) |
+| **环境** | 微信开发者工具，基础库 3.5.5+ | JDK 17 + Android SDK 36 | Xcode 27 + Swift 6.4 |
+| **测试** | 69 个（node:test） | 141 个（Robolectric + Compose UI Test） | 145 个（@MainActor XCTest） |
 
 > APK 可直接安装使用，用仓库内的公开 debug 密钥签名，**不适合上架应用商店**。
 > 正式发布请按 [android/keystore/README.md](android/keystore/README.md) 生成 release 密钥后重新构建。
+
+### iPad 版长这样
+
+<p align="center">
+  <img src="ios/docs/screenshots/01-home.png" width="24%" alt="首页" />
+  <img src="ios/docs/screenshots/05-detail.png" width="24%" alt="生字详情" />
+  <img src="ios/docs/screenshots/06-write.png" width="24%" alt="描红" />
+  <img src="ios/docs/screenshots/11-profile.png" width="24%" alt="我的" />
+</p>
+
+用 `NavigationSplitView` 侧边栏代替底部 tab，横屏纵向都按窗口宽度自适应。
+[全部 12 张界面截图 →](ios/README.md#界面)
 
 ---
 
@@ -115,16 +127,16 @@ npm run preview      # http://127.0.0.1:8788
 
 ## 技术栈
 
-| 层 | 小程序 | Android |
-| --- | --- | --- |
-| UI | WXML / WXSS | Jetpack Compose（BOM 2025.09.01） |
-| 语言 | 原生 JS（CommonJS） | Kotlin 2.2.20 |
-| 构建 | 微信开发者工具 | Gradle 8.14.3 + AGP 8.13.1 |
-| 笔顺渲染 | Canvas 2D | `android.graphics.Canvas`（自定义 `HanziPainter`） |
-| 存储 | `wx.setStorageSync` | SharedPreferences（JSON） |
-| 网络 | 无 | 无 |
+| 层 | 小程序 | Android | iPad |
+| --- | --- | --- | --- |
+| UI | WXML / WXSS | Jetpack Compose（BOM 2025.09.01） | SwiftUI（`NavigationSplitView` 侧边栏） |
+| 语言 | 原生 JS（CommonJS） | Kotlin 2.2.20 | Swift 6.4 |
+| 构建 | 微信开发者工具 | Gradle 8.14.3 + AGP 8.13.1 | Xcode 27（手写 pbxproj） |
+| 笔顺渲染 | Canvas 2D | `android.graphics.Canvas`（自定义 `HanziPainter`） | SwiftUI `Canvas`（自定义 `HanziDraw`） |
+| 存储 | `wx.setStorageSync` | SharedPreferences（JSON） | Application Support 下的 JSON 文件 |
+| 网络 | 无 | 无 | 无 |
 
-**零运行时依赖**。两边都没有引入第三方库：评分、出题、间隔重复、笔画解码
+**零运行时依赖**。三端都没有引入第三方库：评分、出题、间隔重复、笔画解码
 全部自己实现，`logic/` 与 `utils/` 是不依赖平台的纯逻辑，可以直接跑单测。
 
 笔顺数据格式：`坐标量化(÷6) → 二进制 → base64`，
@@ -182,8 +194,21 @@ hanzi/
 │   │   │   ├── logic/           Srs / Trace / Quiz / Plan / Progress / Store
 │   │   │   └── ui/              Theme / Components / HanziPainter / Nav / 11 个页面
 │   │   └── res/
-│   ├── app/src/test/            104 个测试（Robolectric）
+│   ├── app/src/test/            141 个测试（Robolectric + Compose UI）
 │   └── dist/                    发布的 APK
+│
+├── ios/                         SwiftUI 原生 iPad 版
+│   ├── HanziPad/
+│   │   ├── App/                 入口、AppState（路由）、RootView（侧边栏）
+│   │   ├── Data/                Models / Repo / StrokeCodec
+│   │   ├── Logic/               Srs / Trace / Quiz / Plan / Progress / Store
+│   │   ├── UI/                  HanziCanvas / HanziDraw / 组件 / 主题 / 布局规则
+│   │   ├── Platform/            朗读（AVSpeechSynthesizer）
+│   │   ├── Pages/               11 个页面
+│   │   └── Resources/           catalog.json / meta.json / strokes.json（复用同一份）
+│   ├── Checks/                  145 个测试（SPM + XCTest，macOS 原生跑）
+│   ├── docs/screenshots/        界面截图
+│   └── README.md                iPad 版实现记录
 │
 ├── content/source/              原始数据（不打包，可复现构建）
 ├── scripts/                     build-data / gen-icons / lint / render-check / preview / export-android
@@ -292,7 +317,9 @@ Android 测试全部跑在 JVM 上（Robolectric + Compose UI Test），**不需
 数据里已经是四年级了（8 册）。再加年级 = 加数据 + 一条分包映射，代码不用改。
 
 **Q：iOS 版？**
-没有。小程序在 iOS 微信里可以直接用；原生版目前只有 Android。
+有，是原生 SwiftUI 的 **iPad 版**（[`ios/`](ios/)，见 [ios/README.md](ios/README.md)），
+侧边栏分栏导航、适配大屏，最低 iOS 17。**没有做 iPhone 专属布局**——
+手机屏太小，放不下描红和笔顺并排的界面，iPhone 上用小程序即可。
 
 ---
 
@@ -306,6 +333,7 @@ Android 测试全部跑在 JVM 上（Robolectric + Compose UI Test），**不需
 | [测试与验收](docs/04-测试与验收.md) | 五层验证怎么做、怎么跑、覆盖了什么、没覆盖什么 |
 | [朗读功能方案](docs/05-朗读功能方案.md) | 插件选型、体积账本、多音字策略、接口设计（待评审，未实现） |
 | [Android 原生版](docs/06-Android原生版.md) | 迁移动机、工程结构、关键实现、构建运行、发布清单 |
+| [iPad 原生版](ios/README.md) | SwiftUI 实现记录：绘制验证、描红判分、自适应布局、上架准备 |
 
 ---
 
@@ -320,7 +348,7 @@ Android 测试全部跑在 JVM 上（Robolectric + Compose UI Test），**不需
 | **1.0.1** | 「我的」页徽章改为 4 列 2 行（原 2 列 4 行占近半屏），未解锁卡片改用暖灰以拉开对比 |
 | **1.0.0** | Android 原生版首发；小程序支持一～四年级；描红最后一笔修复 |
 
-后续计划：接入朗读（`TextToSpeech`）、深色模式、平板适配。
+后续计划：深色模式、听写、生字搜索、学习周报。
 
 ---
 
