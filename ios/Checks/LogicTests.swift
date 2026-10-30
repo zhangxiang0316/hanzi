@@ -8,23 +8,7 @@ import XCTest
 @MainActor
 final class LogicTests: XCTestCase {
 
-    private static var _repo: Repo?
-
-    private var repo: Repo {
-        if let r = Self._repo {
-            Repo.overrideShared(r)
-            return r
-        }
-        let resources = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appendingPathComponent("HanziPad/Resources")
-        let r = Repo(source: .directory(resources))
-        Self._repo = r
-        // Quiz / Plan 内部读 Repo.shared，必须指向测试数据
-        Repo.overrideShared(r)
-        return r
-    }
+    private var repo: Repo { TestRepo.make() }
 
     // MARK: - SRS
 
