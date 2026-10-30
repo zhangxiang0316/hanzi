@@ -29,3 +29,8 @@ android/keystore/release.*
 
 # 站内工具链（Gradle 发行版 + 依赖缓存 + Robolectric 字体/依赖），体积很大，不进仓库
 .tools/
+
+# ---- iOS 原生工程 ----
+ios/.build/
+ios/HanziPad.xcodeproj/xcuserdata/
+ios/HanziPad.xcodeproj/project.xcworkspace/xcuserdata/
