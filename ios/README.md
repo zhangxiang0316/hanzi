@@ -301,3 +301,55 @@ Android 用底部三 tab 是因为手机屏幕窄、列不出更多入口。iPad
 与实际 1.0.5 脱节，这个坑不重踩。
 
 新增 15 个测试（布局 11 + 朗读 4），累计 **138 个全绿**。
+
+### M8 上架准备（2026-10-30）
+
+**App 图标是画出来的，不是贴的。**
+
+`scripts/gen-ios-icon.mjs` 从 `strokes.json` 解出「字」的笔顺路径，用同一套
+0..1024 坐标 + 同样的 3.5% 内边距渲染到 1024×1024，铺玉色渐变底（#4FA091→#2C6A5D）
+加极淡田字格。好处是图标里那个字和 App 里显示的字出自同一份数据，
+不是字体渲染的近似物——和 M3 的结论一致（底字必须来自笔画轮廓）。
+
+App Store 要求图标不能带 alpha 通道。生成时先铺白底再叠加，实测编译产物
+`AppIcon60x60@2x.png`(120×120) 和 `AppIcon76x76@2x~ipad.png`(152×152)
+的 alpha<255 像素数都是 **0**。
+
+**隐私清单（`PrivacyInfo.xcprivacy`）声明为空，这是准确的。**
+
+先按常规写了 `NSPrivacyAccessedAPICategoryFileTimestamp` + 理由 `C617.1`，
+然后回去核查代码——发现根本没用过任何需要批准理由的 API：
+
+| 检查项 | 结果 |
+| --- | --- |
+| `UserDefaults` | 未使用（改写 Application Support 下的 JSON 文件） |
+| 文件属性/时间戳 | 未使用 |
+| 系统启动时间 / 磁盘空间 | 未使用 |
+| `URLSession` / 任何网络请求 | **完全没有** |
+| 统计 / 广告 SDK | 无 |
+
+学习记录只写在本机，不上传不同步。所以 `NSPrivacyAccessedAPITypes` 和
+`NSPrivacyCollectedDataTypes` 都是空数组，`NSPrivacyTracking` 为 false。
+声明比实际用得多也是错——审核会按声明问你要理由。
+
+**Info.plist 补充项：**
+- `ITSAppUsesNonExemptEncryption = NO`——没用自定义加密，省掉每次上传都被问一遍
+- `MARKETING_VERSION = 1.0.0`——首个 iPad 版本，不从 Android 的 1.0.5 续号
+- `NSHumanReadableCopyright`
+- 启动屏用 `UILaunchScreen_Generation`（系统自动生成，纯色底，不闪白）
+
+**没做的：** 占位的 `InfoPlist.strings` / `Localizable.strings` 写了又删了。
+`CFBundleDisplayName` 已经在构建设置里，而 `.strings` 不放 `.lproj` 目录根本
+不生效——留个不起作用的文件只会让人误以为已经本地化了。单语言产品不需要。
+
+**产物核对：**
+```
+HanziPad.app/
+  AppIcon60x60@2x.png        120×120  alpha ✓
+  AppIcon76x76@2x~ipad.png   152×152  alpha ✓
+  PrivacyInfo.xcprivacy      ✓
+  strokes.json / catalog.json / meta.json
+  CFBundleShortVersionString 1.0.0
+  CFBundleVersion            1
+  UIDeviceFamily              [2]  仅 iPad
+```

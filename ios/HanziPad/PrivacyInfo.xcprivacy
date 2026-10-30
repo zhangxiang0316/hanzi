@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- 不追踪用户，不投放广告 -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+
+	<!-- 不收集任何数据。
+	     学习记录只写在本机的 Application Support 目录，不上传、不同步。 -->
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+
+	<!-- 没有使用任何需要「批准理由」的 API：
+	     不用 UserDefaults（改为写 JSON 文件）、不读文件属性/时间戳、
+	     不查系统启动时间、不查磁盘空间、不枚举输入法。
+	     清单这里留空是准确的，不是遗漏。 -->
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array/>
+</dict>
+</plist>
