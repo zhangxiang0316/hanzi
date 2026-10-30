@@ -251,6 +251,9 @@ struct DetailPageView: View {
         )
     }
 
+    /// 「显示拼音」设置。控制组词上方的注音，语义与 Android/小程序一致。
+    private var showPinyin: Bool { app.progress.settings.showPinyin }
+
     private var wordsCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             SectionHead("组词")
@@ -264,7 +267,11 @@ struct DetailPageView: View {
                                 Text(w.word)
                                     .font(.system(size: 14, weight: .medium))
                                     .foregroundStyle(Palette.ink1)
-                                if !w.p.isEmpty {
+                                // 「显示拼音」控制的是组词上方的注音，不是本字读音。
+                                // 目的是让孩子先自己认词——直接给拼音就变成念拼音了。
+                                // 与 Android `DetailPage.kt:341`、小程序 `detail.wxml:69`
+                                // 的 showPinyin 语义一致。
+                                if showPinyin && !w.p.isEmpty {
                                     Text(w.p)
                                         .font(.system(size: 10))
                                         .foregroundStyle(Palette.ink3)

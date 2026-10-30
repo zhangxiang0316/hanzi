@@ -103,6 +103,29 @@ final class AppState {
         // 预置一些学习记录，否则练习/错题/徽章等页面全是空状态，看不出真实样子
         if args.contains("-seedDemo") { seedDemoData() }
 
+        if let v = value("-setPinyin") {
+            var st = progress.settings
+            st.showPinyin = (v == "1")
+            progress.updateSettings(st)
+        }
+
+        if args.contains("-reportBundle") {
+            // 本地化配置是否真的生效，光看工程文件看不出来——
+            // 要问运行时的 Bundle 才知道
+            let b = Bundle.main
+            let lines = [
+                "CFBundleDevelopmentRegion: \(b.infoDictionary?["CFBundleDevelopmentRegion"] as? String ?? "nil")",
+                "localizations: \(b.localizations.sorted())",
+                "preferredLocalizations: \(Bundle.preferredLocalizations(from: b.localizations))",
+                "developmentLocalization: \(b.developmentLocalization ?? "nil")",
+                "CFBundleLocalizations: \(b.infoDictionary?["CFBundleLocalizations"] as? [String] ?? [])",
+                "displayName: \(b.infoDictionary?["CFBundleDisplayName"] as? String ?? "nil")",
+            ]
+            let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("bundle-report.txt")
+            try? lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
+        }
+
         if args.contains("-selfTestSpeech") {
             // 在设备上真的调一次朗读，验证音频会话能配起来、不崩
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -141,8 +164,12 @@ final class AppState {
     }
 
     #if DEBUG
-    /// 造一批学习记录，用于界面截图核对
+    /// 造一批学习记录，用于界面截图核对。
+    ///
+    /// 开头先 resetAll：进度是落盘的，不重置的话每次启动都在上一次的数据上
+    /// 继续叠加，同一个参数两次截图的画面就不一样，没法做像素对比。
     private func seedDemoData() {
+        progress.resetAll()
         let book = currentBook
         let chars = repo.bookChars(book)
         let learned = Array(chars.prefix(18))
