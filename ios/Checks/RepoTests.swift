@@ -13,13 +13,19 @@ final class RepoTests: XCTestCase {
 
     /// 延迟初始化：@MainActor 的类不能在 class setUp 里构造
     private var repo: Repo {
-        if let r = Self._repo { return r }
+        if let r = Self._repo {
+            Repo.overrideShared(r)
+            return r
+        }
         let resources = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()   // Checks
             .deletingLastPathComponent()   // ios
             .appendingPathComponent("HanziPad/Resources")
         let r = Repo(source: .directory(resources))
         Self._repo = r
+        // 逻辑层（Quiz/Plan）内部读 Repo.shared，测试进程的 Bundle.main 没有资源，
+        // 必须把全局实例指到这里
+        Repo.overrideShared(r)
         return r
     }
 

@@ -13,12 +13,20 @@ let package = Package(
     targets: [
         .target(
             name: "HanziCore",
+            // 数据层与逻辑层都是纯 Swift + Foundation/CoreGraphics，无 UIKit 依赖
             path: ".",
             sources: [
                 "HanziPad/Data/StrokeCodec.swift",
                 "HanziPad/Data/Models.swift",
                 "HanziPad/Data/Repo.swift",
                 "HanziPad/UI/HanziCanvas.swift",
+                "HanziPad/Logic/Srs.swift",
+                "HanziPad/Logic/DayUtil.swift",
+                "HanziPad/Logic/Store.swift",
+                "HanziPad/Logic/Trace.swift",
+                "HanziPad/Logic/Quiz.swift",
+                "HanziPad/Logic/Progress.swift",
+                "HanziPad/Logic/Plan.swift",
             ]
         ),
         .testTarget(

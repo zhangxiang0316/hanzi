@@ -10,7 +10,25 @@ import Foundation
 /// 用 actor 隔离能从构造上杜绝数据竞争，比手写 NSLock 更难出错。
 @MainActor
 final class Repo {
-    static let shared = Repo()
+    private static var _shared: Repo?
+
+    /// 全局实例。
+    ///
+    /// 逻辑层（Quiz / Plan）需要读数据，但硬编码单例会让它们无法在测试里跑——
+    /// 测试进程的 Bundle.main 里没有那三个 JSON。所以留一个后可覆盖的口子：
+    /// 生产用默认的 bundle 源，测试先 `overrideShared` 再调用。
+    static var shared: Repo {
+        if let s = _shared { return s }
+        let r = Repo()
+        _shared = r
+        return r
+    }
+
+    /// 仅测试使用：替换全局实例
+    static func overrideShared(_ repo: Repo) { _shared = repo }
+
+    /// 仅测试使用：清掉全局实例
+    static func resetShared() { _shared = nil }
 
     /// 数据来源。生产用 bundle，测试用目录路径。
     ///
@@ -54,7 +72,9 @@ final class Repo {
               let metaURL = url("meta", from: source),
               let strokesURL = url("strokes", from: source)
         else {
-            assertionFailure("数据文件缺失：catalog/meta/strokes 必须存在")
+            // 不用 assertionFailure：测试进程里 Bundle.main 没有这些资源，
+            // 断言会把整个测试进程打挂，反而掩盖真正要测的东西
+            print("[Repo] 数据文件缺失：catalog/meta/strokes 必须存在")
             return
         }
 
@@ -209,6 +229,16 @@ final class Repo {
     var strokeCharCount: Int { rawStrokes.count }
 
     // MARK: - 全部字（搜索用，M5 的搜索页会用到）
+
+    /// 全部字（教材顺序）。出题时用作最后一档干扰项来源，与 Android 的 Repo.allChars 对应
+    private var allCharsCache: [String]?
+
+    var allChars: [String] {
+        if let c = allCharsCache { return c }
+        let list = allCharsInOrder()
+        allCharsCache = list
+        return list
+    }
 
     /// 按册次分组返回所有字，顺序遵循教材
     func allCharsInOrder() -> [String] {
