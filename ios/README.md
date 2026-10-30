@@ -403,3 +403,22 @@ displayName: 小小识字家
 不用 `DateFormatter`。所以在英文系统的 iPad 上也不会冒出 "Thursday"。
 
 测试累计 **145 个全绿**。
+
+### 最终验收（2026-10-30）
+
+目标四项约束逐条核对：
+
+| 约束 | 核对方式 | 结果 |
+| --- | --- | --- |
+| 仅 iPad，不做 iPhone 专属布局 | `TARGETED_DEVICE_FAMILY = 2`；代码里 `userInterfaceIdiom` / `UIDevice.current` 出现 **0** 次 | ✓ 全部自适应，无设备分支 |
+| 侧边栏分栏导航 | `NavigationSplitView` 用于根视图 | ✓ |
+| 不做压感笔锋 | `pressure`/`force`/`PencilKit`/`PKStroke` 搜索命中 **0** | ✓ 只取触点位置 |
+| 11 页界面 | `Pages/` 下 11 个文件 | ✓ |
+
+12 个可到达的页面状态逐一在 iPad Pro 13 寸上启动截图（结果页有满分/有错两个状态），
+**进程全部存活、内容区全部有渲染**，无一崩溃或白屏。
+
+结果页星级用像素验证：满分 10/10 渲染出 **3 颗星**（43×42，x=1197/1255/1313），
+7/10 渲染出 **2 颗星**；对照 `ResultPageView.stars` 的阈值（≥90 三星、≥70 二星）一致。
+
+最终状态：**145 个测试全绿，`BUILD SUCCEEDED`，工作区干净。**

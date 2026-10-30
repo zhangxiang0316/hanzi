@@ -153,6 +153,13 @@ final class AppState {
                 }
             case "write":
                 if parts.count > 1 { push(WriteRoute(ch: parts[1])) }
+            case "result":
+                // result:对/总/错字数，用于核对结果页
+                let correct = Int(parts.count > 1 ? parts[1] : "8") ?? 8
+                let total = Int(parts.count > 2 ? parts[2] : "10") ?? 10
+                push(ResultPayload(correct: correct, total: total,
+                                   wrong: correct < total ? ["地", "人"] : [],
+                                   mode: "review", book: currentBook))
             case "quiz":
                 push(QuizPayload(mode: parts.count > 1 ? parts[1] : "free",
                                  book: parts.count > 2 ? parts[2] : currentBook,
