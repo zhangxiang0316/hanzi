@@ -66,6 +66,68 @@ iPhone Pro Max 横屏宽度 932pt，尺寸类会变成 `.regular`，于是「转
 在「首页」里推到某个单元，切到「我的」会看到同一个单元页。所以 `AppState`
 改成 `paths: [Section: NavigationPath]`，并提供 `pathBinding(_:)` 按分区取绑定。
 
+## 在 Xcode 里运行
+
+### 1. 打开工程
+
+```bash
+open ios/HanziPad.xcodeproj
+```
+
+或者双击 `ios/HanziPad.xcodeproj`。
+
+**不要用 Xcode 打开 `ios/` 这个文件夹。** 目录里同时有 `Package.swift`（测试用的
+SwiftPM 包），Xcode 看到它会当成 Swift Package 打开——那里面只有 `HanziCore` 库，
+**没有可运行的 App**，你会找不到 Run 按钮。认准 `.xcodeproj`。
+
+### 2. 选 scheme 和模拟器
+
+打开后左上角应该是：
+
+```
+HanziPad  >  iPhone 17 Pro
+```
+
+scheme 只有 `HanziPad` 一个，已经放进版本库（`xcshareddata/xcschemes/`），
+clone 下来就有，不用等自动创建。
+
+模拟器随便选，iPhone 和 iPad 都能跑，界面会自己适配：
+
+| 想看什么 | 选什么 |
+| --- | --- |
+| 手机布局（底部 tab、单列） | 任意 iPhone |
+| 窄屏极限（320pt） | 模拟器里没有 SE 机型时，用 iPhone 17e 或加一个 SE |
+| 平板布局（侧边栏、分栏） | 任意 iPad |
+| 横屏 | 模拟器里 `Cmd + ←/→` |
+
+### 3. 运行
+
+`Cmd + R`。首次编译要一两分钟（要解 2.5MB 的笔顺数据、编译整个 App）。
+
+跑起来后想直接跳到某一页，可以用启动参数（见下方「调试启动参数」），
+在 **Product → Scheme → Edit Scheme → Run → Arguments** 里加，例如
+`-startSection home -startRoute write:天` 直接进描红页。
+
+### 4. 跑在真机上（需要额外一步）
+
+模拟器不需要签名，直接 `Cmd + R` 就行。**真机需要配 Development Team**，
+因为工程里 `CODE_SIGN_STYLE = Automatic` 但没有指定 team——这是故意的，
+team ID 因人而异，写死在版本库里没意义。
+
+第一次插真机会报：
+
+> Signing for "HanziPad" requires a development team.
+
+改法：选中工程 → target `HanziPad` → **Signing & Capabilities** →
+
+1. **Team** 选你的 Apple ID（个人免费账号也行）
+2. 如果提示 Bundle Identifier 已被占用，把 `com.xiaoxiao.hanzi` 改成
+   `com.你的名字.hanzi`
+
+免费账号有 7 天有效期，到期重新跑一次即可。
+
+**注意不要把这两个改动提交上去**：换 team ID 和 bundle ID 只对你自己有效。
+
 ## 构建
 
 ```bash
