@@ -182,6 +182,11 @@ struct ProfilePageView: View {
                     RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
                         .strokeBorder(Palette.line, lineWidth: 1)
                 )
+                .background(GeometryReader { g in
+                    Color.clear.onAppear {
+                        TapTargetProbe.shared.record("我的-错题本入口", g.size)
+                    }
+                })
             }
             .buttonStyle(PressableStyle())
         }
@@ -234,6 +239,11 @@ struct ProfilePageView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 9)
+                .background(GeometryReader { g in
+                    Color.clear.onAppear {
+                        TapTargetProbe.shared.record("我的-设置行(开关)", g.size)
+                    }
+                })
 
                 HairLine()
 
@@ -254,6 +264,11 @@ struct ProfilePageView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 9)
+                .background(GeometryReader { g in
+                    Color.clear.onAppear {
+                        TapTargetProbe.shared.record("我的-设置行(开关)", g.size)
+                    }
+                })
 
                 HairLine()
 

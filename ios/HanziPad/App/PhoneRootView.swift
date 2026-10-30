@@ -63,11 +63,24 @@ struct PhoneRootView: View {
 extension AppState.Section {
 
     /// 这个分区归属哪个 tab。非 tab 分区映射到最接近的那个。
+    /// 这个分区归哪个 tab。映射表在 `TabSlot`（HanziCore），那边有测试。
     var tabRoot: AppState.Section {
-        switch self {
-        case .home, .courses: return .home
+        switch TabSlot.slot(forSection: slotKey) {
+        case .home: return .home
         case .practice: return .practice
-        case .profile, .wrong, .about: return .profile
+        case .profile: return .profile
+        }
+    }
+
+    /// 传给 `TabSlot` 的稳定标识
+    private var slotKey: String {
+        switch self {
+        case .home: return "home"
+        case .courses: return "courses"
+        case .practice: return "practice"
+        case .wrong: return "wrong"
+        case .profile: return "profile"
+        case .about: return "about"
         }
     }
 }

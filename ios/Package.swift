@@ -31,6 +31,7 @@ let package = Package(
                 "HanziPad/Logic/Progress.swift",
                 "HanziPad/Logic/Plan.swift",
                 "HanziPad/Logic/WriteSession.swift",
+                "HanziPad/Logic/TabSlot.swift",
             ]
         ),
         .testTarget(

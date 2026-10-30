@@ -131,6 +131,12 @@ final class AppState {
             progress.updateSettings(st)
         }
 
+        if args.contains("-probeTapTargets") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                TapTargetProbe.shared.flush()
+            }
+        }
+
         if args.contains("-reportBundle") {
             // 本地化配置是否真的生效，光看工程文件看不出来——
             // 要问运行时的 Bundle 才知道

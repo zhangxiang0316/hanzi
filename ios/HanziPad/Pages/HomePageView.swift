@@ -172,6 +172,11 @@ struct HomePageView: View {
                     HanziView(ch: ch, strokes: app.repo.strokes(ch),
                               showGrid: true, showGhost: false)
                         .frame(width: 104, height: 104)
+                        .background(GeometryReader { g in
+                            Color.clear.onAppear {
+                                TapTargetProbe.shared.record("首页-今日一字", g.size)
+                            }
+                        })
                     Text("今日一字")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(Palette.ink3)

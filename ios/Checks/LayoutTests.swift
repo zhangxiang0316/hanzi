@@ -116,3 +116,47 @@ final class LayoutTests: XCTestCase {
         }
     }
 }
+
+// MARK: - 手机导航
+
+/// 手机端底部 tab 的分区归属（实现在 `TabSlot`）。
+///
+/// `TabView` 的 selection 绑定的是当前分区，但分区有 6 个、tab 只有 3 个，
+/// 所以要把分区折到它所属的 tab 上。折叠错了的表现是「点某页，高亮的却是另一个 tab」。
+final class PhoneTabMappingTests: XCTestCase {
+
+    /// 6 个分区都要能折，不能有谁落空
+    func testEverySectionFoldsToATab() {
+        let sections = ["home", "courses", "practice", "wrong", "profile", "about"]
+        for s in sections {
+            let slot = TabSlot.slot(forSection: s)
+            XCTAssertTrue(TabSlot.allCases.contains(slot), "\(s) 折到了不在 tab 里的槽位")
+        }
+    }
+
+    /// 折叠幂等：折两次结果不变，否则 selection 会来回弹
+    func testFoldIsIdempotent() {
+        for s in ["home", "courses", "practice", "wrong", "profile", "about"] {
+            let once = TabSlot.slot(forSection: s).rawValue
+            XCTAssertEqual(TabSlot.slot(forSection: once).rawValue, once, "\(s) 折叠不幂等")
+        }
+    }
+
+    /// 子页面归到它的入口 tab：课本从首页进，错题本和关于从「我的」进
+    func testSubpagesFoldToParentTab() {
+        XCTAssertEqual(TabSlot.slot(forSection: "courses"), .home)
+        XCTAssertEqual(TabSlot.slot(forSection: "wrong"), .profile)
+        XCTAssertEqual(TabSlot.slot(forSection: "about"), .profile)
+    }
+
+    /// 未知分区兜底到「我的」，不能返回 nil 让 tab bar 失去选中项
+    func testUnknownSectionFallsBackToProfile() {
+        XCTAssertEqual(TabSlot.slot(forSection: "nope"), .profile)
+        XCTAssertEqual(TabSlot.slot(forSection: ""), .profile)
+    }
+
+    /// 恰好 3 个 tab —— 5 个 tab 在 320pt 上每个只剩 64pt，中文标签会挤
+    func testTabCountIsThree() {
+        XCTAssertEqual(TabSlot.allCases.count, 3)
+    }
+}

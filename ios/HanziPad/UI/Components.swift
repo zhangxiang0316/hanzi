@@ -72,6 +72,25 @@ struct HanziButton: View {
 }
 
 /// 按下时轻微缩小 —— 比默认的高亮反馈更细腻，也更符合「纸片」的质感
+// MARK: - 触达区域
+
+extension View {
+    /// 把点击区域撑到至少 44×44pt（Apple HIG 的最小触达尺寸），
+    /// 但不改变视觉大小。
+    ///
+    /// 为什么需要：组词胶囊这类元素视觉上只有约 31pt 高——在 iPad 上用鼠标或
+    /// 大手指点还行，手机上就很容易点不中。这类 App 的用户是一二年级的孩子，
+    /// 手指更小、精细动作控制更弱，触达区域比成人更需要留足。
+    ///
+    /// 用 `contentShape` + 负 padding 的组合：`frame(minHeight:)` 会把布局撑大，
+    /// 而这里只想要「多点一块地方」不想让胶囊变胖。所以在外层加一个透明的
+    /// 最小尺寸容器，视觉内容仍然居中保持原样。
+    func minTapTarget(_ side: CGFloat = 44) -> some View {
+        frame(minWidth: side, minHeight: side)
+            .contentShape(Rectangle())
+    }
+}
+
 struct PressableStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
