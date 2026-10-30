@@ -21,6 +21,7 @@ let package = Package(
                 "HanziPad/Data/Repo.swift",
                 "HanziPad/UI/HanziCanvas.swift",
                 "HanziPad/UI/HanziDraw.swift",
+                "HanziPad/UI/LayoutRules.swift",
                 "HanziPad/UI/HanziView.swift",
                 "HanziPad/Logic/Srs.swift",
                 "HanziPad/Logic/DayUtil.swift",
