@@ -34,7 +34,7 @@ struct M0ProbeView: View {
                     HStack {
                         Text(c).font(.system(size: 24, weight: .medium))
                         Spacer()
-                        if let s = Repo.strokes(c) {
+                        if let s = Repo.shared.strokes(c) {
                             Text("\(s.count) 笔").font(.caption).foregroundStyle(.secondary)
                         } else {
                             Text("无数据").font(.caption).foregroundStyle(.red)
@@ -98,7 +98,7 @@ struct HanziCanvasView: View {
                 style: StrokeStyle(lineWidth: 0.8, dash: [5, 4])
             )
 
-            if let s = Repo.strokes(ch) {
+            if let s = Repo.shared.strokes(ch) {
                 for stroke in s.strokes {
                     let path = Path(HanziCanvas.path(for: stroke, box: box, origin: origin))
                     ctx.fill(path, with: .color(Color(red: 0.145, green: 0.2, blue: 0.176)))

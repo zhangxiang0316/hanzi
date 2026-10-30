@@ -12,7 +12,7 @@
 			path = HanziPad;
 			sourceTree = "<group>";
 		};
-/* End PBXFileSystemSynchronizedRootGroup section */
+		/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		A1000000000000000000021 /* Frameworks */ = {
@@ -66,7 +66,7 @@
 			productReference = A1000000000000000000013 /* HanziPad.app */;
 			productType = "com.apple.product-type.application";
 		};
-/* End PBXNativeTarget section */
+		/* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
 		A1000000000000000000005 /* Project object */ = {
@@ -118,7 +118,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-/* End PBXSourcesBuildPhase section */
+		/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXResourcesBuildPhase section */
+		/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		/* End PBXFrameworksBuildPhase section */
+
 
 /* Begin PBXFileReference section */
 		A1000000000000000000013 /* HanziPad.app */ = {
@@ -128,7 +135,7 @@
 			path = HanziPad.app;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-/* End PBXFileReference section */
+		/* End PBXFileReference section */
 
 /* Begin XCBuildConfiguration section */
 		A1000000000000000000040 /* Debug */ = {
@@ -271,7 +278,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-/* End XCConfigurationList section */
+		/* End XCConfigurationList section */
 	};
 	rootObject = A1000000000000000000005 /* Project object */;
 }
