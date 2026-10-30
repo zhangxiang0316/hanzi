@@ -4,7 +4,7 @@ import SwiftUI
 struct HanziPadApp: App {
     var body: some Scene {
         WindowGroup {
-            M3ProbeView()
+            M4ProbeView()
         }
     }
 }
