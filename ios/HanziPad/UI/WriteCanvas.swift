@@ -31,8 +31,11 @@ struct WriteCanvas: View {
                     HanziDraw.drawGhostChar(&ctx, strokes, box: box, origin: origin)
                 }
 
-                // 已完成的笔画实心，当前这一笔的轮廓用配色提示
-                for i in 0..<min(session.index, strokes.count) {
+                // 已完成的笔画实心，当前这一笔的轮廓用配色提示。
+                //
+                // 用 drawnStrokes 而不是 session.index：最后一笔通过时 index
+                // 不自增（改为置 finished），直接用 index 会漏画最后一笔。
+                for i in 0..<session.drawnStrokes {
                     let p = Path(HanziCanvas.path(for: strokes.strokes[i], box: box, origin: origin))
                     ctx.fill(p, with: .color(HanziDraw.ink))
                 }

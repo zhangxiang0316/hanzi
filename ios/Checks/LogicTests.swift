@@ -607,6 +607,57 @@ final class LogicTests: XCTestCase {
         XCTAssertEqual(plan.stars, 0)
     }
 
+    /// 最后一笔写完后必须算进「已画出的笔画」。
+    ///
+    /// 回归测试：`submit` 在最后一笔通过时把 `finished` 置 true 而**不自增 index**
+    /// （自增会越界到 strokes[count]）。画布如果直接拿 index 当完成数，
+    /// 绘制范围就是 `0..<count-1`——最后一笔判定通过了、星星也弹出来了，
+    /// 但屏幕上永远看不见它，用户看到的是「写了没反应」。
+    ///
+    /// 这个 bug 三端只有 iOS 有：Android 写的是
+    /// `completed = if (done) strokes.count else minOf(strokeIndex, ...)`，
+    /// 小程序用 `accepted` 数组累积。所以这条断言同时是跨端一致性的一环。
+    func testDrawnStrokesIncludesTheLastStroke() {
+        let repo = TestRepo.make()
+        let s = WriteSession(ch: "天", strokes: repo.strokes("天"), box: 400)
+        let total = s.count
+        XCTAssertEqual(total, 4, "「天」应该是 4 笔")
+
+        // 一笔都没写时不该有实心笔画
+        XCTAssertEqual(s.drawnStrokes, 0)
+
+        // 逐笔写，每通过一笔就多显示一笔
+        for expect in 1...total {
+            guard let t = s.targetPoints(for: s.index) else {
+                XCTFail("第 \(s.index) 笔缺参照数据")
+                return
+            }
+            let outcome = s.submit(t)
+            XCTAssertEqual(s.drawnStrokes, expect, "写完第 \(expect) 笔后应显示 \(expect) 笔")
+            if expect < total {
+                guard case .passed = outcome else {
+                    XCTFail("第 \(expect) 笔应通过，实际 \(outcome)")
+                    return
+                }
+            }
+        }
+
+        // 全部写完之后：判定完成、index 停在最后一笔、但画布要显示全部
+        XCTAssertTrue(s.isDone, "应已判定整字完成")
+        XCTAssertEqual(s.index, total - 1, "index 不该自增到 count（会越界）")
+        XCTAssertEqual(s.drawnStrokes, total, "最后一笔必须画出来")
+        XCTAssertEqual(s.progress, 1, "进度条应满")
+    }
+
+    /// 跳过最后一笔也要把它算进绘制范围——否则跳过后画布会缺一笔。
+    func testDrawnStrokesAfterSkippingLastStroke() {
+        let repo = TestRepo.make()
+        let s = WriteSession(ch: "天", strokes: repo.strokes("天"), box: 400)
+        for _ in 0..<s.count { s.skip() }
+        XCTAssertTrue(s.isDone)
+        XCTAssertEqual(s.drawnStrokes, s.count)
+    }
+
     func testHideGhostSessionStillScores() {
         let repo = TestRepo.make()
         // 隐藏底字不改变判分：用完美笔迹写，分数必须和有底字时一样

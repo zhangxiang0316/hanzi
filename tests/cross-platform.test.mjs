@@ -191,3 +191,48 @@ function readJsModule(file) {
   if (body.endsWith(';')) body = body.slice(0, -1);
   return JSON.parse(body);
 }
+
+/**
+ * 描红画布「已写完的笔画数」三端语义必须一致。
+ *
+ * 最后一笔通过时，三端都不再把 `index` 自增（自增会越界到 strokes[count]），
+ * 而是置一个 done/finished 标志。于是画布**不能**直接拿 index 当完成数，
+ * 否则绘制范围是 `0..<count-1`——最后一笔判定通过了、星星弹出来了，
+ * 但屏幕上永远看不见它。iOS 曾经就是这样：写完 4 笔和写完 3 笔的
+ * 画布像素完全相同。
+ *
+ * 这条断言直接读三端源码，防止任何一端退化成「用 index 当完成数」。
+ */
+test('描红最后一笔必须算进已绘制笔画（三端语义一致）', () => {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
+
+  // iOS：drawnStrokes 在 finished 时返回全部
+  const iosSession = read('ios/HanziPad/Logic/WriteSession.swift');
+  assert.match(
+    iosSession,
+    /var drawnStrokes[\s\S]{0,400}?if finished \{ return count \}/,
+    'iOS 的 drawnStrokes 必须在 finished 时返回 count'
+  );
+  const iosCanvas = read('ios/HanziPad/UI/WriteCanvas.swift');
+  assert.match(iosCanvas, /0\.\.<session\.drawnStrokes/, 'iOS 画布应使用 drawnStrokes');
+  assert.doesNotMatch(
+    iosCanvas,
+    /0\.\.<min\(session\.index/,
+    'iOS 画布不能直接用 index 当完成数（会漏画最后一笔）'
+  );
+
+  // Android：completed 显式处理 done
+  const android = read('android/app/src/main/java/com/xiaoxiao/hanzi/ui/pages/WritePage.kt');
+  assert.match(
+    android,
+    /completed = if \(done\) strokes\.count else minOf\(strokeIndex/,
+    'Android 的 completed 必须在 done 时取 strokes.count'
+  );
+
+  // 小程序：用 accepted 数组累积，最后一笔通过后天然在内
+  const mp = read('miniprogram/utils/write-page.js');
+  assert.match(mp, /for \(let i = 0; i < this\.accepted\.length; i\+\+\)/,
+    '小程序应遍历 accepted 绘制已完成笔画');
+  assert.match(mp, /this\.accepted\.push\(/, '小程序每通过一笔要 push 进 accepted');
+});

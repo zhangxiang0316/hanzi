@@ -171,6 +171,20 @@ final class WriteSession: ObservableObject {
         message = ""
     }
 
+    /// 画布上应该显示为「已写完」的笔画数。
+    ///
+    /// 抽出来是为了防一个很难看出来的 bug：最后一笔通过时 `index` 不再自增
+    /// （否则会越界到 `strokes[count]`），而是置 `finished`。如果画布直接拿
+    /// `index` 当完成数，最后一笔就永远不在绘制范围里——判定通过了、进度满了、
+    /// 星星也弹出来了，但画布上看不见那一笔，看起来像是「写了没反应」。
+    ///
+    /// 与 Android 的 `completed = if (done) strokes.count else minOf(strokeIndex, ...)`
+    /// 和微信小程序用 `accepted` 数组累积的写法保持同一语义。
+    var drawnStrokes: Int {
+        if finished { return count }
+        return min(index, count)
+    }
+
     /// 当前进度 0...1
     ///
     /// 写完最后一笔时 `index` 不再自增（否则会越界到 strokes[count]），
