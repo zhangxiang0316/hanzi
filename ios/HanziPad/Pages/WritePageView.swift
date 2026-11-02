@@ -97,6 +97,7 @@ private struct WritePageBody: View {
         return ScrollView {
             VStack(spacing: 18) {
                 header
+                if !app.repo.isWriteChar(ch) { readOnlyNote }
 
                 HStack(alignment: .top, spacing: 22) {
                     WriteCanvasHost(session: session) { pts in
@@ -143,6 +144,24 @@ private struct WritePageBody: View {
                 .font(.system(size: 14, weight: .semibold).monospacedDigit())
                 .foregroundStyle(Palette.ink2)
         }
+    }
+
+    /// 只认不写的字（教材里 341 个，如髓/嚼/蟹）要提前说明，
+    /// 否则孩子写不好会以为自己「没学会」——课标本来就不要求会写。
+    private var readOnlyNote: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Text("💡").font(.system(size: 13))
+            Text("这个字课本只要求认识，不要求会写。写不好没关系，多写几次手会熟。")
+                .font(Fonts.caption)
+                .foregroundStyle(Palette.ink2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
+                .fill(Palette.skySoft)
+        )
     }
 
     private var sidePanel: some View {

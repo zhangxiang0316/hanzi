@@ -35,6 +35,7 @@ module.exports = function createDetailPage(options) {
       readingsText: '',
       isPoly: false,
       learned: false,
+      canWrite: true,
       showNumbers: false,
       showPinyin: true,
       strokeActive: -1,
@@ -100,6 +101,8 @@ module.exports = function createDetailPage(options) {
         readingsText: readings.map((r) => r.p).join(' / '),
         isPoly: readings.length > 1,
         learned: !!(entry && entry.box >= 1),
+        // 教材只要求认识、不要求会写的字（341 个，如髓/嚼/蟹）
+        canWrite: catalog.isWriteChar(ch),
         showPinyin: settings.showPinyin !== false,
         strokeActive: -1,
         hasPrev: idx > 0,

@@ -668,4 +668,28 @@ final class LogicTests: XCTestCase {
         XCTAssertTrue(prog.allWriteRecords().isEmpty)
     }
 
+
+    // MARK: - 只认不写的字
+
+    func testReadOnlyCharCount() {
+        let repo = TestRepo.make()
+        let all = repo.allChars
+        let readOnly = all.filter { !repo.isWriteChar($0) }
+        // 教材自带「会写」区分：2596 个字里 341 个只要求认识
+        XCTAssertEqual(all.count, 2596)
+        XCTAssertEqual(readOnly.count, 341)
+        XCTAssertEqual(all.count - readOnly.count, 2255)
+    }
+
+    func testTypicalReadOnlyChars() {
+        let repo = TestRepo.make()
+        // 典型只认字：髓（4a）、嚼（3a）、蟹（2a）
+        for ch in ["髓", "嚼", "蟹"] {
+            XCTAssertFalse(repo.isWriteChar(ch), "\(ch) 不该要求会写")
+            // 但仍然有笔顺数据，能描红——只是课标不要求
+            XCTAssertNotNil(repo.strokes(ch), "\(ch) 应有笔顺数据")
+        }
+        XCTAssertTrue(repo.isWriteChar("天"))
+    }
+
 }

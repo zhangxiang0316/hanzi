@@ -90,11 +90,25 @@ final class RepoTests: XCTestCase {
         XCTAssertEqual(chars.first, "天", "应按教材顺序，第一个字是「天」")
     }
 
-    func testBookCharsMatchStat() {
-        // stat.chars 是构建时统计的数字，应和实际去重后的数量一致
+    func testBookCharsCoverStat() {
+        // stat.chars 是教材标称的识字量（1a=300 ... 4b=250 这类整数），
+        // 而实际字表可能多出几个漏收的字（匀/剩/训/忧/毒，共 5 个）。
+        // 所以只要求「不少于标称」，不要求恰好相等——
+        // 硬相等会逼着把漏收的字藏起来，那才是真的错。
         for b in repo.books {
             let actual = repo.bookChars(b.id).count
-            XCTAssertEqual(actual, b.stat.chars, "\(b.id) 的 stat.chars 与实际不符")
+            XCTAssertGreaterThanOrEqual(actual, b.stat.chars, "\(b.id) 的字表少于标称识字量")
+        }
+    }
+
+    func testOrphanCharsAreRecovered() {
+        // 这 5 个字在 meta 里指向某课、也在该课写字表里，却没进识字表。
+        // 会写必然会认，所以它们必须能被找到，否则在 App 里根本看不到。
+        for ch in ["匀", "剩", "训", "忧", "毒"] {
+            // 它们不属于任何一册的识字表（那正是这 5 个字的特殊之处），
+            // 但必须进全字表——否则出题、描红都取不到
+            XCTAssertTrue(repo.allChars.contains(ch), "\(ch) 应在全字表里")
+            XCTAssertTrue(repo.writeOnlyChars.contains(ch), "\(ch) 应被识别为仅写字表字")
         }
     }
 

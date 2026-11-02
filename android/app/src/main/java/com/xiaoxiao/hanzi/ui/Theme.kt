@@ -82,7 +82,10 @@ class Palette(
     val claySoft: Color = HanziColors.claySoft,
     val line: Color = HanziColors.line,
     val lineSoft: Color = HanziColors.lineSoft,
-    val track: Color = HanziColors.track
+    val track: Color = HanziColors.track,
+    /** 第五种强调色（多音字、只认不写提示），与 iOS Palette.sky 一致 */
+    val sky: Color = HanziColors.sky,
+    val skySoft: Color = HanziColors.skySoft
 )
 
 val LocalPalette = staticCompositionLocalOf { Palette() }

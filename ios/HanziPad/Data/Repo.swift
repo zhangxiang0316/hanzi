@@ -326,7 +326,31 @@ final class Repo {
         return list
     }
 
-    /// 按册次分组返回所有字，顺序遵循教材
+    /// 只出现在写字表、没被任何课时识字表收录的字（共 5 个：匀/剩/训/忧/毒）。
+    ///
+    /// 它们不属于任何一册的识字表（`bookChars` 里没有），但要能认、能描红，
+    /// 所以要进全字表。按（课时、字）稳定排序，保证三端顺序一致——
+    /// 小程序端的全字表就是 meta 的键序，这五个字正好在末尾。
+    var writeOnlyChars: [String] {
+        metaMap.compactMap { ch, m -> (String, String)? in
+            let l = m.l
+            guard !l.isEmpty, let lesson = lessonMap[l] else { return nil }
+            guard !lesson.chars.contains(ch) else { return nil }
+            return (l, ch)
+        }
+        .sorted { a, b in
+            if a.0 != b.0 { return a.0 < b.0 }
+            return a.1 < b.1
+        }
+        .map { $0.1 }
+    }
+
+    /// 按册次分组返回所有字，顺序遵循教材。
+    ///
+    /// 末尾补上只出现在写字表的那几个字——它们不在任何一册的识字表里，
+    /// 但必须能认、能描红。之前这里只并了 bookChars，导致 iOS/Android
+    /// 的全字表是 2591 个，而小程序端（meta 键序）是 2596 个，
+    /// 三端的干扰项池和听写候选范围因此对不上。
     func allCharsInOrder() -> [String] {
         var out: [String] = []
         var seen = Set<String>()
@@ -334,6 +358,9 @@ final class Repo {
             for ch in bookChars(b.id) where seen.insert(ch).inserted {
                 out.append(ch)
             }
+        }
+        for ch in writeOnlyChars where seen.insert(ch).inserted {
+            out.append(ch)
         }
         return out
     }

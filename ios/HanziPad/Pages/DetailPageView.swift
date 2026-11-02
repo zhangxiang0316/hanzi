@@ -330,7 +330,21 @@ struct DetailPageView: View {
                         .foregroundStyle(Palette.ink3)
                 }
 
-                HanziButton(title: record == nil ? "开始描红" : "再写一遍", fullWidth: true) {
+                // 只认不写的字（教材里 341 个，如髓/嚼/蟹）不催着写，
+                // 但也别把入口藏掉——孩子想试试是好事，只是别让他以为写不好等于没学会。
+                if !app.repo.isWriteChar(ch) {
+                    Text("课本只要求认识这个字，不要求会写")
+                        .font(Fonts.caption)
+                        .foregroundStyle(Palette.sky)
+                }
+
+                HanziButton(
+                    title: app.repo.isWriteChar(ch)
+                        ? (record == nil ? "开始描红" : "再写一遍")
+                        : (record == nil ? "想写就试试" : "再写一遍"),
+                    kind: app.repo.isWriteChar(ch) ? .primary : .ghost,
+                    fullWidth: true
+                ) {
                     app.push(AppState.WriteRoute(ch: ch))
                 }
             }

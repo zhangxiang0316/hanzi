@@ -388,7 +388,18 @@ fun DetailPage(app: AppState, ch: String, lessonId: String?) {
         Spacer(Modifier.height(18.dp))
 
         // 操作区
-        HanziButton("描红跟写", style = BtnStyle.Primary, tag = "btn-write") {
+        // 只认不写的字（教材里 341 个，如髓/嚼/蟹）不催着写，但也别把入口藏掉——
+        // 孩子想试试是好事，只是别让他以为写不好等于没学会。
+        val canWrite = Repo.isWriteChar(ch)
+        if (!canWrite) {
+            Text("课本只要求认识这个字，不要求会写", fontSize = 11.sp, color = p.sky)
+            Spacer(Modifier.height(6.dp))
+        }
+        HanziButton(
+            if (canWrite) "描红跟写" else "想写就试试",
+            style = if (canWrite) BtnStyle.Primary else BtnStyle.Ghost,
+            tag = "btn-write"
+        ) {
             app.nav.push(Screen.Write(ch))
         }
         Spacer(Modifier.height(9.dp))

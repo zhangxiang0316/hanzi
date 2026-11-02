@@ -202,6 +202,23 @@ object Repo {
         return out
     }
 
+    /**
+     * 只出现在写字表、没被任何课时识字表收录的字（共 5 个：匀/剩/训/忧/毒）。
+     *
+     * 它们不属于任何一册的识字表（`bookChars` 里没有），但要能认、能描红，
+     * 所以要进全字表。按（课时、字）稳定排序，与 iOS `writeOnlyChars` 一致。
+     */
+    val writeOnlyChars: List<String> by lazy {
+        metaMap.entries
+            .mapNotNull { (ch, m) ->
+                val l = m.lesson
+                val lesson = if (l.isEmpty()) null else lessonMap[l]
+                if (lesson != null && ch !in lesson.chars) l to ch else null
+            }
+            .sortedWith(compareBy({ it.first }, { it.second }))
+            .map { it.second }
+    }
+
     fun lessonChars(lessonId: String?): List<String> =
         if (lessonId == null) emptyList() else (lessonMap[lessonId]?.chars ?: emptyList())
 

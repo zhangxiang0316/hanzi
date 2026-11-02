@@ -174,6 +174,28 @@ fun WritePage(
             }
         }
 
+        // 只认不写的字（教材里 341 个，如髓/嚼/蟹）要提前说明，
+        // 否则孩子写不好会以为自己「没学会」——课标本来就不要求会写。
+        if (!Repo.isWriteChar(ch)) {
+            Spacer(Modifier.height(12.dp))
+            Surface(
+                Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(Dimens.radiusInner.dp),
+                color = p.skySoft
+            ) {
+                Row(Modifier.padding(12.dp)) {
+                    Text("💡", fontSize = 12.sp)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "这个字课本只要求认识，不要求会写。写不好没关系，多写几次手会熟。",
+                        fontSize = 11.sp,
+                        lineHeight = 16.sp,
+                        color = p.ink2
+                    )
+                }
+            }
+        }
+
         Spacer(Modifier.height(12.dp))
 
         // 进度点

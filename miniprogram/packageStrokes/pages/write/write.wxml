@@ -13,6 +13,12 @@
     </view>
   </view>
 
+  <!-- 只认不写的字要提前说明，否则孩子写不好会以为自己「没学会」 -->
+  <view class="readonly-note" wx:if="{{!canWrite}}">
+    <text class="readonly-note-emoji">💡</text>
+    <text class="readonly-note-text">这个字课本只要求认识，不要求会写。写不好没关系，多写几次手会熟。</text>
+  </view>
+
   <view class="steps">
     <view
       class="step {{index < strokeIndex ? 'ok' : ''}} {{index === strokeIndex ? 'now' : ''}}"

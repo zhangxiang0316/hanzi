@@ -355,3 +355,39 @@ button.btn::after {
 .safe-bottom {
   height: calc(28rpx + env(safe-area-inset-bottom));
 }
+
+/* 只认不写提示：教材里 341 个这样的字（髓/嚼/蟹），
+   写不好不代表没学会，课标本来就不要求会写。 */
+.readonly-note,
+.readonly-tip {
+  display: flex;
+  align-items: flex-start;
+  margin: 0 24rpx 16rpx;
+  padding: 18rpx 22rpx;
+  border-radius: 20rpx;
+  background: var(--sky-soft, #e8f0f7);
+}
+
+.readonly-note-emoji {
+  margin-right: 10rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+}
+
+.readonly-note-text {
+  flex: 1;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+/* 详情页里单独一行文字（没有底色），与按钮配套 */
+.readonly-tip {
+  display: block;
+  margin: 0 0 12rpx;
+  padding: 0;
+  background: transparent;
+  font-size: 22rpx;
+  color: var(--sky, #5b8db8);
+  text-align: center;
+}

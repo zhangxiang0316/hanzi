@@ -176,3 +176,44 @@ test('笔顺坐标已翻转为屏幕坐标（y 向下），否则整字上下镜
   }
   assert.deepEqual(off, []);
 });
+
+// 只认不写的字：教材自带 isWriteChar 区分，341 个字只要求认识。
+// 描红页据此显示「不要求会写」的说明，避免孩子以为自己没学会。
+test('只认不写的字有 341 个，且都有笔顺数据', () => {
+  const all = catalog.getAllChars();
+  const readOnly = all.filter((ch) => !catalog.isWriteChar(ch));
+  assert.equal(readOnly.length, 341);
+  assert.equal(all.length - readOnly.length, 2255);
+
+  // 这些字仍能描红（有笔顺数据），只是课标不要求会写
+  for (const ch of readOnly.slice(0, 30)) {
+    assert.ok(catalog.getMeta(ch), `${ch} 应有元数据`);
+  }
+});
+
+test('典型只认字：髓、嚼、蟹', () => {
+  for (const ch of ['髓', '嚼', '蟹']) {
+    assert.equal(catalog.isWriteChar(ch), false, `${ch} 不该要求会写`);
+  }
+  // 会写的字不受影响
+  assert.equal(catalog.isWriteChar('天'), true);
+});
+
+// 全字表必须是 2596 个字 / 2255 个会写 / 341 个只认。
+// 曾经 iOS 和 Android 从「课时 chars 并集」构建字表，得到 2591 个，
+// 少了 5 个只出现在课时写字表、没进识字表的字（匀剩训忧毒）；
+// 小程序端用 meta 键序，是 2596 个。三端各说各话会导致
+// 听写候选池、错题干扰项、字帖统计都对不上。
+test('全字表规模：2596 / 2255 / 341', () => {
+  const all = catalog.getAllChars();
+  assert.equal(all.length, 2596);
+  assert.equal(all.filter((ch) => catalog.isWriteChar(ch)).length, 2255);
+  assert.equal(all.filter((ch) => !catalog.isWriteChar(ch)).length, 341);
+});
+
+test('漏收字：匀剩训忧毒 必须在全字表里', () => {
+  const all = catalog.getAllChars();
+  for (const ch of ['匀', '剩', '训', '忧', '毒']) {
+    assert.ok(all.includes(ch), `${ch} 应在全字表里`);
+  }
+});

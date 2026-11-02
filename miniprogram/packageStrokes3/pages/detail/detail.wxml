@@ -80,8 +80,17 @@
   </view>
 
   <view class="actions">
-    <button class="btn btn-cinnabar btn-block" hover-class="btn-hover" bindtap="onWrite">
-      描红跟写
+    <!-- 只认不写的字（教材里 341 个，如髓/嚼/蟹）不催着写，但也别把入口藏掉——
+         孩子想试试是好事，只是别让他以为写不好等于没学会。 -->
+    <view class="readonly-tip" wx:if="{{!canWrite}}">
+      课本只要求认识这个字，不要求会写
+    </view>
+    <button
+      class="btn btn-block {{canWrite ? 'btn-cinnabar' : 'btn-ghost'}}"
+      hover-class="btn-hover"
+      bindtap="onWrite"
+    >
+      {{canWrite ? '描红跟写' : '想写就试试'}}
     </button>
     <view class="action-row">
       <button class="btn btn-ghost btn-block" hover-class="btn-hover" bindtap="onQuizOne">

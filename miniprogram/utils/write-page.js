@@ -37,6 +37,8 @@ module.exports = function createWritePage(options) {
       stars: 0,
       score: 0,
       resultTip: '',
+      // 教材只要求认识、不要求会写的字（341 个，如髓/嚼/蟹）
+      canWrite: true,
     },
 
     onLoad(options) {
@@ -76,6 +78,7 @@ module.exports = function createWritePage(options) {
         liveScore: 0,
         resultTip: '',
         hint: '沿着淡色的字，一笔一笔写出来',
+        canWrite: catalog.isWriteChar(this.ch),
       });
       if (this.ctx) this.render();
     },

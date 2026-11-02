@@ -157,3 +157,37 @@ test('判太短时三端都要给提示，不能静默返回', () => {
   const sw = read('ios/HanziPad/Logic/WriteSession.swift');
   assert.match(sw, /这一笔太短了/, 'iOS 判太短时没有提示');
 });
+
+// 三端各带一份教材数据（小程序是 JS 模块，另两端是 JSON）。
+// 同一份数据复制三处，最容易出的问题是「改了一端忘了另两端」——
+// 孩子在 iPhone 和 Android 上看到的生字列表不一样。
+// 这里比对解析后的内容，忽略文件格式差异。
+test('三端教材数据内容一致', () => {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const json = (rel) => JSON.parse(fs.readFileSync(path.join(root, rel), 'utf8'));
+
+  const iosMeta = json('ios/HanziPad/Resources/meta.json');
+  const androidMeta = json('android/app/src/main/assets/data/meta.json');
+  const mpMeta = readJsModule(path.join(root, 'miniprogram/data/meta.js'));
+
+  const keys = (o) => Object.keys(o).join(',');
+  assert.equal(keys(androidMeta), keys(iosMeta), 'Android meta 字表与 iOS 不一致');
+  assert.equal(keys(mpMeta), keys(iosMeta), '小程序 meta 字表与 iOS 不一致');
+
+  // 抽查若干字的全部字段，避免只对上键名
+  for (const ch of ['天', '髓', '嚼', '蟹', '匀', '剩', '训', '忧', '毒']) {
+    assert.deepEqual(androidMeta[ch], iosMeta[ch], `${ch} 的 Android 元数据不一致`);
+    assert.deepEqual(mpMeta[ch], iosMeta[ch], `${ch} 的小程序元数据不一致`);
+  }
+});
+
+/** 读 `module.exports = {...}` 这种数据模块 */
+function readJsModule(file) {
+  const text = fs.readFileSync(file, 'utf8');
+  const i = text.indexOf('module.exports');
+  assert.ok(i >= 0, `${path.basename(file)} 不是数据模块`);
+  let body = text.slice(i + 'module.exports'.length).trim();
+  if (body.startsWith('=')) body = body.slice(1).trim();
+  if (body.endsWith(';')) body = body.slice(0, -1);
+  return JSON.parse(body);
+}
