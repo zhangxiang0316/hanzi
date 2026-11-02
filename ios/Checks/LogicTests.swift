@@ -538,4 +538,93 @@ final class LogicTests: XCTestCase {
         }
     }
 
+
+    // MARK: - 听写
+
+    func testDictationLevelsDifferInPromptAndGhost() {
+        // 三档的核心区别就两条：显示不显示底字、念什么
+        XCTAssertTrue(DictationLevel.easy.showsGhost)
+        XCTAssertFalse(DictationLevel.normal.showsGhost)
+        XCTAssertFalse(DictationLevel.hard.showsGhost)
+
+        XCTAssertEqual(DictationLevel.easy.promptText(ch: "天", word: "天空"), "天空")
+        XCTAssertEqual(DictationLevel.normal.promptText(ch: "天", word: "天空"), "天空")
+        // hard 只念字，不念词
+        XCTAssertEqual(DictationLevel.hard.promptText(ch: "天", word: "天空"), "天")
+        // 没有组词时退回念字，不能念空字符串
+        XCTAssertEqual(DictationLevel.normal.promptText(ch: "天", word: nil), "天")
+    }
+
+    func testDictationPicksWriteCharsOnly() {
+        let repo = TestRepo.make()
+        let items = DictationSource.pick(book: "1a", level: .normal, limit: 8)
+        XCTAssertEqual(items.count, 8)
+        for it in items {
+            // 听写只挑「会写」的字：只认不写的字（髓、嚼、蟹）要求默写没道理
+            XCTAssertTrue(repo.isWriteChar(it.ch),
+                          "\(it.ch) 是只认不写的字，不该进听写")
+        }
+    }
+
+    func testDictationHardLevelHasNoWordHint() {
+        let repo = TestRepo.make()
+        _ = repo
+        let items = DictationSource.pick(book: "1a", level: .hard, limit: 5)
+        for it in items {
+            XCTAssertNil(it.word, "hard 档不该带词语提示，否则等于告诉孩子答案")
+        }
+        let normal = DictationSource.pick(book: "1a", level: .normal, limit: 5)
+        XCTAssertTrue(normal.contains { $0.word != nil }, "normal 档应该带词语")
+    }
+
+    func testDictationPlanAdvancesAndScores() {
+        let plan = DictationPlan(level: .normal, items: [
+            .init(ch: "天", word: "天空"),
+            .init(ch: "地", word: "地方"),
+        ])
+        XCTAssertEqual(plan.index, 0)
+        XCTAssertEqual(plan.current?.ch, "天")
+
+        plan.record(ch: "天", score: 90)
+        plan.advance()
+        XCTAssertEqual(plan.current?.ch, "地")
+
+        plan.record(ch: "地", score: 70)
+        plan.advance()
+        XCTAssertTrue(plan.isDone)
+        XCTAssertNil(plan.current)
+
+        XCTAssertEqual(plan.averageScore, 80)
+        // 80 分对应 2 颗星（85 才是 3 颗）
+        XCTAssertEqual(plan.stars, 2)
+    }
+
+    func testDictationEmptyPlanIsSafe() {
+        let plan = DictationPlan(level: .normal, items: [])
+        XCTAssertTrue(plan.isDone)
+        XCTAssertNil(plan.current)
+        XCTAssertNil(plan.averageScore)
+        XCTAssertEqual(plan.stars, 0)
+    }
+
+    func testHideGhostSessionStillScores() {
+        let repo = TestRepo.make()
+        // 隐藏底字不改变判分：用完美笔迹写，分数必须和有底字时一样
+        let withGhost = WriteSession(ch: "天", strokes: repo.strokes("天"),
+                                     box: 400, hideGhost: false)
+        let noGhost = WriteSession(ch: "天", strokes: repo.strokes("天"),
+                                   box: 400, hideGhost: true)
+        var a: [Int] = []
+        var b: [Int] = []
+        while !withGhost.isDone, let t = withGhost.targetPoints(for: withGhost.index) {
+            _ = withGhost.submit(t)
+        }
+        while !noGhost.isDone, let t = noGhost.targetPoints(for: noGhost.index) {
+            _ = noGhost.submit(t)
+        }
+        a.append(withGhost.finalScore)
+        b.append(noGhost.finalScore)
+        XCTAssertEqual(a, b, "隐藏底字不该影响判分")
+    }
+
 }

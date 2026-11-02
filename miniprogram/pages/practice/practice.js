@@ -3,6 +3,7 @@ const progress = require('../../utils/progress');
 const plan = require('../../utils/plan');
 const sessionUtil = require('../../utils/session');
 const day = require('../../utils/day');
+const dictation = require('../../utils/dictation');
 const routes = require('../../utils/routes');
 
 Page({
@@ -11,6 +12,7 @@ Page({
     today: { answers: 0, rate: 0 },
     wrongCount: 0,
     polyCount: 0,
+    dictLevels: dictation.LEVELS,
     heroChar: '字',
     books: [],
     bookName: '',
@@ -86,6 +88,14 @@ Page({
     const app = getApp();
     app.globalData.session = sessionUtil.buildSession('free', {});
     wx.navigateTo({ url: '/pages/quiz/quiz?from=practice' });
+  },
+
+  onDictation(e) {
+    const level = e.currentTarget.dataset.level;
+    const book = progress.getSettings().book || catalog.defaultBook();
+    // 听写页需要笔顺数据，在分包里；先确保分包已预载再跳
+    routes.preload(book);
+    wx.navigateTo({ url: routes.dictationUrl(book, level) });
   },
 
   onPolyphone() {

@@ -57,6 +57,23 @@
   </view>
 
   <view class="section-head">
+    <view class="section-title">默写</view>
+    <view class="section-sub">不给淡色的字，凭记忆写</view>
+  </view>
+  <view class="dict-row">
+    <view
+      class="dict-card tap"
+      wx:for="{{dictLevels}}"
+      wx:key="key"
+      data-level="{{item.key}}"
+      bindtap="onDictation"
+    >
+      <view class="dict-title">{{item.title}}</view>
+      <view class="dict-desc">{{item.showsGhost ? '有底字' : '无底字'}}</view>
+    </view>
+  </view>
+
+  <view class="section-head">
     <view class="section-title">按册来练</view>
   </view>
   <view class="book-row">

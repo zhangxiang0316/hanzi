@@ -29,6 +29,13 @@ final class WriteSession: ObservableObject {
     /// 画布边长（像素）
     private(set) var box: CGFloat
 
+    /// 是否隐藏底字（听写模式）。
+    ///
+    /// 描红是「照着写」，听写是「凭记忆写」——同一套判分，难度差一档。
+    /// 隐藏底字后仍保留田字格和当前笔的起笔红点，否则孩子连从哪儿下笔都不知道，
+    /// 那不是听写，那是默写整字。
+    let hideGhost: Bool
+
     @Published private(set) var index: Int = 0
     @Published private(set) var scores: [Int] = []
     @Published private(set) var finished = false
@@ -63,10 +70,11 @@ final class WriteSession: ObservableObject {
         return min(base, targetLen * 0.35)
     }
 
-    init(ch: String, strokes: StrokeCodec.CharStrokes?, box: CGFloat) {
+    init(ch: String, strokes: StrokeCodec.CharStrokes?, box: CGFloat, hideGhost: Bool = false) {
         self.ch = ch
         self.strokes = strokes
         self.box = box
+        self.hideGhost = hideGhost
     }
 
     func updateBox(_ box: CGFloat) {

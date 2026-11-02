@@ -407,3 +407,34 @@
   font-size: 26rpx;
   color: var(--ink-3);
 }
+
+/* 默写入口：三档并排，与多音字整行卡片区分开 */
+.dict-row {
+  display: flex;
+  padding: 16rpx 32rpx 0;
+}
+
+.dict-card {
+  flex: 1;
+  padding: 20rpx 12rpx;
+  border-radius: 26rpx;
+  background: #ffffff;
+  border: 2rpx solid rgba(233, 223, 205, 0.8);
+  text-align: center;
+}
+
+.dict-card + .dict-card {
+  margin-left: 16rpx;
+}
+
+.dict-title {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: var(--ink-1);
+}
+
+.dict-desc {
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  color: var(--ink-3);
+}

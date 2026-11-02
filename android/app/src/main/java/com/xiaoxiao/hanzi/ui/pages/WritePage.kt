@@ -72,7 +72,20 @@ import com.xiaoxiao.hanzi.ui.Stars
  *   - ACCEPT=42 低于这个分就退回重写该笔
  */
 @Composable
-fun WritePage(app: AppState, ch: String) {
+fun WritePage(
+    app: AppState,
+    ch: String,
+    /**
+     * 听写模式：不画底字。
+     *
+     * 描红是「照着写」，听写是「凭记忆写」——同一套判分，难度差一档。
+     * 仍然保留田字格和起笔提示，否则孩子连从哪儿下笔都不知道，
+     * 那不是听写，那是默写整字。
+     */
+    hideGhost: Boolean = false,
+    /** 整字写完时的回调。听写页用它推进到下一个字；描红页不传。 */
+    onFinished: ((Int) -> Unit)? = null
+) {
     val p = LocalPalette.current
     app.revision
 
@@ -270,6 +283,7 @@ fun WritePage(app: AppState, ch: String) {
                                         finalScore = sc
                                         finalStars = stars
                                         done = true
+                                        onFinished?.invoke(sc)
                                     }
                                 } else {
                                     strokeIndex += 1
@@ -292,8 +306,10 @@ fun WritePage(app: AppState, ch: String) {
                 drawIntoCanvas { c ->
                     HanziPainter.drawGrid(c.nativeCanvas, box, ox, oy)
 
-                    // 底字：淡灰描红参照
-                    HanziPainter.drawGhostChar(c.nativeCanvas, ch, box, ox, oy)
+                    // 底字：淡灰描红参照。听写模式下不画。
+                    if (!hideGhost) {
+                        HanziPainter.drawGhostChar(c.nativeCanvas, ch, box, ox, oy)
+                    }
 
                     if (strokes != null) {
                         // 写完最后一笔时 strokeIndex 不再自增（改为置 done），

@@ -71,6 +71,8 @@ struct PracticePageView: View {
                         }
                     }
 
+                    dictationSection
+
                     recentSection
                 }
                 .padding(.horizontal, Dimens.pagePad(geo.size.width))
@@ -111,6 +113,46 @@ struct PracticePageView: View {
         .buttonStyle(PressableStyle())
         .disabled(!enabled)
         .opacity(enabled ? 1 : 0.5)
+    }
+
+    /// 听写：三档难度摆出来让家长选，而不是藏在设置里。
+    ///
+    /// 适合谁由家长判断——孩子刚学完一课就用「看着写」，
+    /// 学过一阵用「听词写」，很熟了用「只听字」。
+    private var dictationSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHead("听写", trailing: AnyView(Text("念一个词，凭记忆写出来").font(Fonts.caption).foregroundStyle(Palette.ink3)))
+
+            HStack(spacing: 10) {
+                ForEach(DictationLevel.allCases, id: \.rawValue) { level in
+                    Button {
+                        app.push(AppState.DictationRoute(level: level.rawValue,
+                                                         book: app.currentBook))
+                    } label: {
+                        VStack(spacing: 6) {
+                            Text(level.title)
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(Palette.ink1)
+                            Text(level.showsGhost ? "有底字" : "无底字")
+                                .font(.system(size: 10))
+                                .foregroundStyle(Palette.ink3)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(
+                            RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
+                                .fill(Palette.card)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
+                                .strokeBorder(Palette.line, lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(PressableStyle())
+                    .measureTapTarget("练习-听写\(level.title)")
+                }
+            }
+        }
     }
 
     private var recentSection: some View {

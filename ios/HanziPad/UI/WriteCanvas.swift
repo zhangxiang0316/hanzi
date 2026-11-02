@@ -25,8 +25,11 @@ struct WriteCanvas: View {
                     return
                 }
 
-                // 底字：与判分中线同一批轮廓
-                HanziDraw.drawGhostChar(&ctx, strokes, box: box, origin: origin)
+                // 底字：与判分中线同一批轮廓。
+                // 听写模式（hideGhost）不画——那是「凭记忆写」，看了底字就没意义了。
+                if !session.hideGhost {
+                    HanziDraw.drawGhostChar(&ctx, strokes, box: box, origin: origin)
+                }
 
                 // 已完成的笔画实心，当前这一笔的轮廓用配色提示
                 for i in 0..<min(session.index, strokes.count) {

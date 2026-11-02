@@ -16,7 +16,8 @@
       "name": "strokes",
       "pages": [
         "pages/detail/detail",
-        "pages/write/write"
+        "pages/write/write",
+        "pages/dictation/dictation"
       ]
     },
     {
@@ -24,7 +25,8 @@
       "name": "strokes3",
       "pages": [
         "pages/detail/detail",
-        "pages/write/write"
+        "pages/write/write",
+        "pages/dictation/dictation"
       ]
     },
     {
@@ -32,7 +34,8 @@
       "name": "strokes4",
       "pages": [
         "pages/detail/detail",
-        "pages/write/write"
+        "pages/write/write",
+        "pages/dictation/dictation"
       ]
     }
   ],

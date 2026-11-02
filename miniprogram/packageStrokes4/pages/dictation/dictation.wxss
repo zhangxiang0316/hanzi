@@ -1,0 +1,148 @@
+/* 听写/默写页。画布、工具条、结果弹层复用 write.wxss 的公共类，
+   这里只写听写特有的部分（题面卡片、进度条、得分列表）。 */
+@import "../write/write.wxss";
+
+.page {
+  padding-bottom: calc(30rpx + env(safe-area-inset-bottom));
+}
+
+/* 顶部进度 */
+.dt-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22rpx 32rpx 8rpx;
+}
+
+.dt-progress {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.dt-avg {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--jade);
+}
+
+/* 题面卡片：写之前显示「要写的是」，hard 档几秒后藏起来 */
+.dt-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 8rpx 24rpx 0;
+  padding: 22rpx 26rpx;
+  border-radius: 30rpx;
+  background: #ffffff;
+  border: 2rpx solid rgba(233, 223, 205, 0.9);
+  box-shadow: 0 10rpx 26rpx rgba(81, 66, 37, 0.05);
+}
+
+.dt-prompt.is-answered {
+  background: var(--jade-soft);
+  border-color: rgba(62, 142, 126, 0.28);
+}
+
+.dt-prompt-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.dt-prompt-label {
+  font-size: 22rpx;
+  color: var(--ink-3);
+}
+
+.dt-prompt-word {
+  margin-top: 4rpx;
+  font-size: 56rpx;
+  font-weight: 500;
+  color: var(--ink-1);
+  line-height: 1.25;
+}
+
+.dt-prompt-word.dt-mask {
+  color: var(--ink-3);
+  opacity: 0.4;
+  letter-spacing: 8rpx;
+}
+
+.dt-prompt-hint {
+  margin-top: 2rpx;
+  font-size: 21rpx;
+  color: var(--ink-3);
+}
+
+.dt-replay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 120rpx;
+  height: 96rpx;
+  border-radius: 22rpx;
+  background: var(--sky-soft);
+}
+
+.dt-replay-icon {
+  font-size: 30rpx;
+}
+
+.dt-replay-text {
+  margin-top: 2rpx;
+  font-size: 19rpx;
+  color: var(--sky);
+}
+
+/* 底部主按钮 */
+.dt-actions {
+  margin: 22rpx 32rpx 0;
+}
+
+/* 一轮结束的逐字得分 */
+.dt-score-list {
+  width: 100%;
+  max-height: 320rpx;
+  overflow-y: auto;
+  margin: 8rpx 0 18rpx;
+  padding: 4rpx 20rpx;
+  border-radius: 22rpx;
+  background: rgba(255, 255, 255, 0.7);
+  box-sizing: border-box;
+}
+
+.dt-score-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10rpx 0;
+  border-bottom: 1rpx solid rgba(233, 223, 205, 0.7);
+}
+
+.dt-score-row:last-child {
+  border-bottom: none;
+}
+
+.dt-score-ch {
+  font-size: 34rpx;
+  color: var(--ink-1);
+}
+
+.dt-score-val {
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.dt-score-val.good {
+  color: var(--jade);
+}
+
+.dt-score-val.mid {
+  color: var(--gold);
+}
+
+.dt-score-val.low {
+  color: var(--cinnabar);
+}

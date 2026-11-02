@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.xiaoxiao.hanzi.data.Repo
+import com.xiaoxiao.hanzi.logic.DictationLevel
 import com.xiaoxiao.hanzi.logic.Plan
 import com.xiaoxiao.hanzi.ui.AppState
 import com.xiaoxiao.hanzi.ui.Dimens
@@ -177,6 +178,33 @@ fun PracticePage(app: AppState) {
             modifier = Modifier.fillMaxWidth()
         ) {
             if (polyCount > 0) app.nav.push(Screen.Quiz("polyphone", app.currentBook, null))
+        }
+
+        SectionHead("听写", "念一个词，凭记忆写出来")
+        // 三档难度摆出来让家长选，而不是藏在设置里。
+        // 适合谁由家长判断——刚学完一课用「看着写」，学过一阵用「听词写」，很熟了用「只听字」。
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            DictationLevel.entries.forEach { level ->
+                Surface(
+                    Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(Dimens.radiusInner.dp))
+                        .clickable {
+                            app.nav.push(Screen.Dictation(level.key, app.currentBook))
+                        },
+                    color = LocalPalette.current.card
+                ) {
+                    Column(
+                        Modifier.padding(vertical = 14.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(level.title, fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                            color = LocalPalette.current.ink1)
+                        Text(if (level.showsGhost) "有底字" else "无底字",
+                            fontSize = 10.sp, color = LocalPalette.current.ink3)
+                    }
+                }
+            }
         }
 
         SectionHead("按册来练")

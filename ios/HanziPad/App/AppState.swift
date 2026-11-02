@@ -192,6 +192,9 @@ final class AppState {
                 push(ResultPayload(correct: correct, total: total,
                                    wrong: correct < total ? ["地", "人"] : [],
                                    mode: "review", book: currentBook))
+            case "dictation":
+                push(DictationRoute(level: parts.count > 1 ? parts[1] : "normal",
+                                    book: parts.count > 2 ? parts[2] : currentBook))
             case "quiz":
                 push(QuizPayload(mode: parts.count > 1 ? parts[1] : "free",
                                  book: parts.count > 2 ? parts[2] : currentBook,
@@ -263,6 +266,11 @@ final class AppState {
     struct AboutRoute: Hashable {}
     /// 错题本。iPad 上在侧边栏里直接切分区，手机上只能 push，所以需要一条路由。
     struct WrongRoute: Hashable {}
+    /// 听写。带上难度和册次，因为同一个入口能进三档。
+    struct DictationRoute: Hashable {
+        let level: String
+        let book: String
+    }
 }
 
 /// 详情列的路由目的地。集中在一处，新增页面时不容易漏。
@@ -292,6 +300,12 @@ struct AppRoutes: ViewModifier {
             .navigationDestination(for: AboutRoute.self) { _ in
                 AboutPageView()
             }
+            .navigationDestination(for: DictationRoute.self) { r in
+                DictationPageView(
+                    level: DictationLevel(rawValue: r.level) ?? .normal,
+                    book: r.book
+                )
+            }
             .navigationDestination(for: WrongRoute.self) { _ in
                 WrongPageView()
             }
@@ -303,6 +317,7 @@ typealias BookRoute = AppState.BookRoute
 typealias LessonRoute = AppState.LessonRoute
 typealias CharRoute = AppState.CharRoute
 typealias WriteRoute = AppState.WriteRoute
+typealias DictationRoute = AppState.DictationRoute
 typealias AboutRoute = AppState.AboutRoute
 typealias WrongRoute = AppState.WrongRoute
 

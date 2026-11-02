@@ -103,6 +103,18 @@ function writeUrl(ch) {
   return writePath(ch) + '?ch=' + encodeURIComponent(ch || '');
 }
 
+/**
+ * 听写页地址。
+ *
+ * 听写页和描红页一样需要笔顺数据，所以也放在分包里——
+ * 三个年级分包各有一份页面代码（逻辑都在主包 utils/ 里，只是一层薄壳）。
+ */
+function dictationUrl(book, level) {
+  const pack = packOf(book);
+  return '/' + pack + '/pages/dictation/dictation?book=' +
+    encodeURIComponent(book || '') + '&level=' + encodeURIComponent(level || 'normal');
+}
+
 module.exports = {
   PACK_OF_BOOK,
   PACK_NAME,
@@ -114,4 +126,5 @@ module.exports = {
   writePath,
   detailUrl,
   writeUrl,
+  dictationUrl,
 };

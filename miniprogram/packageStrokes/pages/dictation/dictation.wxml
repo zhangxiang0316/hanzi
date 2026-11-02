@@ -1,0 +1,89 @@
+<view class="page">
+  <!-- 顶部：进度 + 平均分 -->
+  <view class="dt-head">
+    <text class="dt-progress">第 {{index + 1}} / {{items.length}} 个</text>
+    <text class="dt-avg" wx:if="{{scores.length}}">平均 {{avgScore}} 分</text>
+  </view>
+
+  <!-- 题面卡片。小程序没有 TTS，所以这里给的是「看词」而不是「听词」。 -->
+  <view class="dt-prompt {{answered ? 'is-answered' : ''}}">
+    <view class="dt-prompt-main">
+      <text class="dt-prompt-label">{{answered ? '这个字是——' : (peekVisible ? '要写的是——' : '题面藏起来了')}}</text>
+      <text class="dt-prompt-word hanzi" wx:if="{{peekVisible || answered}}">{{answered ? ch : (word || ch)}}</text>
+      <text class="dt-prompt-word dt-mask" wx:else>＿ ＿</text>
+      <text class="dt-prompt-hint" wx:if="{{!answered}}">{{peekHint}}</text>
+    </view>
+    <view class="dt-replay tap" bindtap="onReplay" wx:if="{{!answered}}">
+      <text class="dt-replay-icon">👀</text>
+      <text class="dt-replay-text">再看一次</text>
+    </view>
+  </view>
+
+  <!-- 画布：听写/默写不给底字 -->
+  <view class="stage">
+    <canvas
+      type="2d"
+      id="trace"
+      class="trace-canvas"
+      disable-scroll="{{true}}"
+      bindtouchstart="onTouchStart"
+      bindtouchmove="onTouchMove"
+      bindtouchend="onTouchEnd"
+    ></canvas>
+  </view>
+
+  <view class="hint">
+    <text class="hint-dot"></text>
+    <text class="hint-text">{{hint}}</text>
+  </view>
+
+  <view class="tools">
+    <view class="tool tap" bindtap="onHint">
+      <text class="tool-emoji">💡</text>
+      <text>看这一笔</text>
+    </view>
+    <view class="tool tap" bindtap="onUndo">
+      <text class="tool-emoji">↩️</text>
+      <text>退一笔</text>
+    </view>
+    <view class="tool tap" bindtap="onReset">
+      <text class="tool-emoji">🧽</text>
+      <text>擦掉重写</text>
+    </view>
+  </view>
+
+  <view class="dt-actions">
+    <button
+      wx:if="{{answered}}"
+      class="btn btn-primary btn-block"
+      hover-class="btn-hover"
+      bindtap="onNextChar"
+    >{{index + 1 >= items.length ? '看结果' : '下一个'}}</button>
+    <button
+      wx:else
+      class="btn btn-ghost btn-block"
+      hover-class="btn-hover"
+      bindtap="onSkip"
+    >跳过这个字</button>
+  </view>
+
+  <!-- 一轮结束 -->
+  <view class="result-mask" wx:if="{{roundDone}}">
+    <view class="result-card pop">
+      <view class="result-title">默写完成</view>
+      <view class="result-stars">
+        <text class="star {{roundStars >= 1 ? 'on' : ''}}">★</text>
+        <text class="star {{roundStars >= 2 ? 'on' : ''}}">★</text>
+        <text class="star {{roundStars >= 3 ? 'on' : ''}}">★</text>
+      </view>
+      <view class="result-score">平均 {{avgScore}} 分 · 写了 {{scores.length}} 个字</view>
+      <view class="dt-score-list">
+        <view class="dt-score-row" wx:for="{{scores}}" wx:key="ch">
+          <text class="dt-score-ch hanzi">{{item.ch}}</text>
+          <text class="dt-score-val {{item.score >= 85 ? 'good' : (item.score >= 65 ? 'mid' : 'low')}}">{{item.score}} 分</text>
+        </view>
+      </view>
+      <button class="btn btn-primary btn-block" hover-class="btn-hover" bindtap="onFinishRound">完成</button>
+    </view>
+  </view>
+</view>

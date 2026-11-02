@@ -242,6 +242,17 @@ object Repo {
     /** 全部多音字 */
     fun allPolyphones(): List<String> = allChars.filter { isPolyphone(it) }
 
+    /** 所有带笔顺数据的字（教材顺序优先，再补额外字） */
+    fun allCharsWithStrokes(): List<String> {
+        val seen = HashSet<String>()
+        val out = ArrayList<String>()
+        for (ch in allChars) {
+            if (rawStrokes[ch] != null && seen.add(ch)) out.add(ch)
+        }
+        rawStrokes.keys.sorted().forEach { if (seen.add(it)) out.add(it) }
+        return out
+    }
+
     /**
      * 某个读音的用例词。
      *

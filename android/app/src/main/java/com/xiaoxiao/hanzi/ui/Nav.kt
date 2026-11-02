@@ -28,6 +28,8 @@ sealed class Screen {
         val mode: String,
         val book: String
     ) : Screen()
+    /** 听写：带难度，因为同一个入口能进三档 */
+    data class Dictation(val level: String, val book: String) : Screen()
     object Wrong : Screen()
     object About : Screen()
 }

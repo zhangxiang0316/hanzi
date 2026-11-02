@@ -15,6 +15,14 @@ const ACCEPT = 42; // 单笔通过分
 
 module.exports = function createWritePage(options) {
   const opts = options || {};
+  /**
+   * 听写模式：不画底字。
+   *
+   * 描红是「照着写」，听写是「凭记忆写」——同一套判分，难度差一档。
+   * 仍然保留田字格和起笔提示，否则孩子连从哪儿下笔都不知道，
+   * 那不是听写，那是默写整字。
+   */
+  const hideGhostDefault = !!opts.hideGhost;
   if (opts.books) strokeStore.registerAll(opts.books);
   return {
     data: {
@@ -32,7 +40,20 @@ module.exports = function createWritePage(options) {
     },
 
     onLoad(options) {
-      this.ch = decodeURIComponent(options.ch || '');
+      // 听写页会传 hideGhost=1（难度不是 easy 时）
+      this.hideGhost = options && options.hideGhost === '1' ? true : hideGhostDefault;
+      this.loadChar(decodeURIComponent(options.ch || ''));
+      if (this.ch) wx.setNavigationBarTitle({ title: '描红 · ' + this.ch });
+    },
+
+    /**
+     * 载入（或换成）某个字。
+     *
+     * 抽出来是因为听写页要在一个页面里连续换字：判分、画布、手势全都能复用，
+     * 只有「当前是哪个字」要重置。不抽的话听写页只能复制一遍整个初始化逻辑。
+     */
+    loadChar(ch) {
+      this.ch = ch || '';
       const meta = catalog.getMeta(this.ch);
       if (!meta) {
         wx.showToast({ title: '找不到这个字', icon: 'none' });
@@ -49,8 +70,14 @@ module.exports = function createWritePage(options) {
         meta,
         steps: Array.apply(null, { length: meta.s }).map((_, i) => i),
         strokeIndex: 0,
+        done: false,
+        score: 0,
+        stars: 0,
+        liveScore: 0,
+        resultTip: '',
+        hint: '沿着淡色的字，一笔一笔写出来',
       });
-      wx.setNavigationBarTitle({ title: '描红 · ' + this.ch });
+      if (this.ctx) this.render();
     },
 
     onShow() {
@@ -90,12 +117,14 @@ module.exports = function createWritePage(options) {
       ctx.clearRect(0, 0, this.width, this.height);
       hc.drawGrid(ctx, box, this.ox, this.oy, { border: 2, lineColor: '#eee3d0' });
 
-      // 整个字的淡色底
-      hc.drawStrokes(ctx, d, box, this.ox, this.oy, {
-        completed: 0,
-        showGhost: true,
-        ghostFill: 'rgba(37,51,45,0.10)',
-      });
+      // 整个字的淡色底。听写模式下不画——那是「凭记忆写」，看了底字就没意义了。
+      if (!this.hideGhost) {
+        hc.drawStrokes(ctx, d, box, this.ox, this.oy, {
+          completed: 0,
+          showGhost: true,
+          ghostFill: 'rgba(37,51,45,0.10)',
+        });
+      }
 
       // 当前这一笔的引导线
       const idx = this.data.strokeIndex;
@@ -273,6 +302,11 @@ module.exports = function createWritePage(options) {
       });
       if (result.stars >= 2) {
         wx.vibrateShort && wx.vibrateShort({ type: 'heavy' });
+      }
+      // 听写页用它推进到下一个字；描红页不设这个钩子。
+      // 放在最后调用，保证成绩已经写进 progress 再通知外部。
+      if (typeof this.onCharFinished === 'function') {
+        this.onCharFinished(this.ch, result.score, result.stars);
       }
     },
 
