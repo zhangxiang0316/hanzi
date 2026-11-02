@@ -24,15 +24,23 @@ Page({
     this.answers = [];
     this.locked = false;
 
-    const built = quiz.buildQuiz({
-      chars: session.chars,
-      book: session.book,
-      lesson: session.lesson,
-      count: session.count,
-      seed: Date.now(),
-      // 多音字模式只出多音字题；其余模式用默认题型轮转
-      types: session.mode === 'polyphone' ? ['polyphone'] : undefined,
-    });
+    // 词语模式的题源是课本词语表，和生字表无关，走单独的构建函数
+    const built = session.mode === 'words'
+      ? quiz.buildWordQuiz({
+          book: session.book,
+          lesson: session.lesson,
+          count: session.count,
+          seed: Date.now(),
+        })
+      : quiz.buildQuiz({
+          chars: session.chars,
+          book: session.book,
+          lesson: session.lesson,
+          count: session.count,
+          seed: Date.now(),
+          // 多音字模式只出多音字题；其余模式用默认题型轮转
+          types: session.mode === 'polyphone' ? ['polyphone'] : undefined,
+        });
     this.questions = built.questions;
     if (!this.questions.length) {
       wx.showToast({ title: '还没有可以练习的字', icon: 'none' });
@@ -76,7 +84,15 @@ Page({
       q: Object.assign({}, this.data.q, { options }),
       feedbackState: correct ? 'ok' : 'no',
     });
-    progress.grade(q.ch, correct, { book: q.lesson ? catalog.getMeta(q.ch).b : this.session.book });
+    // 词语题的 ch 是整词，不能直接当字喂给 SRS——按词里每个字分别记账，
+    // 这样「天空」答错会同时影响「天」和「空」的复习节奏，正是想要的。
+    const gradeChars = q.ch && q.ch.length > 1 && !catalog.hasChar(q.ch)
+      ? q.ch.split('').filter((c) => catalog.hasChar(c))
+      : [q.ch];
+    const gradeBook = catalog.hasChar(q.ch) && catalog.getMeta(q.ch)
+      ? catalog.getMeta(q.ch).b
+      : this.session.book;
+    gradeChars.forEach((ch) => progress.grade(ch, correct, { book: gradeBook }));
     this.answers.push({ ch: q.ch, correct, type: q.type, answer: q.answer, picked: value });
     if (correct) {
       wx.vibrateShort && wx.vibrateShort({ type: 'light' });
@@ -97,7 +113,14 @@ Page({
     progress.recordQuiz(total, correct);
     const wrongChars = [];
     this.answers.forEach((a) => {
-      if (!a.correct && wrongChars.indexOf(a.ch) < 0) wrongChars.push(a.ch);
+      if (a.correct) return;
+      // 词语题答错时 a.ch 是一整个词。错题本、错字重练都按单字组织，
+      // 所以把词拆成字——这也更符合学习逻辑：词写错了，落点是其中某个字。
+      const parts = a.ch && a.ch.length > 1 ? a.ch.split('') : [a.ch];
+      parts.forEach((ch) => {
+        if (!ch || !catalog.hasChar(ch)) return;
+        if (wrongChars.indexOf(ch) < 0) wrongChars.push(ch);
+      });
     });
     const app = getApp();
     app.globalData.lastResult = {

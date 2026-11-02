@@ -26,7 +26,7 @@
         data-v="{{opt.v}}"
         bindtap="onOption"
       >
-        <text class="option-label {{q.type === 'pinyin2char' || q.type === 'fillWord' ? 'hanzi' : ''}} {{q.type === 'char2pinyin' ? 'py' : ''}}">{{opt.label}}</text>
+        <text class="option-label {{q.type === 'pinyin2char' || q.type === 'fillWord' || q.type === 'wordPinyin' ? 'hanzi' : ''}} {{q.type === 'char2pinyin' ? 'py' : ''}}">{{opt.label}}</text>
         <text class="option-mark" wx:if="{{opt.state === 'correct'}}">✓</text>
         <text class="option-mark" wx:if="{{opt.state === 'wrong'}}">✕</text>
       </view>

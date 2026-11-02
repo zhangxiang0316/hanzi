@@ -33,6 +33,7 @@ let package = Package(
                 "HanziPad/Logic/WriteSession.swift",
                 "HanziPad/Logic/TabSlot.swift",
                 "HanziPad/Logic/Dictation.swift",
+                "HanziPad/Logic/Words.swift",
             ]
         ),
         .testTarget(

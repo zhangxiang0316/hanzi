@@ -71,6 +71,14 @@ fun QuizPage(app: AppState, mode: String, bookId: String, lessonId: String?) {
 
     // 生成题目：只在进页面时算一次
     val session = remember(mode, bookId, lessonId) {
+        // 词语模式的题源是课本词语表，和生字表无关，走单独的构建函数
+        if (mode == "words") {
+            val r = Quiz.buildWordQuiz(bookId, null, 10)
+            val name = Repo.book(bookId)?.name
+            val title = if (name != null) "$name · 看拼音选词语" else "看拼音选词语"
+            val s = Plan.Session("words", title, bookId, emptyList(), r.questions.size)
+            return@remember Triple(s, r.questions, r.targets)
+        }
         val s = when (mode) {
             "single" -> {
                 // 单字练习：就那一个字，出 4 道不同类型的题
@@ -245,8 +253,16 @@ fun QuizPage(app: AppState, mode: String, bookId: String, lessonId: String?) {
                                     answered = true
                                     val ok = opt.value == q.answer
                                     if (ok) correctCount += 1
-                                    else if (q.ch !in wrongChars) wrongChars.add(q.ch)
-                                    app.progress.grade(q.ch, ok, q.lesson)
+                                    // 词语题的 ch 是整词，错题本和 SRS 都按单字组织——
+                                    // 拆成字反而更符合学习逻辑：词错了，落点是其中某个字。
+                                    val gradeChars =
+                                        if (q.ch.length > 1 && Repo.meta(q.ch) == null)
+                                            q.ch.map { it.toString() }.filter { Repo.meta(it) != null }
+                                        else listOf(q.ch)
+                                    if (!ok) {
+                                        gradeChars.forEach { if (it !in wrongChars) wrongChars.add(it) }
+                                    }
+                                    gradeChars.forEach { app.progress.grade(it, ok, q.lesson) }
                                     app.touch()
                                     showFeedback = true
                                 },

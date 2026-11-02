@@ -692,4 +692,119 @@ final class LogicTests: XCTestCase {
         XCTAssertTrue(repo.isWriteChar("天"))
     }
 
+
+    // MARK: - 课文词语表
+
+    func testTextbookWordCountIs1276() {
+        let repo = TestRepo.make()
+        // lessons[*].words 共 1276 条，之前三端一次都没读过
+        var total = 0
+        var booksWithWords = Set<String>()
+        for b in repo.books {
+            for lid in b.lessons {
+                guard let l = repo.lesson(lid) else { continue }
+                if !l.words.isEmpty {
+                    total += l.words.count
+                    booksWithWords.insert(l.book)
+                }
+            }
+        }
+        XCTAssertEqual(total, 1276)
+        // 一年级课本没有单独的词语表，识字量还在积累——这是数据事实，不是缺失
+        XCTAssertEqual(booksWithWords, ["2a", "2b", "3a", "3b", "4a", "4b"])
+    }
+
+    func testLessonWordsUseTextbookWhenAvailable() {
+        let repo = TestRepo.make()
+        let list = repo.lessonWords("2a-k1")
+        XCTAssertFalse(list.isEmpty)
+        XCTAssertTrue(list[0].fromTextbook)
+        // 都带拼音
+        for w in list {
+            XCTAssertFalse(w.pinyin.isEmpty, "\(w.word) 缺拼音")
+        }
+    }
+
+    func testLessonWordsFallBackForGradeOne() {
+        let repo = TestRepo.make()
+        // 一年级没有词语表，要用本课生字的组词兜底，不能返回空
+        let list = repo.lessonWords("1a-s1")
+        XCTAssertFalse(list.isEmpty, "一年级也应有词可练")
+        XCTAssertFalse(list[0].fromTextbook)
+
+        let lesson = repo.lesson("1a-s1")
+        let chars = Set(lesson?.chars ?? [])
+        for w in list {
+            XCTAssertTrue(w.word.contains(where: { chars.contains(String($0)) }),
+                          "\(w.word) 不含本课生字")
+        }
+    }
+
+    func testBookWordsAreDeduped() {
+        let repo = TestRepo.make()
+        for b in ["1a", "2a", "3b"] {
+            let list = repo.bookWords(b)
+            XCTAssertGreaterThanOrEqual(list.count, 100, "\(b) 词语太少")
+            XCTAssertEqual(Set(list.map(\.word)).count, list.count, "\(b) 词语有重复")
+        }
+    }
+
+    func testWordQuizHasFourOptionsAndAnswerIncluded() {
+        let repo = TestRepo.make()
+        let r = Quiz.buildWordQuiz(repo: repo, book: "2a", count: 8, seed: 12345)
+        XCTAssertEqual(r.questions.count, 8)
+
+        var pinyins = Set<String>()
+        for q in r.questions {
+            XCTAssertEqual(q.type, "wordPinyin")
+            XCTAssertEqual(q.options.count, 4, "每题应有 4 个选项")
+            XCTAssertTrue(q.options.contains { $0.value == q.answer }, "答案必须在选项里")
+            XCTAssertFalse(q.prompt.isEmpty)
+            // 同一轮里题面不能重复，否则结果页会看到两道一样的题
+            XCTAssertTrue(pinyins.insert(q.prompt).inserted, "重复题面：\(q.prompt)")
+        }
+    }
+
+    func testWordQuizDistractorsAreNotHomophones() {
+        let repo = TestRepo.make()
+        let r = Quiz.buildWordQuiz(repo: repo, book: "2a", count: 10, seed: 99)
+        for q in r.questions {
+            for opt in q.options where opt.value != q.answer {
+                // 干扰项不能和正确答案同音，否则这题无解
+                XCTAssertNotEqual(repo.wordPinyin(opt.value), q.prompt)
+            }
+        }
+    }
+
+    func testWordQuizIsDeterministic() {
+        let repo = TestRepo.make()
+        let a = Quiz.buildWordQuiz(repo: repo, book: "2a", count: 6, seed: 7)
+            .questions.map(\.answer)
+        let b = Quiz.buildWordQuiz(repo: repo, book: "2a", count: 6, seed: 7)
+            .questions.map(\.answer)
+        XCTAssertEqual(a, b)
+    }
+
+    func testWordQuizEmptyBookIsSafe() {
+        let repo = TestRepo.make()
+        let r = Quiz.buildWordQuiz(repo: repo, book: "zz", count: 10, seed: 1)
+        XCTAssertTrue(r.questions.isEmpty)
+        XCTAssertTrue(r.targets.isEmpty)
+    }
+
+    func testWordQuizAnswersSplitIntoLearnableChars() {
+        let repo = TestRepo.make()
+        // 错题本、错字重练都按单字组织，整词塞进去会让结果页取不到 meta
+        let r = Quiz.buildWordQuiz(repo: repo, book: "2a", count: 8, seed: 42)
+        for q in r.questions {
+            let parts = q.ch.count > 1 && repo.meta(q.ch) == nil
+                ? q.ch.map(String.init).filter { repo.meta($0) != nil }
+                : [q.ch]
+            XCTAssertFalse(parts.isEmpty, "\(q.ch) 拆不出任何可学字")
+            for ch in parts {
+                XCTAssertNotNil(repo.meta(ch), "\(ch) 缺元数据")
+            }
+        }
+    }
+
 }

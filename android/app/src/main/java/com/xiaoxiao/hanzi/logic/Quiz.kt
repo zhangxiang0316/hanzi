@@ -308,6 +308,94 @@ object Quiz {
             else -> null
         }
 
+    /**
+     * 「看拼音选词语」：给一个词语的拼音，选出正确的那个词。
+     *
+     * 直接用课本的词语表（[Words]），不是每个字自带的组词——后者是通用例子，
+     * 前者才是要求掌握的那一份。
+     *
+     * 与字音题的区别：孩子要读的是**整个词**，而不只是其中一个字。
+     * 「天空」和「填空」的字音完全不同，光看字形分不出来，必须真的会读。
+     *
+     * 与 iOS `Quiz.buildWordQuiz`、小程序 `quiz.buildWordQuiz` 对应。
+     */
+    fun buildWordQuiz(
+        book: String?,
+        lesson: String? = null,
+        count: Int = 10,
+        seed: Long = System.currentTimeMillis()
+    ): Result {
+        val src = if (lesson != null) Words.lessonWords(lesson) else Words.bookWords(book ?: "")
+        if (src.size < 4) return Result(emptyList(), emptyList())
+
+        val rand = mulberry32(seed.toInt())
+        // 至少两个字、且有拼音的词才能出题
+        val pool = src.filter { it.pinyin.isNotEmpty() && it.word.length >= 2 }
+        if (pool.size < 4) return Result(emptyList(), emptyList())
+
+        val want = minOf(count, pool.size)
+        val picked = ArrayList<LessonWord>()
+        val usedWord = HashSet<String>()
+        val usedPinyin = HashSet<String>()
+        var guard = 0
+        while (picked.size < want && guard < want * 8) {
+            guard++
+            val cand = pool[(rand() * pool.size).toInt().coerceIn(0, pool.size - 1)]
+            if (!usedWord.add(cand.word)) continue
+            // 题面（拼音）也不能重复：同一轮的题会一块儿显示在结果页
+            if (!usedPinyin.add(cand.pinyin)) {
+                usedWord.remove(cand.word)
+                continue
+            }
+            picked.add(cand)
+        }
+
+        val questions = ArrayList<Question>()
+        for (correct in picked) {
+            // 干扰项：同册其他词，且拼音不能和正确答案一样（同音词会让这题无解）
+            val ds = ArrayList<LessonWord>()
+            var tries = 0
+            while (ds.size < 3 && tries < 60) {
+                tries++
+                val cand = pool[(rand() * pool.size).toInt().coerceIn(0, pool.size - 1)]
+                if (cand.word == correct.word || cand.pinyin == correct.pinyin) continue
+                if (ds.any { it.word == cand.word }) continue
+                ds.add(cand)
+            }
+            if (ds.size != 3) continue
+
+            val raw = ArrayList<Option>()
+            raw.add(Option(correct.word, correct.word))
+            ds.forEach { raw.add(Option(it.word, it.word)) }
+            val options = uniqueOptions(shuffle(raw, rand))
+            if (options.size != 4) continue
+
+            questions.add(
+                Question(
+                    type = "wordPinyin",
+                    ch = correct.word,
+                    lesson = lesson,
+                    title = "看拼音选词语",
+                    prompt = correct.pinyin,
+                    promptKind = "pinyin",
+                    sub = "这个音是哪个词？",
+                    options = options,
+                    answer = correct.word,
+                    explain = "「${correct.word}」读 ${correct.pinyin}。",
+                    index = questions.size,
+                    total = want
+                )
+            )
+        }
+
+        // 重排 index/total：中途被跳过的题会让前面算的 total 偏大
+        val fixed = questions.mapIndexed { i, q ->
+            Question(q.type, q.ch, q.lesson, q.title, q.prompt, q.promptKind, q.sub,
+                q.options, q.answer, q.explain, i, questions.size)
+        }
+        return Result(fixed, fixed.map { it.ch })
+    }
+
     fun build(
         chars: List<String>,
         book: String? = null,

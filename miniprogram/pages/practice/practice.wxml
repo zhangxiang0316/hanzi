@@ -56,6 +56,15 @@
     <view class="poly-arrow">→</view>
   </view>
 
+  <view class="poly-card tap" bindtap="onWords">
+    <view class="poly-icon">📖</view>
+    <view class="poly-body">
+      <view class="card-title">看拼音选词语</view>
+      <view class="card-desc">本册 {{wordCount}} 个课文词语，练读整个词</view>
+    </view>
+    <view class="poly-arrow">→</view>
+  </view>
+
   <view class="section-head">
     <view class="section-title">默写</view>
     <view class="section-sub">不给淡色的字，凭记忆写</view>

@@ -67,6 +67,19 @@ function buildSession(mode, opts) {
       count: Math.min(10, Math.max(4, picked.length)),
     };
   }
+  if (mode === 'words') {
+    // 看拼音选词语：题源是课本词语表，不是生字表
+    const book = o.book || catalog.defaultBook();
+    const words = require('./words');
+    const total = words.bookWordCount(book);
+    return {
+      mode: 'words',
+      title: o.title || catalog.getBook(book).name + ' · 看拼音选词语',
+      book,
+      chars: [],
+      count: Math.min(10, Math.max(4, total)),
+    };
+  }
   // free：按册随机
   const book = o.book || catalog.defaultBook();
   const learned = catalog.bookChars(book).filter((ch) => progress.hasLearned(ch));

@@ -304,6 +304,85 @@ const TYPE_ORDER = ['pinyin2char', 'char2pinyin', 'fillWord', 'strokeCount', 'ch
 let USED_PROMPTS = {};
 
 /**
+ * 「看拼音选词语」：给一个词语的拼音，选出正确的那个词。
+ *
+ * 直接用课本的词语表（`utils/words.js`），不是每个字自带的组词——
+ * 后者是通用例子，前者才是要求掌握的那一份。
+ *
+ * 与字音题的区别：孩子要读的是**整个词**，而不只是其中一个字。
+ * 「天空」和「填空」的字音完全不同，光看字形分不出来，必须真的会读。
+ *
+ * @param {object} opts
+ * @param {string} [opts.lesson] 只出这一课的词
+ * @param {string} [opts.book]   只出这一册的词
+ * @param {number} [opts.count=10]
+ * @param {number} [opts.seed]
+ */
+function buildWordQuiz(opts) {
+  const words = require('./words');
+  const src = opts.lesson ? words.lessonWords(opts.lesson) : words.bookWords(opts.book);
+  // 至少要有 4 个词才凑得出选项
+  if (src.length < 4) return { questions: [], targets: [] };
+
+  const count = Math.min(opts.count || 10, src.length);
+  const rand = mulberry32((opts.seed == null ? Date.now() : opts.seed) >>> 0);
+  const pool = src.filter((w) => w.py && w.word.length >= 2);
+  if (pool.length < 4) return { questions: [], targets: [] };
+
+  const picked = [];
+  const usedWord = {};
+  let guard = 0;
+  while (picked.length < count && guard < count * 8) {
+    const cand = pool[Math.floor(rand() * pool.length)];
+    guard++;
+    if (!cand || usedWord[cand.word]) continue;
+    // 题面（拼音）也不能重复：同一轮的题会一块儿显示在结果页
+    if (picked.some((p) => p.q.py === cand.py)) continue;
+    usedWord[cand.word] = true;
+    picked.push({ q: cand });
+  }
+
+  const questions = picked.map((x, i) => {
+    const correct = x.q;
+    // 干扰项：同册其他词，且拼音不能和正确答案一样
+    const ds = [];
+    let tries = 0;
+    while (ds.length < 3 && tries < 60) {
+      tries++;
+      const cand = pool[Math.floor(rand() * pool.length)];
+      if (!cand || cand.word === correct.word) continue;
+      if (cand.py === correct.py) continue;
+      if (ds.some((d) => d.word === cand.word)) continue;
+      ds.push(cand);
+    }
+    const options = uniqueOptions(
+      shuffle([option(correct.word, correct.word)].concat(ds.map((d) => option(d.word, d.word))), rand)
+    );
+    if (options.length < 4) return null;
+    return {
+      type: 'wordPinyin',
+      ch: correct.word,
+      lesson: x.q.lesson || opts.lesson || '',
+      title: '看拼音选词语',
+      prompt: correct.py,
+      promptKind: 'pinyin',
+      sub: '这个音是哪个词？',
+      options,
+      answer: correct.word,
+      explain: '「' + correct.word + '」读 ' + correct.py + '。',
+      index: i,
+      total: picked.length,
+    };
+  }).filter(Boolean);
+
+  questions.forEach((q, i) => {
+    q.index = i;
+    q.total = questions.length;
+  });
+  return { questions, targets: questions.map((q) => q.ch) };
+}
+
+/**
  * @param {object} opts
  * @param {string[]} opts.chars 目标字
  * @param {string} [opts.book] 干扰项来源册次
@@ -353,6 +432,7 @@ function buildQuiz(opts) {
 
 module.exports = {
   buildQuiz,
+  buildWordQuiz,
   mulberry32,
   shuffle,
   TYPE_ORDER,

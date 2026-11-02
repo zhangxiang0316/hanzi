@@ -307,6 +307,91 @@ enum Quiz {
     }
 
     // MARK: - 入口
+    /// 「看拼音选词语」：给一个词语的拼音，选出正确的那个词。
+    ///
+    /// 直接用课本的词语表（`Repo.lessonWords` / `bookWords`），不是每个字
+    /// 自带的组词——后者是通用例子，前者才是要求掌握的那一份。
+    ///
+    /// 与字音题的区别：孩子要读的是**整个词**，而不只是其中一个字。
+    /// 「天空」和「填空」的字音完全不同，光看字形分不出来，必须真的会读。
+    static func buildWordQuiz(repo: Repo,
+                              book: String,
+                              lesson: String? = nil,
+                              count: Int = 10,
+                              seed: UInt32) -> Result {
+        let src = lesson.map { repo.lessonWords($0) } ?? repo.bookWords(book)
+        guard src.count >= 4 else { return Result(questions: [], targets: []) }
+
+        let rand = mulberry32(seed)
+        // 至少两个字、且有拼音的词才能出题
+        let pool = src.filter { $0.pinyin.count > 0 && $0.word.count >= 2 }
+        guard pool.count >= 4 else { return Result(questions: [], targets: []) }
+
+        let want = min(count, pool.count)
+        var picked: [LessonWord] = []
+        var usedWord = Set<String>()
+        var usedPinyin = Set<String>()
+        var guardCount = 0
+        while picked.count < want && guardCount < want * 8 {
+            guardCount += 1
+            let cand = pool[Int(rand() * Double(pool.count))]
+            guard usedWord.insert(cand.word).inserted else { continue }
+            // 题面（拼音）也不能重复：同一轮的题会一块儿显示在结果页
+            guard usedPinyin.insert(cand.pinyin).inserted else {
+                usedWord.remove(cand.word)
+                continue
+            }
+            picked.append(cand)
+        }
+
+        var questions: [Question] = []
+        for correct in picked {
+            // 干扰项：同册其他词，且拼音不能和正确答案一样（同音词会让这题无解）
+            var ds: [LessonWord] = []
+            var tries = 0
+            while ds.count < 3 && tries < 60 {
+                tries += 1
+                let cand = pool[Int(rand() * Double(pool.count))]
+                guard cand.word != correct.word, cand.pinyin != correct.pinyin else { continue }
+                guard !ds.contains(where: { $0.word == cand.word }) else { continue }
+                ds.append(cand)
+            }
+            guard ds.count == 3 else { continue }
+
+            var options = [Option(value: correct.word, label: correct.word)]
+            options += ds.map { Option(value: $0.word, label: $0.word) }
+            options = uniqueOptions(shuffle(options, rand))
+            guard options.count == 4 else { continue }
+
+            questions.append(Question(
+                type: "wordPinyin",
+                ch: correct.word,
+                lesson: lesson,
+                title: "看拼音选词语",
+                prompt: correct.pinyin,
+                promptKind: "pinyin",
+                sub: "这个音是哪个词？",
+                options: options,
+                answer: correct.word,
+                explain: "「\(correct.word)」读 \(correct.pinyin)。",
+                index: questions.count,
+                total: want
+            ))
+        }
+
+        for i in questions.indices {
+            questions[i] = Question(
+                type: questions[i].type, ch: questions[i].ch, lesson: questions[i].lesson,
+                title: questions[i].title, prompt: questions[i].prompt,
+                promptKind: questions[i].promptKind, sub: questions[i].sub,
+                options: questions[i].options, answer: questions[i].answer,
+                explain: questions[i].explain, index: i, total: questions.count
+            )
+        }
+        return Result(questions: questions, targets: questions.map { $0.ch })
+    }
+
+
 
     static func build(
         chars: [String],

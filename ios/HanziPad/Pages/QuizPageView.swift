@@ -57,6 +57,18 @@ struct QuizPageView: View {
 
     private func build() {
         guard questions.isEmpty else { return }
+
+        // 词语模式的题源是课本词语表，和生字表无关，走单独的构建函数
+        if payload.mode == "words" {
+            let r = Quiz.buildWordQuiz(repo: app.repo, book: payload.book,
+                                       lesson: payload.lesson,
+                                       count: 10, seed: UInt32(Date().timeIntervalSince1970))
+            questions = r.questions
+            targets = r.targets
+            dumpIfRequested()
+            return
+        }
+
         let session: Plan.Session
         switch payload.mode {
         case "lesson":
@@ -78,11 +90,15 @@ struct QuizPageView: View {
                            lesson: payload.lesson, count: session.count, types: types)
         questions = r.questions
         targets = r.targets
+        dumpIfRequested()
+    }
+
+    /// 自检：把生成的题目落盘，用于核对「三端是否出同一套题」。
+    /// 沙箱里没法注入点击，光看截图判断题目内容不可靠。
+    private func dumpIfRequested() {
         #if DEBUG
-        // 自检：把生成的题目落盘，用于核对「三端是否出同一套题」。
-        // 沙箱里没法注入点击，光看截图判断题目内容不可靠。
         if ProcessInfo.processInfo.arguments.contains("-dumpQuestions") {
-            let lines = r.questions.map { q in
+            let lines = questions.map { q in
                 "\(q.type)\t\(q.ch)\t\(q.prompt)\t\(q.sub)\t答:\(q.answer)\t选:\(q.options.map(\.value).joined(separator: "|"))"
             }
             let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -302,11 +318,21 @@ struct QuizPageView: View {
         let ok = opt.value == q.answer
         if ok {
             correct += 1
-        } else {
-            wrongChars.append(q.ch)
+        }
+        // 词语题的 ch 是整词，错题本和 SRS 都按单字组织——
+        // 拆成字反而更符合学习逻辑：词写错了，落点是其中某个字。
+        let gradeChars = q.ch.count > 1 && app.repo.meta(q.ch) == nil
+            ? q.ch.map(String.init).filter { app.repo.meta($0) != nil }
+            : [q.ch]
+        if !ok {
+            for ch in gradeChars where !wrongChars.contains(ch) {
+                wrongChars.append(ch)
+            }
         }
         // 记进 SRS 和错题本
-        app.progress.grade(q.ch, correct: ok, lesson: q.lesson)
+        for ch in gradeChars {
+            app.progress.grade(ch, correct: ok, lesson: q.lesson)
+        }
         withAnimation(.easeOut(duration: 0.2)) { revealed = true }
 
         // 答对了自动进下一题，答错则停留让人看清解析。

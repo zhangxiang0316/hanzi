@@ -4,6 +4,7 @@ const plan = require('../../utils/plan');
 const sessionUtil = require('../../utils/session');
 const day = require('../../utils/day');
 const dictation = require('../../utils/dictation');
+const words = require('../../utils/words');
 const routes = require('../../utils/routes');
 
 Page({
@@ -13,6 +14,7 @@ Page({
     wrongCount: 0,
     polyCount: 0,
     dictLevels: dictation.LEVELS,
+    wordCount: 0,
     heroChar: '字',
     books: [],
     bookName: '',
@@ -57,6 +59,7 @@ Page({
       today: { answers: today.answers, rate: progress.getAccuracyToday() },
       wrongCount: progress.wrongCount(),
       polyCount: catalog.polyphones(book ? book.id : catalog.defaultBook()).length,
+      wordCount: words.bookWordCount(book ? book.id : catalog.defaultBook()),
       heroChar: due.length ? due[0] : writeChar,
       books,
       bookName: book ? book.name : '',
@@ -88,6 +91,14 @@ Page({
     const app = getApp();
     app.globalData.session = sessionUtil.buildSession('free', {});
     wx.navigateTo({ url: '/pages/quiz/quiz?from=practice' });
+  },
+
+  /** 看拼音选词语：题源是课本词语表 */
+  onWords() {
+    const book = progress.getSettings().book || catalog.defaultBook();
+    const app = getApp();
+    app.globalData.session = sessionUtil.buildSession('words', { book });
+    wx.navigateTo({ url: '/pages/quiz/quiz?mode=words' });
   },
 
   onDictation(e) {

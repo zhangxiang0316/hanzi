@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.xiaoxiao.hanzi.data.Repo
 import com.xiaoxiao.hanzi.logic.DictationLevel
+import com.xiaoxiao.hanzi.logic.Words
 import com.xiaoxiao.hanzi.logic.Plan
 import com.xiaoxiao.hanzi.ui.AppState
 import com.xiaoxiao.hanzi.ui.Dimens
@@ -178,6 +179,21 @@ fun PracticePage(app: AppState) {
             modifier = Modifier.fillMaxWidth()
         ) {
             if (polyCount > 0) app.nav.push(Screen.Quiz("polyphone", app.currentBook, null))
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        // 看拼音选词语：题源是课本词语表，不是生字表。
+        // 孩子要读的是整个词，光认单字读不出来也白搭。
+        val wordCount = Words.bookWordCount(app.currentBook)
+        ActionCard(
+            emoji = "📚",
+            title = "看拼音选词语",
+            desc = "本册 $wordCount 个课文词语，练读整个词",
+            badge = 0,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            if (wordCount >= 4) app.nav.push(Screen.Quiz("words", app.currentBook, null))
         }
 
         SectionHead("听写", "念一个词，凭记忆写出来")

@@ -58,6 +58,18 @@ struct PracticePageView: View {
                                                           book: app.currentBook, lesson: nil))
                         }
 
+                        // 看拼音选词语：题源是课本词语表，不是生字表。
+                        // 孩子要读的是整个词，光认单字读不出来也白搭。
+                        let wordCount = app.repo.bookWordCount(app.currentBook)
+                        modeCard(
+                            emoji: "📚", title: "看拼音选词语",
+                            desc: "本册 \(wordCount) 个课文词语",
+                            color: Palette.clay, enabled: wordCount >= 4
+                        ) {
+                            app.push(AppState.QuizPayload(mode: "words",
+                                                          book: app.currentBook, lesson: nil))
+                        }
+
                         modeCard(
                             emoji: "📖", title: "课本练习",
                             desc: "按课文顺序练习",
