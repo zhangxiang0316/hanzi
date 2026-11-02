@@ -675,10 +675,43 @@ final class LogicTests: XCTestCase {
         let repo = TestRepo.make()
         let all = repo.allChars
         let readOnly = all.filter { !repo.isWriteChar($0) }
-        // 教材自带「会写」区分：2596 个字里 341 个只要求认识
+        // 2596 个字里 1798 个要求会写，798 个只要求认识
         XCTAssertEqual(all.count, 2596)
-        XCTAssertEqual(readOnly.count, 341)
-        XCTAssertEqual(all.count - readOnly.count, 2255)
+        XCTAssertEqual(readOnly.count, 798)
+        XCTAssertEqual(all.count - readOnly.count, 1798)
+    }
+
+    /// 曾经 `isWriteChar` 只看 `meta.x` 非空，把 457 个「写字课在五六年级」的字
+    /// （棋→6a-k6、鸦→6b-k3、氏→5a-k16）误判成本项目要求会写——
+    /// 于是听写会要求二年级孩子默写「鸦」。
+    ///
+    /// 修正后必须与课时的 `write` 数组并集严格一致。两种算法互相独立，
+    /// 任何一边偏了这条测试都会失败。
+    func testWriteCharsMatchLessonWriteLists() {
+        let repo = TestRepo.make()
+        var inWriteLists = Set<String>()
+        for b in repo.books {
+            for lid in b.lessons {
+                guard let l = repo.lesson(lid) else { continue }
+                for ch in l.write { inWriteLists.insert(ch) }
+            }
+        }
+        let byMeta = repo.allChars.filter { repo.isWriteChar($0) }
+        XCTAssertEqual(byMeta.count, inWriteLists.count, "两种算法数量不一致")
+        for ch in byMeta {
+            XCTAssertTrue(inWriteLists.contains(ch), "\(ch) 被判为会写，却不在任何课时写字表里")
+        }
+    }
+
+    func testOutOfRangeWriteLessonsAreReadOnly() {
+        let repo = TestRepo.make()
+        // 这几个字的 meta.x 分别指向 6a/6b/5a/5b，本项目只做一到四年级
+        for ch in ["棋", "鸦", "氏", "孙", "纯"] {
+            XCTAssertFalse(repo.isWriteChar(ch), "\(ch) 的写字课在五六年级，本项目不要求会写")
+        }
+        // 一到四年级的字不受影响
+        XCTAssertTrue(repo.isWriteChar("天"))
+        XCTAssertTrue(repo.isWriteChar("匀"))  // 3b-k7，在本项目范围内
     }
 
     func testTypicalReadOnlyChars() {

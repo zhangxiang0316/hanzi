@@ -123,9 +123,24 @@ function readingDetails(ch) {
   }));
 }
 
+/** 本项目覆盖的册次（一上～四下）。meta.x 可能指向五六年级的写字课。 */
+const BOOK_IDS = {};
+books.forEach((b) => { BOOK_IDS[b.id] = true; });
+
+/**
+ * 这个字在本项目范围内是否要求会写。
+ *
+ * 不能只看 `meta.x` 非空：有 457 个字的写字课在五、六年级（如「棋」的
+ * x 是 6a-k6），而本项目只做一到四年级。这些字在本项目里是「只认不写」，
+ * 之前三端都误判成会写，导致听写会要求孩子默写「鸦」「氏」「孙」这类字。
+ *
+ * 修正后与本项目课时的 `write` 数组并集严格一致（都是 1798 个），
+ * 这个交叉验证写进了测试。
+ */
 function isWriteChar(ch) {
   const m = meta[ch];
-  return !!(m && m.x);
+  if (!m || !m.x) return false;
+  return BOOK_IDS[m.x.split('-')[0]] === true;
 }
 
 // MARK: - 多音字

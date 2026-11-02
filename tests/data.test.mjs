@@ -179,16 +179,45 @@ test('笔顺坐标已翻转为屏幕坐标（y 向下），否则整字上下镜
 
 // 只认不写的字：教材自带 isWriteChar 区分，341 个字只要求认识。
 // 描红页据此显示「不要求会写」的说明，避免孩子以为自己没学会。
-test('只认不写的字有 341 个，且都有笔顺数据', () => {
+test('只认不写的字有 798 个，且都有笔顺数据', () => {
   const all = catalog.getAllChars();
   const readOnly = all.filter((ch) => !catalog.isWriteChar(ch));
-  assert.equal(readOnly.length, 341);
-  assert.equal(all.length - readOnly.length, 2255);
+  // 1798 个要求会写，798 个只要求认识
+  assert.equal(readOnly.length, 798);
+  assert.equal(all.length - readOnly.length, 1798);
 
   // 这些字仍能描红（有笔顺数据），只是课标不要求会写
   for (const ch of readOnly.slice(0, 30)) {
     assert.ok(catalog.getMeta(ch), `${ch} 应有元数据`);
   }
+});
+
+// 曾经 isWriteChar 只看 meta.x 非空，把 457 个「写字课在五六年级」的字
+// （棋→6a-k6、鸦→6b-k3、氏→5a-k16）误判成本项目要求会写——
+// 于是听写会要求二年级孩子默写「鸦」。修正后必须与课时的 write 数组
+// 并集严格一致，这个交叉验证是两边独立算的，能抓到任何一边的偏差。
+test('会写字集合与课时写字表并集严格一致', () => {
+  const cat = catalog.catalog;
+  const inWriteLists = new Set();
+  Object.keys(cat.lessons).forEach((id) => {
+    (cat.lessons[id].write || []).forEach((ch) => inWriteLists.add(ch));
+  });
+  const byMeta = catalog.getAllChars().filter((ch) => catalog.isWriteChar(ch));
+
+  assert.equal(byMeta.length, inWriteLists.size, '两种算法数量不一致');
+  for (const ch of byMeta) {
+    assert.ok(inWriteLists.has(ch), `${ch} 被判为会写，却不在任何课时写字表里`);
+  }
+});
+
+test('写字课超出本项目册次的字算只认不写', () => {
+  // 这几个字的 meta.x 分别指向 6a/6b/5a/5b，本项目只做一到四年级
+  for (const ch of ['棋', '鸦', '氏', '孙', '纯']) {
+    assert.equal(catalog.isWriteChar(ch), false, `${ch} 的写字课在五六年级，本项目不要求会写`);
+  }
+  // 一到四年级的字不受影响
+  assert.equal(catalog.isWriteChar('天'), true);
+  assert.equal(catalog.isWriteChar('匀'), true); // 3b-k7，在本项目范围内
 });
 
 test('典型只认字：髓、嚼、蟹', () => {
@@ -204,11 +233,11 @@ test('典型只认字：髓、嚼、蟹', () => {
 // 少了 5 个只出现在课时写字表、没进识字表的字（匀剩训忧毒）；
 // 小程序端用 meta 键序，是 2596 个。三端各说各话会导致
 // 听写候选池、错题干扰项、字帖统计都对不上。
-test('全字表规模：2596 / 2255 / 341', () => {
+test('全字表规模：2596 / 1798 / 798', () => {
   const all = catalog.getAllChars();
   assert.equal(all.length, 2596);
-  assert.equal(all.filter((ch) => catalog.isWriteChar(ch)).length, 2255);
-  assert.equal(all.filter((ch) => !catalog.isWriteChar(ch)).length, 341);
+  assert.equal(all.filter((ch) => catalog.isWriteChar(ch)).length, 1798);
+  assert.equal(all.filter((ch) => !catalog.isWriteChar(ch)).length, 798);
 });
 
 test('漏收字：匀剩训忧毒 必须在全字表里', () => {

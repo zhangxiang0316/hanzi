@@ -97,4 +97,41 @@ class DictationTest {
         val writeChars = Repo.allChars.filter { Repo.isWriteChar(it) }
         assertTrue("会写字应远超一轮的 8 个，实际 ${writeChars.size}", writeChars.size > 100)
     }
+
+    /**
+     * 曾经 `isWriteChar` 只看 `writeLesson` 非空，把 457 个「写字课在五六年级」
+     * 的字（棋→6a-k6、鸦→6b-k3、氏→5a-k16）误判成本项目要求会写——
+     * 于是听写会要求二年级孩子默写「鸦」。
+     *
+     * 修正后必须与课时的 `write` 数组并集严格一致。两种算法互相独立，
+     * 任何一边偏了这条测试都会失败。
+     */
+    @Test
+    fun `会写字集合与课时写字表并集一致`() {
+        val inWriteLists = HashSet<String>()
+        Repo.books.forEach { b ->
+            b.lessons.forEach { lid ->
+                Repo.lesson(lid)?.write?.forEach { inWriteLists.add(it) }
+            }
+        }
+        val byMeta = Repo.allChars.filter { Repo.isWriteChar(it) }
+        assertEquals("两种算法数量不一致", inWriteLists.size, byMeta.size)
+        byMeta.forEach { ch ->
+            assertTrue("$ch 被判为会写，却不在任何课时写字表里", inWriteLists.contains(ch))
+        }
+        // 总数锁死：2596 个字里 1798 个会写、798 个只认
+        assertEquals(1798, byMeta.size)
+        assertEquals(798, Repo.allChars.size - byMeta.size)
+    }
+
+    @Test
+    fun `写字课超出本项目册次的字算只认不写`() {
+        // 这几个字的 writeLesson 分别指向 6a/6b/5a/5b，本项目只做一到四年级
+        listOf("棋", "鸦", "氏", "孙", "纯").forEach { ch ->
+            assertFalse("$ch 的写字课在五六年级，本项目不要求会写", Repo.isWriteChar(ch))
+        }
+        // 一到四年级的字不受影响
+        assertTrue(Repo.isWriteChar("天"))
+        assertTrue(Repo.isWriteChar("匀"))  // 3b-k7，在本项目范围内
+    }
 }

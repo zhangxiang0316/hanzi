@@ -177,9 +177,18 @@ final class Repo {
         return m.rd ?? [Reading(p: m.py, l: "")]
     }
 
+    /// 这个字在本项目范围内是否要求会写。
+    ///
+    /// 不能只看 `meta.x` 非空：有 457 个字的写字课在五、六年级（如「棋」的
+    /// x 是 6a-k6），而本项目只做一到四年级。这些字在本项目里是「只认不写」，
+    /// 之前三端都误判成会写，导致听写会要求孩子默写「鸦」「氏」「孙」这类字。
+    ///
+    /// 修正后与本项目课时的 `write` 数组并集严格一致（都是 1798 个），
+    /// 这个交叉验证写进了测试。
     func isWriteChar(_ ch: String) -> Bool {
-        guard let m = metaMap[ch] else { return false }
-        return !m.x.isEmpty
+        guard let m = metaMap[ch], !m.x.isEmpty else { return false }
+        let bookOfX = m.x.split(separator: "-").first.map(String.init) ?? ""
+        return bookMap[bookOfX] != nil
     }
 
     // MARK: - 多音字
