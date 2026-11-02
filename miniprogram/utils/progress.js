@@ -230,6 +230,39 @@ function writeStarsTotal() {
   return Object.keys(writes).reduce((n, ch) => n + (writes[ch].stars || 0), 0);
 }
 
+/** 写过多少个字 */
+function writeCount() {
+  return Object.keys(writes).length;
+}
+
+/**
+ * 所有写过字的记录，按「最近写的在前，同一天按最高分降序」排。
+ *
+ * 排序刻意不按字的音序：孩子翻开字帖想看的是「我最近写的」，
+ * 而不是「按拼音排的一堆字」——后者更像词典，不像自己的成果。
+ * 与 iOS `allWriteRecords()`、Android `allWriteRecords()` 三端一致。
+ */
+function allWriteRecords() {
+  return Object.keys(writes)
+    .map((ch) => ({ ch, record: writes[ch] }))
+    .sort((a, b) => {
+      if (a.record.last !== b.record.last) return b.record.last - a.record.last;
+      if (a.record.best !== b.record.best) return b.record.best - a.record.best;
+      // 兜底：保证顺序稳定，测试可复现
+      return a.ch < b.ch ? -1 : a.ch > b.ch ? 1 : 0;
+    });
+}
+
+/** 按星级分档的数量（3 星 / 2 星 / 1 星 / 0 星），四个键一定存在 */
+function writeStarsHistogram() {
+  const out = { 0: 0, 1: 0, 2: 0, 3: 0 };
+  Object.keys(writes).forEach((ch) => {
+    const s = writes[ch].stars || 0;
+    out[s] = (out[s] || 0) + 1;
+  });
+  return out;
+}
+
 function getSettings() {
   return Object.assign({}, settings);
 }
@@ -330,6 +363,9 @@ module.exports = {
   getWrite,
   saveWrite,
   writeStarsTotal,
+  writeCount,
+  allWriteRecords,
+  writeStarsHistogram,
   getSettings,
   updateSettings,
   getLast,

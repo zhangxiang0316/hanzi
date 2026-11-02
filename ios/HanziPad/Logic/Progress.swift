@@ -371,6 +371,30 @@ final class Progress {
 
     var writeStarsTotal: Int { writes.values.reduce(0) { $0 + $1.stars } }
 
+    /// 写过多少个字
+    var writeCount: Int { writes.count }
+
+    /// 所有写过字的记录，按「最近写的在前，同一天按最高分降序」排。
+    ///
+    /// 排序刻意不按字的音序：孩子翻开字帖想看的是「我最近写的」，
+    /// 而不是「按拼音排的一堆字」——后者更像词典，不像自己的成果。
+    func allWriteRecords() -> [(ch: String, record: WriteRecord)] {
+        writes
+            .map { (ch: $0.key, record: $0.value) }
+            .sorted { a, b in
+                if a.record.last != b.record.last { return a.record.last > b.record.last }
+                if a.record.best != b.record.best { return a.record.best > b.record.best }
+                return a.ch < b.ch   // 兜底：保证顺序稳定，测试可复现
+            }
+    }
+
+    /// 按星级分档的数量（3 星 / 2 星 / 1 星 / 0 星）
+    func writeStarsHistogram() -> [Int: Int] {
+        var out: [Int: Int] = [0: 0, 1: 0, 2: 0, 3: 0]
+        for (_, r) in writes { out[r.stars, default: 0] += 1 }
+        return out
+    }
+
     // MARK: - 设置
 
     func updateSettings(_ patch: Settings) {

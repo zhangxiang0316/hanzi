@@ -627,4 +627,45 @@ final class LogicTests: XCTestCase {
         XCTAssertEqual(a, b, "隐藏底字不该影响判分")
     }
 
+
+    // MARK: - 我的字帖
+
+    func testWriteRecordsSortByRecentThenScore() {
+        let prog = Progress(store: MemoryStore())
+        prog.saveWrite("天", score: 90)
+        prog.saveWrite("地", score: 50)
+        prog.saveWrite("人", score: 90)
+
+        let all = prog.allWriteRecords()
+        XCTAssertEqual(all.count, 3)
+        // 同一天写的按分数降序，同分的按字稳定排序（保证可复现）
+        XCTAssertEqual(all.map { $0.ch }, ["人", "天", "地"])
+        XCTAssertEqual(all.first?.record.best, 90)
+    }
+
+    func testWriteStarsHistogram() {
+        let prog = Progress(store: MemoryStore())
+        // 85/65/40 是星级门槛：>=85 三星、>=65 两星、>=40 一星
+        prog.saveWrite("甲", score: 90)   // 3 星
+        prog.saveWrite("乙", score: 85)   // 3 星
+        prog.saveWrite("丙", score: 70)   // 2 星
+        prog.saveWrite("丁", score: 39)   // 0 星
+
+        let h = prog.writeStarsHistogram()
+        XCTAssertEqual(h[3], 2)
+        XCTAssertEqual(h[2], 1)
+        XCTAssertEqual(h[1], 0)
+        XCTAssertEqual(h[0], 1)
+        XCTAssertEqual(prog.writeCount, 4)
+    }
+
+    func testWriteHistogramEmptyIsAllZero() {
+        let prog = Progress(store: MemoryStore())
+        let h = prog.writeStarsHistogram()
+        // 四个档位都要有键：页面上直接取值画四格，缺键会读到 nil 变成空白
+        for k in 0...3 { XCTAssertEqual(h[k], 0) }
+        XCTAssertEqual(prog.writeCount, 0)
+        XCTAssertTrue(prog.allWriteRecords().isEmpty)
+    }
+
 }

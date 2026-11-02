@@ -176,3 +176,46 @@ test('清空记录后回到初始状态', () => {
   assert.equal(progress.wrongCount(), 0);
   assert.equal(progress.getStreak(), 0);
 });
+
+// MARK: 我的字帖
+// 与 iOS `testWriteRecordsSortByRecentThenScore`、Android `CopybookTest` 对应：
+// 排序规则和星级分档在三端必须一致，否则同一个账号在不同设备上
+// 看到的字帖顺序会不一样。
+
+test('字帖：同一天写的按分数降序排列', () => {
+  fresh();
+  progress.saveWrite('天', 90);
+  progress.saveWrite('地', 50);
+  progress.saveWrite('人', 90);
+
+  const all = progress.allWriteRecords();
+  assert.equal(all.length, 3);
+  // 同分时按字稳定排序，保证测试可复现
+  assert.deepEqual(all.map((x) => x.ch), ['人', '天', '地']);
+  assert.equal(all[0].record.best, 90);
+});
+
+test('字帖：星级分档', () => {
+  fresh();
+  // 85/65/40 是星级门槛：>=85 三星、>=65 两星、>=40 一星
+  progress.saveWrite('甲', 90);
+  progress.saveWrite('乙', 85);
+  progress.saveWrite('丙', 70);
+  progress.saveWrite('丁', 39);
+
+  const h = progress.writeStarsHistogram();
+  assert.equal(h[3], 2);
+  assert.equal(h[2], 1);
+  assert.equal(h[1], 0);
+  assert.equal(h[0], 1);
+  assert.equal(progress.writeCount(), 4);
+});
+
+test('字帖：空状态四个档位都在', () => {
+  fresh();
+  const h = progress.writeStarsHistogram();
+  // 页面上直接取四格画，缺键会读到 undefined 变成空白
+  for (const k of [0, 1, 2, 3]) assert.equal(h[k], 0);
+  assert.equal(progress.writeCount(), 0);
+  assert.deepEqual(progress.allWriteRecords(), []);
+});

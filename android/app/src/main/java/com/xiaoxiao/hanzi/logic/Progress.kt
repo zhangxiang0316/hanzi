@@ -346,6 +346,31 @@ class Progress(private val store: Store) {
 
     fun writeStarsTotal(): Int = writes.values.sumOf { it.stars }
 
+    /** 写过多少个字 */
+    fun writeCount(): Int = writes.size
+
+    /**
+     * 所有写过字的记录，按「最近写的在前，同一天按最高分降序」排。
+     *
+     * 排序刻意不按字的音序：孩子翻开字帖想看的是「我最近写的」，
+     * 而不是「按拼音排的一堆字」——后者更像词典，不像自己的成果。
+     */
+    fun allWriteRecords(): List<Pair<String, WriteRecord>> =
+        writes.entries
+            .map { it.key to it.value }
+            .sortedWith(
+                compareByDescending<Pair<String, WriteRecord>> { it.second.last }
+                    .thenByDescending { it.second.best }
+                    .thenBy { it.first }   // 兜底：保证顺序稳定，测试可复现
+            )
+
+    /** 按星级分档的数量（3 星 / 2 星 / 1 星 / 0 星），四个键一定存在 */
+    fun writeStarsHistogram(): Map<Int, Int> {
+        val out = mutableMapOf(0 to 0, 1 to 0, 2 to 0, 3 to 0)
+        for (r in writes.values) out[r.stars] = (out[r.stars] ?: 0) + 1
+        return out
+    }
+
     // ---------- 设置 ----------
 
     fun updateSettings(patch: Settings) {

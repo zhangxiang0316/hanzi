@@ -20,6 +20,7 @@ Page({
     books: [],
     showPinyin: true,
     wrongCount: 0,
+    writeCount: 0,
     version: '1.0.0',
   },
 
@@ -55,6 +56,7 @@ Page({
       books: catalog.getBooks().map((b) => ({ id: b.id, short: b.short, name: b.name })),
       showPinyin: settings.showPinyin !== false,
       wrongCount: progress.wrongCount(),
+      writeCount: progress.writeCount(),
     });
   },
 
@@ -73,6 +75,10 @@ Page({
   onPinyin(e) {
     progress.updateSettings({ showPinyin: !!e.detail.value });
     this.refresh();
+  },
+
+  onCopybook() {
+    wx.navigateTo({ url: '/pages/copybook/copybook' });
   },
 
   onWrong() {

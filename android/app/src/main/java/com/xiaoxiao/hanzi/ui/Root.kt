@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.xiaoxiao.hanzi.ui.pages.AboutPage
+import com.xiaoxiao.hanzi.ui.pages.CopybookPage
 import com.xiaoxiao.hanzi.ui.pages.DetailPage
 import com.xiaoxiao.hanzi.ui.pages.DictationPage
 import com.xiaoxiao.hanzi.ui.pages.IndexPage
@@ -97,6 +98,7 @@ fun Root(app: AppState) {
                     app, screen.correct, screen.total, screen.wrongChars, screen.mode, screen.book
                 )
                 is Screen.Dictation -> DictationPage(app, screen.level, screen.book)
+                is Screen.Copybook -> CopybookPage(app)
                 is Screen.Wrong -> WrongPage(app)
                 is Screen.About -> AboutPage()
             }
@@ -116,6 +118,7 @@ private fun titleOf(screen: Screen): String = when (screen) {
     is Screen.Dictation -> "听写"
     is Screen.Quiz -> "练一练"
     is Screen.Result -> "练习结果"
+    is Screen.Copybook -> "我的字帖"
     is Screen.Wrong -> "错题本"
     is Screen.About -> "关于"
     else -> ""

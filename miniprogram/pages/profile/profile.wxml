@@ -86,6 +86,12 @@
       <text class="link-name">错题本</text>
       <text class="link-value">{{wrongCount}} 个字 ›</text>
     </view>
+    <!-- 字帖：写出来的字和认得的字是两种能力，值得单独有一个入口。
+         徽章体系几乎全是「认识 N 个字」，写字这个维度此前只有单字页里的三颗星。 -->
+    <view class="link tap" bindtap="onCopybook">
+      <text class="link-name">我的字帖</text>
+      <text class="link-value">{{writeCount > 0 ? writeCount + ' 个字 ›' : '还没写过 ›'}}</text>
+    </view>
     <view class="link tap" bindtap="onAbout">
       <text class="link-name">关于与数据来源</text>
       <text class="link-value">›</text>

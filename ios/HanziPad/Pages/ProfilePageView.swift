@@ -185,6 +185,42 @@ struct ProfilePageView: View {
                 .measureTapTarget("我的-错题本入口")
             }
             .buttonStyle(PressableStyle())
+
+            // 字帖：写出来的字和认得的字是两种能力，值得单独有一个入口。
+            // 徽章体系几乎全是「认识 N 个字」，写字这个维度此前只有单字详情页里的三颗星。
+            Button {
+                app.push(AppState.CopybookRoute())
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "square.grid.2x2")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(app.progress.writeCount > 0 ? Palette.jade : Palette.ink3)
+                        .frame(width: 22)
+                    Text("我的字帖")
+                        .font(Fonts.body)
+                        .foregroundStyle(Palette.ink1)
+                    Spacer()
+                    Text(app.progress.writeCount > 0
+                         ? "\(app.progress.writeCount) 个字"
+                         : "还没写过")
+                        .font(Fonts.caption)
+                        .foregroundStyle(app.progress.writeCount > 0 ? Palette.jade : Palette.ink3)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Palette.ink3)
+                }
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
+                        .fill(Palette.card)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
+                        .strokeBorder(Palette.line, lineWidth: 1)
+                )
+                .measureTapTarget("我的-字帖入口")
+            }
+            .buttonStyle(PressableStyle())
         }
     }
 

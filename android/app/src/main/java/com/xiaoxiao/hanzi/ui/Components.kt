@@ -5,6 +5,7 @@ import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,12 +27,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.xiaoxiao.hanzi.data.Repo
 import androidx.compose.ui.unit.sp
 
 /**
@@ -299,4 +303,32 @@ fun RoundIconButton(onClick: () -> Unit, content: @Composable () -> Unit) {
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) { content() }
+}
+
+/**
+ * 静态汉字（不画田字格）。
+ *
+ * 列表里已经在密集排版，每格再加一遍田字格会糊成一片；
+ * 只画笔画，字本身的分量就够了。
+ * 与 iOS `HanziView(showGrid: false, showGhost: false)` 对应。
+ */
+@Composable
+fun HanziGlyph(ch: String, modifier: Modifier = Modifier) {
+    val p = LocalPalette.current
+    val strokes = remember(ch) { Repo.strokes(ch) }
+    if (strokes == null) {
+        // 没有笔顺数据：退回系统字体，至少不显示空白
+        Box(modifier, contentAlignment = Alignment.Center) {
+            Text(ch, fontSize = 26.sp, color = p.ink1)
+        }
+        return
+    }
+    Canvas(modifier) {
+        val box = minOf(size.width, size.height)
+        val ox = (size.width - box) / 2f
+        val oy = (size.height - box) / 2f
+        drawIntoCanvas { c ->
+            HanziPainter.drawStrokes(c.nativeCanvas, strokes, box, ox, oy, completed = strokes.count)
+        }
+    }
 }

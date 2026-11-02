@@ -273,6 +273,15 @@ fun ProfilePage(app: AppState) {
                     app.nav.push(Screen.Wrong)
                 }
                 Box(Modifier.fillMaxWidth().height(1.dp).background(p.lineSoft))
+                // 字帖：写出来的字和认得的字是两种能力，值得单独有一个入口。
+                // 徽章体系几乎全是「认识 N 个字」，写字这个维度此前只有单字页里的三颗星。
+                LinkRow(
+                    "我的字帖",
+                    if (app.progress.writeCount() > 0) "${app.progress.writeCount()} 个字 ›" else "还没写过 ›"
+                ) {
+                    app.nav.push(Screen.Copybook)
+                }
+                Box(Modifier.fillMaxWidth().height(1.dp).background(p.lineSoft))
                 LinkRow("关于与数据来源", "›") { app.nav.push(Screen.About) }
                 Box(Modifier.fillMaxWidth().height(1.dp).background(p.lineSoft))
                 LinkRow("清空学习记录", "›", danger = true) { showReset = true }

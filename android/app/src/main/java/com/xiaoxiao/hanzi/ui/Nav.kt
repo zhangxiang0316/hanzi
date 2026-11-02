@@ -30,6 +30,8 @@ sealed class Screen {
     ) : Screen()
     /** 听写：带难度，因为同一个入口能进三档 */
     data class Dictation(val level: String, val book: String) : Screen()
+    /** 我的字帖：写过的字汇总 */
+    object Copybook : Screen()
     object Wrong : Screen()
     object About : Screen()
 }

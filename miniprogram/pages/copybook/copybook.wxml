@@ -1,0 +1,71 @@
+<view class="page">
+  <!-- 空状态 -->
+  <view class="cb-empty" wx:if="{{empty}}">
+    <text class="cb-empty-emoji">🖌️</text>
+    <text class="cb-empty-title">还没有写过字</text>
+    <text class="cb-empty-desc">去描红或听写几个字，这里就会有一张你自己的字帖</text>
+    <button class="btn btn-primary cb-empty-btn" hover-class="btn-hover" bindtap="onStart">去描红</button>
+  </view>
+
+  <block wx:else>
+    <!-- 汇总 -->
+    <view class="cb-summary">
+      <view class="cb-summary-top">
+        <text class="cb-summary-num">{{total}}</text>
+        <text class="cb-summary-unit">个字写过</text>
+        <text class="cb-summary-stars">共 {{starsTotal}} 颗星</text>
+      </view>
+      <view class="cb-hist">
+        <view class="cb-hist-cell">
+          <text class="cb-hist-num {{hist[3] > 0 ? 's3' : 'zero'}}">{{hist[3]}}</text>
+          <text class="cb-hist-label">3 星</text>
+        </view>
+        <view class="cb-hist-cell">
+          <text class="cb-hist-num {{hist[2] > 0 ? 's2' : 'zero'}}">{{hist[2]}}</text>
+          <text class="cb-hist-label">2 星</text>
+        </view>
+        <view class="cb-hist-cell">
+          <text class="cb-hist-num {{hist[1] > 0 ? 's1' : 'zero'}}">{{hist[1]}}</text>
+          <text class="cb-hist-label">1 星</text>
+        </view>
+        <view class="cb-hist-cell">
+          <text class="cb-hist-num {{hist[0] > 0 ? 's0' : 'zero'}}">{{hist[0]}}</text>
+          <text class="cb-hist-label">待练</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 筛选 -->
+    <scroll-view class="cb-chips" scroll-x="{{true}}" show-scrollbar="{{false}}">
+      <view
+        class="cb-chip {{filter === item.key ? 'on' : ''}}"
+        wx:for="{{chips}}"
+        wx:key="key"
+        data-key="{{item.key}}"
+        bindtap="onFilter"
+      >
+        <text class="cb-chip-title">{{item.title}}</text>
+        <text class="cb-chip-count">{{item.count}}</text>
+      </view>
+    </scroll-view>
+
+    <!-- 字格 -->
+    <view class="cb-grid">
+      <view
+        class="cb-tile tap"
+        wx:for="{{shown}}"
+        wx:key="ch"
+        data-ch="{{item.ch}}"
+        bindtap="onChar"
+      >
+        <text class="cb-tile-char hanzi">{{item.ch}}</text>
+        <view class="cb-tile-stars">
+          <text class="cb-tile-star {{item.starList[0] ? 'on' : ''}}">★</text>
+          <text class="cb-tile-star {{item.starList[1] ? 'on' : ''}}">★</text>
+          <text class="cb-tile-star {{item.starList[2] ? 'on' : ''}}">★</text>
+        </view>
+        <text class="cb-tile-score {{item.scoreClass}}">{{item.best}} 分</text>
+      </view>
+    </view>
+  </block>
+</view>
