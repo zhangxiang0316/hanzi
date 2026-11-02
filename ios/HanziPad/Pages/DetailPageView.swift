@@ -225,11 +225,7 @@ struct DetailPageView: View {
                                 StrokeGlyphView(ch: ch, strokes: strokes, strokeIndex: i)
                             }
                             .frame(height: 44)
-                            .background(GeometryReader { g in
-                                Color.clear.onAppear {
-                                    TapTargetProbe.shared.record("详情-笔画格", g.size)
-                                }
-                            })
+                            .measureTapTarget("详情-笔画格")
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                                     .strokeBorder(highlight == i ? Palette.jade : Palette.line,
@@ -288,11 +284,7 @@ struct DetailPageView: View {
                             .overlay(Capsule().strokeBorder(Palette.line, lineWidth: 1))
                             // 胶囊本身约 31pt 高，撑到 44pt 才好点
                             .minTapTarget()
-                            .background(GeometryReader { g in
-                                Color.clear.onAppear {
-                                    TapTargetProbe.shared.record("详情-组词胶囊", g.size)
-                                }
-                            })
+                            .measureTapTarget("详情-组词胶囊")
                         }
                         .buttonStyle(PressableStyle())
                     }

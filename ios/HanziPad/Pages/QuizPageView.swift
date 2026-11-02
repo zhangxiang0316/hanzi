@@ -214,11 +214,7 @@ struct QuizPageView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 13)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(GeometryReader { g in
-                Color.clear.onAppear {
-                    TapTargetProbe.shared.record("答题-选项", g.size)
-                }
-            })
+            .measureTapTarget("答题-选项")
             .background(
                 RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
                     .fill(fill)

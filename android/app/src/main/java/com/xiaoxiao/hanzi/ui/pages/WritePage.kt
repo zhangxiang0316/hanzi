@@ -234,14 +234,34 @@ fun WritePage(app: AppState, ch: String) {
                         // 只点了一下、或者划得太短：不算数，但一定要说清楚。
                         // 早先这里什么都不做，孩子会以为「写了没反应」——
                         // 而点（点画）恰恰经常是最后一笔，于是就成了「最后一笔写不上」。
-                        if (current.size < 2 || Trace.polylineLength(userPts) < geom.box * 0.04f) {
-                            current.clear()
-                            failure = "这一笔太短了，沿着虚线完整写一遍"
-                        } else if (geom.box > 0f) {
+                        //
+                        // 门槛不能只用画布比例：点画本身就很短（「每」末笔约 31px、
+                        // 「毒」28px，画布 400 时），一刀切在 box*0.04 会让小一点的点
+                        // 永远过不去。所以取「画布比例」与「目标长 * 0.35」里更小的一个，
+                        // 长笔画仍按画布比例兜底。与 iOS `minLength(forStroke:)`、
+                        // 小程序 `write-page.js` 保持一致。
+                        //
+                        // 注意顺序：先算 target 才能算门槛，所以这里把它提到判定之前。
+                        if (geom.box > 0f) {
                             val target = medianInPixels(strokes, strokeIndex, geom)
+                            val targetLen = Trace.polylineLength(target)
+                            val minLen = minOf(geom.box * 0.04f, targetLen * 0.35f)
+                            val tooShort = current.size < 2 ||
+                                Trace.polylineLength(userPts) < minLen
+                            if (tooShort) {
+                                current.clear()
+                                failure = if (current.size < 2) {
+                                    "这一笔太短了——按住别松手，沿着虚线划一小段"
+                                } else {
+                                    "这一笔太短了，沿着虚线完整写一遍"
+                                }
+                            }
                             // 容差按画布边长取比例，和屏幕大小/密度无关
-                            val r = Trace.scoreStroke(userPts, target, geom.box * 0.075f)
-                            if (r.score >= Trace.ACCEPT) {
+                            val r = if (tooShort) null
+                            else Trace.scoreStroke(userPts, target, geom.box * 0.075f)
+                            if (r == null) {
+                                // 判太短，上面已给出提示
+                            } else if (r.score >= Trace.ACCEPT) {
                                 scores.add(r.score)
                                 current.clear()
                                 failure = ""

@@ -198,8 +198,24 @@ module.exports = function createWritePage(options) {
       }
       const res = scoreStroke(pts, target, { tolerance: this.tolerance });
       const len = trace.polylineLength(pts);
-      if (len < this.box * 0.06) {
-        // 只是点了一下，忽略
+      // 「算一笔」的最短长度：不能只用画布比例。
+      //
+      // 点画的最后一笔本来就很短（「每」末笔约 31px、「毒」28px，画布 400 时），
+      // 如果门槛一刀切在 box*0.06，孩子把点写小一点就永远过不去，而且
+      // 早先这里连提示都没有——表现就是「最后一笔怎么都写不上」。
+      //
+      // 所以取「画布比例」与「目标笔画长度的 35%」里更小的一个：
+      // 长笔画仍按画布比例兜底，只有本来就短的笔画放宽。
+      // 与 iOS `WriteSession.minLength(forStroke:)`、Android 同款逻辑保持一致。
+      const targetLen = trace.polylineLength(target);
+      const minLen = Math.min(this.box * 0.04, targetLen * 0.35);
+      if (len < minLen) {
+        // 一定要说清楚，否则孩子以为「写了没反应」
+        this.setData({
+          hint: pts.length < 2
+            ? '这一笔太短了——按住别松手，沿着虚线划一小段'
+            : '这一笔太短了，沿着虚线完整写一遍',
+        });
         this.render();
         return;
       }

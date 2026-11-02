@@ -107,7 +107,7 @@ final class WriteSession: ObservableObject {
             // 提示要能指导下一步：只说「太短」孩子不知道该怎么办。
             // 点一下（只有一个采样点）是常见情况，单独说明。
             message = points.count < 4
-                ? "这一笔没采到线——按住别松手，沿着虚线划一小段"
+                ? "这一笔太短了——按住别松手，沿着虚线划一小段"
                 : "这一笔太短了，沿着虚线完整写一遍"
             return .tooShort
         }
