@@ -825,6 +825,45 @@ final class LogicTests: XCTestCase {
         XCTAssertTrue(r.targets.isEmpty)
     }
 
+    /// 跨端黄金值：同一 seed 三端必须出完全相同的题（含选项顺序）。
+    ///
+    /// 期望值由小程序 `utils/quiz.js` 的 `buildWordQuiz` 算出，是另外
+    /// 一份独立实现。任何一端改了随机数调用顺序、干扰项挑选或洗牌方式，
+    /// 这条测试都会红——这是「三端行为一致」这个硬约束的兜底。
+    /// 多音字的跨端黄金值：同一 seed、同一批字，三端必须出同一套题。
+    /// 期望值由小程序 `utils/quiz.js` 算出。
+    func testPolyphoneMatchesCrossPlatformGolden() {
+        let repo = TestRepo.make()
+        let chars = Array(repo.polyphones(book: "2a").prefix(4))
+        let r = Quiz.build(chars: chars, book: "2a", lesson: nil,
+                           count: 4, seed: 20240101, types: ["polyphone"])
+        let got = r.questions.map { q in
+            "\(q.ch)|\(q.prompt)|\(q.answer)|\(q.options.map(\.value).joined(separator: "|"))"
+        }
+        XCTAssertEqual(got, [
+            "哇|好哇|wa|wā|wa",
+            "奔|奔跑|bēn|bēn|bèn",
+            "冲|冲锋|chōng|chòng|chōng",
+            "炸|炸死|zhà|zhà|zhá"
+        ])
+    }
+
+    func testWordQuizMatchesCrossPlatformGolden() {
+        let repo = TestRepo.make()
+        let r = Quiz.buildWordQuiz(repo: repo, book: "2a", count: 5, seed: 20240101)
+        let got = r.questions.map { q in
+            "\(q.ch)|\(q.prompt)|\(q.answer)|\(q.options.map(\.value).joined(separator: "|"))"
+        }
+        let want = [
+            "卧室|wò shì|卧室|邻居|秧苗|卧室|蚯蚓",
+            "那些|nà xiē|那些|那些|和好|看见|回家",
+            "展开|zhǎn kāi|展开|头顶|展开|电影|井口",
+            "白蛇|bái shé|白蛇|爱慕|时辰|花朵|白蛇",
+            "船身|chuán shēn|船身|展开|井沿|船身|时间"
+        ]
+        XCTAssertEqual(got, want)
+    }
+
     func testWordQuizAnswersSplitIntoLearnableChars() {
         let repo = TestRepo.make()
         // 错题本、错字重练都按单字组织，整词塞进去会让结果页取不到 meta

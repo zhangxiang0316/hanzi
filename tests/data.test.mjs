@@ -246,3 +246,25 @@ test('漏收字：匀剩训忧毒 必须在全字表里', () => {
     assert.ok(all.includes(ch), `${ch} 应在全字表里`);
   }
 });
+
+/**
+ * 多音字的跨端黄金值：同一 seed、同一批字，三端必须出同一套题。
+ * iOS `testPolyphoneMatchesCrossPlatformGolden` 和 Android
+ * `同 seed 三端出同一套多音字题` 断言同样的字符串。
+ */
+test('多音字同 seed 出题锁定为跨端黄金值', () => {
+  const quiz = require('../miniprogram/utils/quiz.js');
+  const chars = catalog.polyphones('2a').slice(0, 4);
+  const r = quiz.buildQuiz({
+    chars, book: '2a', count: 4, seed: 20240101, types: ['polyphone'],
+  });
+  const got = r.questions.map((q) =>
+    [q.ch, q.prompt, q.answer, q.options.map((o) => o.v).join('|')].join('|')
+  );
+  assert.deepEqual(got, [
+    '哇|好哇|wa|wā|wa',
+    '奔|奔跑|bēn|bēn|bèn',
+    '冲|冲锋|chōng|chòng|chōng',
+    '炸|炸死|zhà|zhà|zhá',
+  ]);
+});

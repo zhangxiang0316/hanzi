@@ -107,3 +107,24 @@ test('词语答错要能拆成单字进错题本', () => {
     valid.forEach((ch) => assert.ok(catalog.getMeta(ch), `${ch} 缺元数据`));
   }
 });
+
+/**
+ * 跨端黄金值：同一 seed 三端必须出完全相同的题（含选项顺序）。
+ *
+ * 这份期望值是基准——iOS `testWordQuizMatchesCrossPlatformGolden` 和
+ * Android `同 seed 三端出同一套词语题` 都断言同样的字符串。
+ * 任何一端改了随机数调用顺序、干扰项挑选或洗牌方式，三处会同时红。
+ */
+test('同 seed 的出题结果锁定为跨端黄金值', () => {
+  const r = quiz.buildWordQuiz({ book: '2a', count: 5, seed: 20240101 });
+  const got = r.questions.map((q) =>
+    [q.ch, q.prompt, q.answer, q.options.map((o) => o.v).join('|')].join('|')
+  );
+  assert.deepEqual(got, [
+    '卧室|wò shì|卧室|邻居|秧苗|卧室|蚯蚓',
+    '那些|nà xiē|那些|那些|和好|看见|回家',
+    '展开|zhǎn kāi|展开|头顶|展开|电影|井口',
+    '白蛇|bái shé|白蛇|爱慕|时辰|花朵|白蛇',
+    '船身|chuán shēn|船身|展开|井沿|船身|时间',
+  ]);
+});

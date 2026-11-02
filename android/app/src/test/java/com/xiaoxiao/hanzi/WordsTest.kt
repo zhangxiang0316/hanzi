@@ -123,6 +123,27 @@ class WordsTest {
         assertTrue(r.targets.isEmpty())
     }
 
+    /**
+     * 跨端黄金值：同一 seed 三端必须出完全相同的题（含选项顺序）。
+     *
+     * 期望值由小程序 `utils/quiz.js` 的 `buildWordQuiz` 算出，是另外
+     * 一份独立实现。任何一端改了随机数调用顺序、干扰项挑选或洗牌方式，
+     * 这条测试都会红——这是「三端行为一致」这个硬约束的兜底。
+     */
+    @Test
+    fun `同 seed 三端出同一套词语题`() {
+        val r = Quiz.buildWordQuiz("2a", null, 5, 20240101L)
+        val got = r.questions.map { "${it.ch}|${it.prompt}|${it.answer}|${it.options.joinToString("|") { o -> o.value }}" }
+        val want = listOf(
+            "卧室|wò shì|卧室|邻居|秧苗|卧室|蚯蚓",
+            "那些|nà xiē|那些|那些|和好|看见|回家",
+            "展开|zhǎn kāi|展开|头顶|展开|电影|井口",
+            "白蛇|bái shé|白蛇|爱慕|时辰|花朵|白蛇",
+            "船身|chuán shēn|船身|展开|井沿|船身|时间"
+        )
+        assertEquals(want, got)
+    }
+
     @Test
     fun `词语答错能拆成单字进错题本`() {
         // 错题本、错字重练都按单字组织，整词塞进去会让结果页取不到 meta

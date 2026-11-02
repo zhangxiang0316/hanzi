@@ -168,4 +168,26 @@ class PolyphoneTest {
         }
     }
 
+    /**
+     * 多音字的跨端黄金值：同一 seed、同一批字，三端必须出同一套题。
+     * 期望值由小程序 `utils/quiz.js` 算出；iOS 侧同名断言一致。
+     */
+    @Test
+    fun `同 seed 三端出同一套多音字题`() {
+        val chars = Repo.polyphones("2a").take(4)
+        val r = Quiz.build(chars, "2a", null, 4, 20240101L, listOf("polyphone"))
+        val got = r.questions.map {
+            "${it.ch}|${it.prompt}|${it.answer}|${it.options.joinToString("|") { o -> o.value }}"
+        }
+        assertEquals(
+            listOf(
+                "哇|好哇|wa|wā|wa",
+                "奔|奔跑|bēn|bēn|bèn",
+                "冲|冲锋|chōng|chòng|chōng",
+                "炸|炸死|zhà|zhà|zhá"
+            ),
+            got
+        )
+    }
+
 }
