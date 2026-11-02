@@ -365,3 +365,45 @@
   font-size: 19rpx;
   color: var(--ink-3);
 }
+
+/* 多音字入口：整行卡片，与其他两列卡片区分开（它是「读准」这类独立技能） */
+.poly-card {
+  display: flex;
+  align-items: center;
+  margin: 20rpx 32rpx 0;
+  padding: 24rpx 26rpx;
+  border-radius: 30rpx;
+  background: #ffffff;
+  border: 2rpx solid rgba(233, 223, 205, 0.8);
+  box-shadow: 0 8rpx 22rpx rgba(81, 66, 37, 0.045);
+}
+
+.poly-card.is-off {
+  opacity: 0.55;
+}
+
+.poly-icon {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34rpx;
+  background: var(--sky-soft);
+}
+
+.poly-body {
+  flex: 1;
+  margin-left: 20rpx;
+}
+
+/* 这里没有 .card-icon，标题要自己补间距 */
+.poly-body .card-title {
+  margin-top: 0;
+}
+
+.poly-arrow {
+  font-size: 26rpx;
+  color: var(--ink-3);
+}

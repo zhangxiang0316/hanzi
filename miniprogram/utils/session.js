@@ -52,6 +52,21 @@ function buildSession(mode, opts) {
       count: Math.min(15, list.length * 2),
     };
   }
+  if (mode === 'polyphone') {
+    // 多音字：只从本册里挑多音字。本册不足 4 个就从全部补
+    // （3b 之后多音字很少，只有 3~6 个，太少了不成一局）
+    const book = o.book || catalog.defaultBook();
+    let pool = catalog.polyphones(book);
+    if (pool.length < 4) pool = catalog.allPolyphones();
+    const picked = sample(pool, Math.min(12, pool.length));
+    return {
+      mode: 'polyphone',
+      title: o.title || catalog.getBook(book).name + ' · 多音字',
+      book,
+      chars: picked,
+      count: Math.min(10, Math.max(4, picked.length)),
+    };
+  }
   // free：按册随机
   const book = o.book || catalog.defaultBook();
   const learned = catalog.bookChars(book).filter((ch) => progress.hasLearned(ch));

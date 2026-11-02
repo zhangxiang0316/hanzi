@@ -180,6 +180,77 @@ final class Repo {
         return !m.x.isEmpty
     }
 
+    // MARK: - 多音字
+
+    /// 是否多音字
+    func isPolyphone(_ ch: String) -> Bool {
+        (metaMap[ch]?.rd?.count ?? 0) > 1
+    }
+
+    /// 某册里的多音字（保持教材顺序）
+    func polyphones(book: String) -> [String] {
+        bookChars(book).filter { isPolyphone($0) }
+    }
+
+    /// 全部多音字
+    var allPolyphones: [String] {
+        charOrder.filter { isPolyphone($0) }
+    }
+
+    /// 某个读音的用例词。
+    ///
+    /// 组词数据里每个词都带拼音，而拼音音节与汉字是一一对应的
+    /// （「快乐」→ `lè kuài`… 实际是 `kuài lè`）。所以只要把「本字在词中的位置」
+    /// 与「拼音里的音节位置」对上，就能确定这个词用的是哪个读音。
+    ///
+    /// 早先试过「拼音里任意位置出现该音节就算」——那样会把「地方」的 `dì`
+    /// 误配到别的读音上（同一个词里另一个字恰好同音时）。改成按位置对齐后，
+    /// 156 个多音字全部都能匹配到用例，且不会串音。
+    ///
+    /// 音节数与字数不一致的词（儿化、轻声合写等）直接跳过，宁可少几个例子也不出错。
+    func wordsUsing(_ ch: String, reading: String) -> [String] {
+        guard let m = metaMap[ch] else { return [] }
+        var out: [String] = []
+        for w in m.words {
+            let ws = Array(w.word)
+            guard let idx = ws.firstIndex(of: Character(ch)) else { continue }
+            let syl = w.pinyin.split(separator: " ").map(String.init)
+            guard syl.count == ws.count else { continue }
+            if syl[idx] == reading { out.append(w.word) }
+        }
+        return out
+    }
+
+    /// 册次在教材里的先后序号（越小越早）。未知册次排到最后。
+    func bookRank(_ id: String) -> Int {
+        books.firstIndex(where: { $0.id == id }) ?? books.count
+    }
+
+    /// 一个词「最难的字的册次」。用来给多音字例句排序：
+    /// 「数落」里「落」是 3 年级的字，一年级的孩子看不懂，
+    /// 优先选整词都在本册或更早的词。
+    func wordRank(_ word: String) -> Int {
+        var worst = 0
+        for c in word {
+            let r = metaMap[String(c)].map { bookRank($0.book) } ?? books.count
+            worst = max(worst, r)
+        }
+        return worst
+    }
+
+    /// 多音字的读音 + 各自的用例词（按「好懂」排序：词里最难的字的册次越早越靠前）
+    func polyphoneCases(_ ch: String) -> [(reading: Reading, words: [String])] {
+        readingDetails(ch).map { r in
+            let ws = wordsUsing(ch, reading: r.p)
+                .sorted { a, b in
+                    let ra = wordRank(a), rb = wordRank(b)
+                    if ra != rb { return ra < rb }
+                    return a.count < b.count   // 同难度优先短词
+                }
+            return (r, ws)
+        }
+    }
+
     // MARK: - 前后导航
 
     func nextInLesson(_ lessonId: String?, _ ch: String) -> String {

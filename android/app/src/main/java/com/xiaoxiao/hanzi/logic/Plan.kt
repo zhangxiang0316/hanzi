@@ -180,6 +180,21 @@ object Plan {
                 val list = chars ?: prog.wrongList().map { it.ch }
                 Session("wrong", "错题重练", book, list.take(12), minOf(15, list.size * 2))
             }
+            "polyphone" -> {
+                // 多音字：只从本册里挑多音字。本册不足 4 个就从全部补
+                // （3b 之后多音字很少，只有 3~6 个，太少了不成一局）
+                var pool = Repo.polyphones(book)
+                if (pool.size < 4) pool = Repo.allPolyphones()
+                val picked = Quiz.shuffle(pool, Quiz.mulberry32(System.currentTimeMillis().toInt()))
+                    .take(minOf(12, pool.size))
+                Session(
+                    "polyphone",
+                    title ?: ((Repo.book(book)?.name ?: "") + " · 多音字"),
+                    book,
+                    picked,
+                    minOf(10, maxOf(4, picked.size))
+                )
+            }
             else -> {
                 val learned = Repo.bookChars(book).filter { prog.hasLearned(it) }
                 val pool = if (learned.size >= 8) learned else Repo.bookChars(book)

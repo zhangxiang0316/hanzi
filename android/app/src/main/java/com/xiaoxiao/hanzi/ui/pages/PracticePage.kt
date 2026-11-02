@@ -165,6 +165,20 @@ fun PracticePage(app: AppState) {
             ) { app.nav.push(Screen.Quiz("free", app.currentBook, null)) }
         }
 
+        Spacer(Modifier.height(12.dp))
+
+        // 多音字：读准了才算真认识
+        val polyCount = Repo.polyphones(app.currentBook).size
+        ActionCard(
+            emoji = "🎭",
+            title = "多音字",
+            desc = if (polyCount > 0) "本册 $polyCount 个多音字，练读准" else "换一册就会有多音字",
+            badge = 0,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            if (polyCount > 0) app.nav.push(Screen.Quiz("polyphone", app.currentBook, null))
+        }
+
         SectionHead("按册来练")
         // 8 册芯片：4 列 x 2 行。小程序里这里踩过两个坑：
         // 一是 border-radius 用了 999rpx（两行时圆角半径超过高度，变成胶囊怪形状），

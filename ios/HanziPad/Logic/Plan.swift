@@ -199,6 +199,18 @@ enum Plan {
                 chars: Array(list.prefix(12)),
                 count: min(15, list.count * 2)
             )
+        case "polyphone":
+            // 多音字：只从本册里挑多音字。本册不足 4 个就从全部补
+            // （3b 之后多音字很少，只有 3~6 个，太少了不成一局）
+            var pool = Repo.shared.polyphones(book: bookId)
+            if pool.count < 4 { pool = Repo.shared.allPolyphones }
+            let rand = Quiz.mulberry32(UInt32(truncatingIfNeeded: Int(Date().timeIntervalSince1970 * 1000)))
+            let picked = Array(Quiz.shuffle(pool, rand).prefix(min(12, pool.count)))
+            let bookName = Repo.shared.book(bookId)?.name ?? ""
+            return Session(
+                mode: "polyphone", title: title ?? (bookName + " · 多音字"),
+                book: bookId, chars: picked, count: min(10, max(4, picked.count))
+            )
         default:
             let learned = Repo.shared.bookChars(bookId).filter { prog.hasLearned($0) }
             let pool = learned.count >= 8 ? learned : Repo.shared.bookChars(bookId)

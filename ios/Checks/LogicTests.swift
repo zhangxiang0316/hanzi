@@ -423,4 +423,119 @@ final class LogicTests: XCTestCase {
         let review = Plan.buildSession(mode: "review", prog: prog, book: "1a")
         XCTAssertTrue(review.chars.isEmpty)
     }
+
+    // MARK: - 多音字
+
+    func testPolyphonesExist() {
+        let repo = TestRepo.make()
+        XCTAssertTrue(repo.isPolyphone("数"))
+        XCTAssertFalse(repo.isPolyphone("天"))
+        XCTAssertEqual(repo.allPolyphones.count, 156)
+    }
+
+    func testWordsUsingAlignsByPosition() {
+        let repo = TestRepo.make()
+        // 「数」读 shù 与 shǔ —— 「无数」是 shù，「数落」是 shǔ
+        let shu4 = repo.wordsUsing("数", reading: "shù")
+        let shu3 = repo.wordsUsing("数", reading: "shǔ")
+        XCTAssertTrue(shu4.contains("无数"), "shù 应匹配到「无数」，实际 \(shu4)")
+        XCTAssertTrue(shu3.contains("数落"), "shǔ 应匹配到「数落」，实际 \(shu3)")
+        // 不能串音
+        XCTAssertFalse(shu4.contains("数落"))
+        XCTAssertFalse(shu3.contains("无数"))
+    }
+
+    func testPolyphoneQuestionHasRealWordContext() {
+        let repo = TestRepo.make()
+        _ = repo
+        let r = Quiz.build(chars: ["乐"], book: "1a", count: 6,
+                           seed: 12345, types: ["polyphone"])
+        XCTAssertFalse(r.questions.isEmpty, "「乐」应该能出多音字题")
+        for q in r.questions {
+            XCTAssertEqual(q.type, "polyphone")
+            // prompt 是用例词，必须真的包含这个字
+            XCTAssertTrue(q.prompt.contains("乐"), "prompt 应是用例词，实际 \(q.prompt)")
+            // 选项就是这个字自己的读音
+            let opts = Set(q.options.map(\.value))
+            XCTAssertTrue(opts.contains("yuè"))
+            XCTAssertTrue(opts.contains("lè"))
+            XCTAssertTrue(opts.contains(q.answer))
+            // 解释里要列出两个读音
+            XCTAssertTrue(q.explain.contains("多音字"))
+        }
+    }
+
+    func testPolyphoneModeOnlyProducesPolyphoneQuestions() {
+        let repo = TestRepo.make()
+        _ = repo
+        let prog = Progress(store: MemoryStore())
+        let s = Plan.buildSession(mode: "polyphone", prog: prog, book: "1a")
+        XCTAssertEqual(s.mode, "polyphone")
+        XCTAssertFalse(s.chars.isEmpty)
+        for ch in s.chars {
+            XCTAssertTrue(repo.isPolyphone(ch), "\(ch) 不是多音字却被选进多音字模式")
+        }
+        let r = Quiz.build(chars: s.chars, book: "1a", count: s.count,
+                           seed: 999, types: ["polyphone"])
+        XCTAssertFalse(r.questions.isEmpty)
+        XCTAssertTrue(r.questions.allSatisfy { $0.type == "polyphone" })
+    }
+
+    func testNormalQuizUnaffectedByPolyphoneType() {
+        let repo = TestRepo.make()
+        _ = repo
+        // 不传 types 时题型轮转必须和以前完全一致（不含 polyphone）
+        let r = Quiz.build(chars: ["天", "地", "人", "你", "我", "他"],
+                           book: "1a", count: 8, seed: 12345)
+        XCTAssertFalse(r.questions.isEmpty)
+        XCTAssertFalse(r.questions.contains { $0.type == "polyphone" },
+                       "普通闯关不应出现多音字题")
+    }
+
+
+    /// 三端一致性：同一个字表 + 同一个 seed，必须出完全相同的多音字题。
+    ///
+    /// 期望值取自小程序 `utils/quiz.js` 的实跑结果（seed=12345）。
+    /// 三端各有一份独立的 mulberry32 和 shuffle，任何一处写歪这里都会红。
+    func testPolyphoneMatchesMiniprogramForSameSeed() {
+        let repo = TestRepo.make()
+        _ = repo
+        let r = Quiz.build(chars: ["乐", "数", "地", "没"], book: "1a", count: 6,
+                           seed: 12345, types: ["polyphone"])
+        let got = r.questions.map { "\($0.ch)|\($0.prompt)|\($0.answer)|\($0.options.map(\.value).joined(separator: "/"))" }
+        let want = [
+            "乐|乐曲|yuè|lè/yuè",
+            "数|不可计数|shù|shǔ/shù",
+            "地|地道|dì|dì/de",
+            "没|没精打采|méi|méi/mò",
+            "乐|欢乐|lè|yuè/lè",
+            "数|不计其数|shù|shǔ/shù",
+        ]
+        XCTAssertEqual(got, want, "iOS 的多音字出题与小程序不一致：\n实际 \(got)\n期望 \(want)")
+    }
+
+    func testPolyphoneNoDuplicatePromptUntilWordsRunOut() {
+        let repo = TestRepo.make()
+        // 「乐」的用例词是有限的（乐器/乐曲/快乐/欢乐）。题数没超过可用词数时，
+        // 绝不能出现重复题面；超过了就必然重复，那时允许重复但仍是同一批词。
+        let available = repo.polyphoneCases("乐")
+            .flatMap(\.words)
+            .count
+        XCTAssertGreaterThan(available, 1, "「乐」应该有多个用例词")
+
+        let r = Quiz.build(chars: ["乐"], book: "1a", count: available,
+                           seed: 777, types: ["polyphone"])
+        let prompts = r.questions.map(\.prompt)
+        XCTAssertEqual(Set(prompts).count, prompts.count,
+                       "可用词还有富余时出现了重复题面：\(prompts)")
+
+        // 词用完之后允许重复，但每道题的答案都必须是「乐」的真实读音之一
+        let more = Quiz.build(chars: ["乐"], book: "1a", count: available + 3,
+                              seed: 777, types: ["polyphone"])
+        let valid = Set(repo.readingsOf("乐"))
+        for q in more.questions {
+            XCTAssertTrue(valid.contains(q.answer), "答案 \(q.answer) 不是「乐」的读音")
+        }
+    }
+
 }

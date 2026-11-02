@@ -36,6 +36,10 @@ object HanziColors {
     val clay = Color(0xFFDF6248)
     val claySoft = Color(0xFFFBE8E3)
 
+    /** 第五种强调色（多音字入口），与 iOS Palette.sky 一致 */
+    val sky = Color(0xFF5B8DB8)
+    val skySoft = Color(0xFFE8F0F7)
+
     val line = Color(0xFFE9DFCD)
     val lineSoft = Color(0xFFFAF5EB)
     val track = Color(0xFFF4EFE4)

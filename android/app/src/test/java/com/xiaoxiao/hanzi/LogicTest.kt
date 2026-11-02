@@ -204,14 +204,23 @@ class LogicTest {
     // ---------- 出题 ----------
 
     @Test
-    fun `随机数生成器与小程序 mulberry32 一致`() {
-        // 同一 seed 第一个值，用来锁住与 utils/quiz.js 的等价性
-        val rand = Quiz.mulberry32(12345)
-        val first = rand()
-        assertTrue("应在 0..1 之间: $first", first >= 0.0 && first < 1.0)
-        // 再次同 seed 必须复现同一序列
-        val rand2 = Quiz.mulberry32(12345)
-        assertEquals(first, rand2(), 0.0)
+    fun `随机数生成器与小程序逐位一致`() {
+        // 黄金值来自 JS 原版 utils/quiz.js 的 mulberry32。
+        //
+        // 早先这里只断言「值在 0..1」和「同 seed 可复现」——两条都成立，
+        // 但 Android 的实现其实和 JS 不一样（第一步乘法误用了改写后的 t
+        // 而不是原始的 a），同一个 seed 出的题和另外两端完全不同。
+        // 所以必须断言具体数值，区间和可复现性都测不出这种偏差。
+        val cases = listOf(
+            Triple(12345, 0.97972826776094735, 0.30675226449966431),
+            Triple(42, 0.60110375192016363, 0.44829055899754167),
+            Triple(7, 0.01170475315302610, 0.06195825757458806)
+        )
+        for ((seed, first, second) in cases) {
+            val rand = Quiz.mulberry32(seed)
+            assertEquals("seed $seed 第一个值不符", first, rand(), 1e-15)
+            assertEquals("seed $seed 第二个值不符", second, rand(), 1e-15)
+        }
     }
 
     @Test

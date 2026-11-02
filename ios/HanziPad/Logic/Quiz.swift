@@ -225,6 +225,71 @@ enum Quiz {
         )
     }
 
+    /// 一轮出题内已用过的「类型|字|题面」，避免同一个字同一个词问两遍。
+    private static var usedPrompts = Set<String>()
+
+    /// 多音字：给一个用例词，问这个字在这里读什么。
+    ///
+    /// 单独一个题型、单独一个模式，不混进普通闯关：
+    /// 多音字只占 2596 个字里的 156 个，混进去出现的概率太低，
+    /// 孩子每次遇到都像突然换了个游戏。而「读准」本身是个独立的技能，
+    /// 值得有自己的入口。
+    ///
+    /// 选项就是这个字自己的读音（2~3 个），不掺别的字的读音——
+    /// 掺了会变成「猜哪个不像」，而不是「判断语境」。
+    private static func polyphone(
+        _ ch: String, _ lessonId: String?, _ pool: [String], _ rand: () -> Double
+    ) -> Question? {
+        let cases = Repo.shared.polyphoneCases(ch)
+        guard cases.count > 1 else { return nil }
+
+        // 优先挑「有实际用例词」的读音，这样题目里有语境可依
+        let withWord = cases.filter { !$0.words.isEmpty }
+        guard !withWord.isEmpty else { return nil }
+
+        // 同一个字、同一个用例词问两遍不算两道题。随机挑，但跳过这一轮里已经用过的词；
+        // 全都用过就退回随机（宁可重复也不能出不来题）。
+        var fresh: [(reading: Reading, word: String)] = []
+        for c in withWord {
+            for w in c.words where !usedPrompts.contains("polyphone|\(ch)|\(w)") {
+                fresh.append((c.reading, w))
+            }
+        }
+        let word: String
+        let answer: String
+        if !fresh.isEmpty {
+            let f = fresh[min(max(Int(rand() * Double(fresh.count)), 0), fresh.count - 1)]
+            word = f.word
+            answer = f.reading.p
+        } else {
+            let picked = withWord[min(max(Int(rand() * Double(withWord.count)), 0), withWord.count - 1)]
+            word = picked.words[min(max(Int(rand() * Double(picked.words.count)), 0), picked.words.count - 1)]
+            answer = picked.reading.p
+        }
+        usedPrompts.insert("polyphone|\(ch)|\(word)")
+
+        var seen = Set<String>()
+        var opts: [Option] = []
+        for c in cases where seen.insert(c.reading.p).inserted {
+            opts.append(Option(value: c.reading.p, label: c.reading.p))
+        }
+        guard opts.count >= 2 else { return nil }
+
+        // 解释里把每个读音的用例都列出来，这样答完能顺手记住另一个读音
+        let detail = cases
+            .map { c in c.words.isEmpty ? c.reading.p : "\(c.reading.p)（\(c.words.prefix(2).joined(separator: "、")))" }
+            .joined(separator: "；")
+
+        return Question(
+            type: "polyphone", ch: ch, lesson: lessonId,
+            title: "多音字读什么", prompt: word, promptKind: "word",
+            sub: "「\(ch)」在「\(word)」里读什么？",
+            options: shuffle(opts, rand), answer: answer,
+            explain: "「\(ch)」是多音字：\(detail)。",
+            index: 0, total: 0
+        )
+    }
+
     private static let typeOrder = ["pinyin2char", "char2pinyin", "fillWord", "strokeCount", "char2word"]
 
     private static func make(
@@ -236,6 +301,7 @@ enum Quiz {
         case "fillWord": return fillWord(ch, lessonId, pool, rand)
         case "strokeCount": return strokeCountQ(ch, lessonId, pool, rand)
         case "char2word": return charToWord(ch, lessonId, pool, rand)
+        case "polyphone": return polyphone(ch, lessonId, pool, rand)
         default: return nil
         }
     }
@@ -247,8 +313,13 @@ enum Quiz {
         book: String? = nil,
         lesson: String? = nil,
         count: Int = 10,
-        seed: Int64 = Int64(Date().timeIntervalSince1970 * 1000)
+        seed: Int64 = Int64(Date().timeIntervalSince1970 * 1000),
+        types: [String]? = nil
     ) -> Result {
+        // 普通闯关传 nil，用固定的 typeOrder——这样已有的 seed 仍然出同一套题。
+        // 多音字模式传 ["polyphone"]，只出这一种。
+        let order = types ?? typeOrder
+        usedPrompts.removeAll()
         let targets = chars.filter { Repo.shared.hasChar($0) }
         if targets.isEmpty { return Result(questions: [], targets: []) }
 
@@ -262,9 +333,9 @@ enum Quiz {
         while questions.count < count && guardCount < count * 6 {
             let ch = targets[questions.count % targets.count]
             let lessonId = lesson ?? Repo.shared.meta(ch)?.lesson
-            let start = min(max(Int(rand() * Double(typeOrder.count)), 0), typeOrder.count - 1)
-            for k in 0..<typeOrder.count {
-                let type = typeOrder[(start + k) % typeOrder.count]
+            let start = min(max(Int(rand() * Double(order.count)), 0), order.count - 1)
+            for k in 0..<order.count {
+                let type = order[(start + k) % order.count]
                 if let q = make(type, ch, lessonId, pool, rand) {
                     questions.append(q)
                     break

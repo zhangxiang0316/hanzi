@@ -22,6 +22,11 @@ enum Palette {
     static let clay = Color(hex: 0xDF6248)
     static let claySoft = Color(hex: 0xFBE8E3)
 
+    /// 第五种强调色，用于「多音字」这类新入口。
+    /// 刻意与 jade/clay/amber 拉开色相，避免和第 1~4 张卡片撞色。
+    static let sky = Color(hex: 0x5B8DB8)
+    static let skySoft = Color(hex: 0xE8F0F7)
+
     static let line = Color(hex: 0xE9DFCD)
 
     /// 可点击元素的边框。

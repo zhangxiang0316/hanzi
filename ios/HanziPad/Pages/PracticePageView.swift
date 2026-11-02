@@ -46,6 +46,18 @@ struct PracticePageView: View {
                                                           book: app.currentBook, lesson: nil))
                         }
 
+                        let polyCount = app.repo.polyphones(book: app.currentBook).count
+                        modeCard(
+                            emoji: "🎭", title: "多音字",
+                            desc: polyCount > 0
+                                ? "本册 \(polyCount) 个多音字，练读准"
+                                : "换一册就会有多音字",
+                            color: Palette.sky, enabled: polyCount > 0
+                        ) {
+                            app.push(AppState.QuizPayload(mode: "polyphone",
+                                                          book: app.currentBook, lesson: nil))
+                        }
+
                         modeCard(
                             emoji: "📖", title: "课本练习",
                             desc: "按课文顺序练习",

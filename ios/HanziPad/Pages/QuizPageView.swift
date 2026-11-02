@@ -66,14 +66,30 @@ struct QuizPageView: View {
             session = Plan.buildSession(mode: "review", prog: app.progress, book: payload.book)
         case "wrong":
             session = Plan.buildSession(mode: "wrong", prog: app.progress, book: payload.book)
+        case "polyphone":
+            session = Plan.buildSession(mode: "polyphone", prog: app.progress, book: payload.book)
         default:
             session = Plan.buildSession(mode: "free", prog: app.progress, book: payload.book)
         }
 
+        // 多音字模式只出多音字题；其余模式用默认题型轮转
+        let types: [String]? = session.mode == "polyphone" ? ["polyphone"] : nil
         let r = Quiz.build(chars: session.chars, book: payload.book,
-                           lesson: payload.lesson, count: session.count)
+                           lesson: payload.lesson, count: session.count, types: types)
         questions = r.questions
         targets = r.targets
+        #if DEBUG
+        // 自检：把生成的题目落盘，用于核对「三端是否出同一套题」。
+        // 沙箱里没法注入点击，光看截图判断题目内容不可靠。
+        if ProcessInfo.processInfo.arguments.contains("-dumpQuestions") {
+            let lines = r.questions.map { q in
+                "\(q.type)\t\(q.ch)\t\(q.prompt)\t\(q.sub)\t答:\(q.answer)\t选:\(q.options.map(\.value).joined(separator: "|"))"
+            }
+            let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("questions.txt")
+            try? lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
+        }
+        #endif
     }
 
     // MARK: - 头部

@@ -14,6 +14,8 @@ content/cache/
 android/.idea/
 android/local.properties
 android/.gradle/
+# Gradle 缓存目录（GRADLE_USER_HOME 指到工程内时产生的派生文件）
+android/.gradle-home/
 android/build/
 android/app/build/
 android/app/release/

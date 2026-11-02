@@ -10,6 +10,7 @@ Page({
     dueCount: 0,
     today: { answers: 0, rate: 0 },
     wrongCount: 0,
+    polyCount: 0,
     heroChar: '字',
     books: [],
     bookName: '',
@@ -53,6 +54,7 @@ Page({
       dueCount: due.length,
       today: { answers: today.answers, rate: progress.getAccuracyToday() },
       wrongCount: progress.wrongCount(),
+      polyCount: catalog.polyphones(book ? book.id : catalog.defaultBook()).length,
       heroChar: due.length ? due[0] : writeChar,
       books,
       bookName: book ? book.name : '',
@@ -83,6 +85,16 @@ Page({
   onFree() {
     const app = getApp();
     app.globalData.session = sessionUtil.buildSession('free', {});
+    wx.navigateTo({ url: '/pages/quiz/quiz?from=practice' });
+  },
+
+  onPolyphone() {
+    if (!this.data.polyCount) {
+      wx.showToast({ title: '这一册没有多音字', icon: 'none' });
+      return;
+    }
+    const app = getApp();
+    app.globalData.session = sessionUtil.buildSession('polyphone', {});
     wx.navigateTo({ url: '/pages/quiz/quiz?from=practice' });
   },
 

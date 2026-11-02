@@ -226,9 +226,82 @@ const MAKERS = {
   fillWord,
   strokeCount,
   char2word,
+  polyphone,
 };
 
+/**
+ * 多音字：给一个用例词，问这个字在这里读什么。
+ *
+ * 单独一个题型、单独一个模式，不混进普通闯关：
+ * 多音字只占 2596 个字里的 156 个，混进去出现的概率太低，
+ * 孩子每次遇到都像突然换了个游戏。而「读准」本身是个独立的技能，
+ * 值得有自己的入口。
+ *
+ * 选项就是这个字自己的读音（2~3 个），不掺别的字的读音——
+ * 掺了会变成「猜哪个不像」，而不是「判断语境」。
+ */
+function polyphone(ch, lessonId, pool, rand) {
+  const cases = catalog.polyphoneCases(ch);
+  if (cases.length <= 1) return null;
+
+  // 优先挑「有实际用例词」的读音，这样题目里有语境可依
+  const withWord = cases.filter((c) => c.words.length > 0);
+  if (!withWord.length) return null;
+
+  // 同一个字、同一个用例词问两遍不算两道题。随机挑，但跳过这一轮里已经用过的词；
+  // 全都用过就退回随机（宁可重复也不能出不来题）。
+  const fresh = [];
+  withWord.forEach((c) => {
+    c.words.forEach((w) => {
+      if (!USED_PROMPTS['polyphone|' + ch + '|' + w]) fresh.push({ reading: c.reading, word: w });
+    });
+  });
+  let picked;
+  let word;
+  if (fresh.length) {
+    const f = fresh[Math.floor(rand() * fresh.length)] || fresh[0];
+    picked = { reading: f.reading };
+    word = f.word;
+  } else {
+    picked = withWord[Math.floor(rand() * withWord.length)] || withWord[0];
+    word = picked.words[Math.floor(rand() * picked.words.length)] || picked.words[0];
+  }
+  USED_PROMPTS['polyphone|' + ch + '|' + word] = true;
+
+  const seen = {};
+  const opts = [];
+  cases.forEach((c) => {
+    if (seen[c.reading.p]) return;
+    seen[c.reading.p] = true;
+    opts.push(option(c.reading.p, c.reading.p));
+  });
+  if (opts.length < 2) return null;
+
+  // 解释里把每个读音的用例都列出来，这样答完能顺手记住另一个读音
+  const detail = cases
+    .map((c) =>
+      c.words.length ? c.reading.p + '（' + c.words.slice(0, 2).join('、') + '）' : c.reading.p
+    )
+    .join('；');
+
+  return {
+    type: 'polyphone',
+    ch,
+    lesson: lessonId,
+    title: '多音字读什么',
+    prompt: word,
+    promptKind: 'word',
+    sub: '「' + ch + '」在「' + word + '」里读什么？',
+    options: shuffle(opts, rand),
+    answer: picked.reading.p,
+    explain: '「' + ch + '」是多音字：' + detail + '。',
+  };
+}
+
 const TYPE_ORDER = ['pinyin2char', 'char2pinyin', 'fillWord', 'strokeCount', 'char2word'];
+
+/** 一轮出题内已用过的「类型|字|题面」，避免同一个字同一个词问两遍。 */
+let USED_PROMPTS = {};
 
 /**
  * @param {object} opts
@@ -241,8 +314,12 @@ const TYPE_ORDER = ['pinyin2char', 'char2pinyin', 'fillWord', 'strokeCount', 'ch
 function buildQuiz(opts) {
   const targets = (opts.chars || []).filter((ch) => catalog.hasChar(ch));
   if (!targets.length) return { questions: [], targets: [] };
+  USED_PROMPTS = {};
   const count = opts.count || 10;
   const rand = mulberry32((opts.seed == null ? Date.now() : opts.seed) >>> 0);
+  // 普通闯关传 undefined，用固定的 TYPE_ORDER——这样已有的 seed 仍然出同一套题。
+  // 多音字模式传 ['polyphone']，只出这一种。
+  const order = opts.types || TYPE_ORDER;
   const book = opts.book || catalog.getMeta(targets[0]).b;
   let pool = catalog.bookChars(book);
   if (pool.length < 12) pool = catalog.getAllChars();
@@ -252,9 +329,9 @@ function buildQuiz(opts) {
     const idx = questions.length;
     const ch = targets[idx % targets.length];
     const lessonId = opts.lesson || catalog.getMeta(ch).l;
-    const start = Math.floor(rand() * TYPE_ORDER.length);
-    for (let k = 0; k < TYPE_ORDER.length; k++) {
-      const type = TYPE_ORDER[(start + k) % TYPE_ORDER.length];
+    const start = Math.floor(rand() * order.length);
+    for (let k = 0; k < order.length; k++) {
+      const type = order[(start + k) % order.length];
       const q = MAKERS[type](ch, lessonId, pool, rand);
       if (q) {
         q.index = questions.length;

@@ -11,6 +11,8 @@ page {
   --ink-2: #5f6f66;
   --ink-3: #9aa79e;
   --line: #ede5d6;
+  --sky: #5b8db8;
+  --sky-soft: #e8f0f7;
   --jade: #3e8e7e;
   --jade-deep: #2c6e62;
   --jade-soft: #e6f2ee;

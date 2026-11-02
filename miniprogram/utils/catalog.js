@@ -128,6 +128,86 @@ function isWriteChar(ch) {
   return !!(m && m.x);
 }
 
+// MARK: - 多音字
+
+/** 是否多音字 */
+function isPolyphone(ch) {
+  const m = meta[ch];
+  return !!(m && m.rd && m.rd.length > 1);
+}
+
+/** 某册里的多音字（保持教材顺序） */
+function polyphones(bookId) {
+  return bookChars(bookId).filter(isPolyphone);
+}
+
+/** 全部多音字 */
+function allPolyphones() {
+  return getAllChars().filter(isPolyphone);
+}
+
+/**
+ * 某个读音的用例词。
+ *
+ * 组词数据里每个词都带拼音，而拼音音节与汉字一一对应。所以只要把
+ * 「本字在词中的位置」与「拼音里的音节位置」对上，就能确定这个词用的是哪个读音。
+ *
+ * 早先试过「拼音里任意位置出现该音节就算」——那样会把「地方」的 dì
+ * 误配到别的读音上（同一个词里另一个字恰好同音时）。改成按位置对齐后，
+ * 156 个多音字全部都能匹配到用例，且不会串音。
+ *
+ * 音节数与字数不一致的词（儿化、轻声合写等）直接跳过，宁可少几个例子也不出错。
+ */
+function wordsUsing(ch, reading) {
+  const m = meta[ch];
+  if (!m || !m.w) return [];
+  const out = [];
+  for (let i = 0; i < m.w.length; i++) {
+    const w = m.w[i];
+    const chars = Array.from(w.w);
+    const idx = chars.indexOf(ch);
+    if (idx < 0) continue;
+    const syl = w.p.split(/\s+/);
+    if (syl.length !== chars.length) continue;
+    if (syl[idx] === reading) out.push(w.w);
+  }
+  return out;
+}
+
+/** 册次在教材里的先后序号（越小越早） */
+function bookRank(bookId) {
+  const i = books.findIndex((b) => b.id === bookId);
+  return i >= 0 ? i : books.length;
+}
+
+/**
+ * 一个词「最难的字的册次」。用来给多音字例句排序：
+ * 「数落」里「落」是 3 年级的字，一年级的孩子看不懂，
+ * 优先选整词都在本册或更早的词。
+ */
+function wordRank(word) {
+  let worst = 0;
+  Array.from(word).forEach((c) => {
+    const m = meta[c];
+    const r = m ? bookRank(m.b) : books.length;
+    if (r > worst) worst = r;
+  });
+  return worst;
+}
+
+/** 多音字的读音 + 各自用例词（按「好懂」排序） */
+function polyphoneCases(ch) {
+  return readingDetails(ch).map((r) => {
+    const ws = wordsUsing(ch, r.p).sort((a, b) => {
+      const ra = wordRank(a);
+      const rb = wordRank(b);
+      if (ra !== rb) return ra - rb;
+      return a.length - b.length; // 同难度优先短词
+    });
+    return { reading: r, words: ws };
+  });
+}
+
 /** 在本课内的下一个 / 上一个字（用于详情页翻页）。 */
 function nextInLesson(lessonId, ch) {
   const list = lessonChars(lessonId);
@@ -184,6 +264,13 @@ module.exports = {
   readingsOf,
   readingDetails,
   isWriteChar,
+  isPolyphone,
+  polyphones,
+  allPolyphones,
+  wordsUsing,
+  bookRank,
+  wordRank,
+  polyphoneCases,
   nextInLesson,
   prevInLesson,
   nextInBook,
