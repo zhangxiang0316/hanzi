@@ -1420,6 +1420,26 @@ final class TypeScaleTests: XCTestCase {
         XCTAssertTrue(LayoutRules.footerStacks(scale: TypeScale.factor(forStep: 8)))
     }
 
+    /// 「笔画薄弱点」一行放几个。
+    ///
+    /// 数字来自 `-probeTapTargets` 实测：默认字号下四枚一排，
+    /// 每枚 74x74；辅助功能字号下退回两列，每枚 158x120。
+    /// 四列时 `第 12 笔` 要 130pt，塞进 74pt 里连 minimumScaleFactor 都救不回来。
+    func testWeakColumnsFourNormallyTwoAtAccessibility() {
+        XCTAssertEqual(LayoutRules.weakColumns(scale: TypeScale.factor(forStep: 0)), 4)
+        XCTAssertEqual(LayoutRules.weakColumns(scale: TypeScale.factor(forStep: 3)), 4)
+        XCTAssertEqual(LayoutRules.weakColumns(scale: TypeScale.factor(forStep: 4)), 2)
+        XCTAssertEqual(LayoutRules.weakColumns(scale: TypeScale.factor(forStep: 8)), 2)
+
+        // 四列时每枚必须还 >= 44pt：326 可用宽 - 3*10 间距 = 296，四等分 74
+        let fourCols = (326.0 - 3 * 10) / 4
+        XCTAssertEqual(fourCols, 74, accuracy: 0.5)
+        XCTAssertGreaterThanOrEqual(fourCols, 44)
+        // 两列时更宽松
+        let twoCols = (326.0 - 10) / 2
+        XCTAssertEqual(twoCols, 158, accuracy: 0.5)
+    }
+
     /// 横排放不下的具体证据：三颗按钮在最大字号下要 496pt，iPhone 只有 362pt。
     func testWriteFooterDoesNotFitHorizontallyAtMaxSize() {
         let scale = TypeScale.factor(forStep: 8)   // 3.12

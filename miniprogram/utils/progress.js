@@ -17,6 +17,14 @@ let settings = Object.assign({}, DEFAULT_SETTINGS, store.read('settings', {}));
 let stats = store.read('stats', { days: {}, streak: 0, lastDay: 0, quizzes: 0, perfect: 0 });
 let wrong = store.read('wrong', {});
 let writes = store.read('write', {});
+/**
+ * 笔画薄弱点：`{ 字: { 笔画序号: { f: 失败次数, t: 尝试次数, d: 最近一天 } } }`
+ *
+ * 描红判分本来每笔都会算出「为什么不过」（起笔错 / 偏离 / 写短了），
+ * 但之前只拿它拼一句即时提示就丢掉了。留下来才看得出「这个字的第 2 笔
+ * 你反复写不好」——这比整字分数具体，也更能指导下一步练什么。
+ */
+let weak = store.read('weak', {});
 let last = store.read('last', null);
 
 if (!stats.days) stats.days = {};
@@ -31,6 +39,9 @@ function persistStats() {
 }
 function persistWrong() {
   store.write('wrong', wrong);
+}
+function persistWeak() {
+  store.write('weak', weak);
 }
 function persistSettings() {
   store.write('settings', settings);
@@ -226,6 +237,129 @@ function saveWrite(ch, score) {
   return record;
 }
 
+/**
+ * 记录一笔的结果。
+ *
+ * `passed` 是这一笔有没有过判分线。失败次数才是「薄弱」的依据：
+ * 一次成功不能抵消两次失败——真正写不好的笔画会一直被记着。
+ *
+ * 练好的判定是**连续写对 2 次**（`o` 记连胜）。
+ * 为什么不「写对一次就清掉」：那样 `t` 永远等于 `f`，
+ * 下面 40% 那条门槛就成了摆设，而且手抖蒙对一次就前功尽弃。
+ * 为什么不是 3 次：低年级一个字的同一笔连写 3 遍正确，样本已经够了。
+ */
+function recordStroke(ch, index, passed) {
+  if (!ch) return;
+  if (!weak[ch]) weak[ch] = {};
+  const key = String(index);
+  const rec = weak[ch][key] || { f: 0, t: 0, o: 0, d: 0 };
+  rec.t += 1;
+  rec.d = today();
+  if (passed) {
+    rec.o = (rec.o || 0) + 1;
+    // 连续两次写对：这一笔练稳了，不用再提示
+    if (rec.o >= 2) {
+      delete weak[ch][key];
+      if (!Object.keys(weak[ch]).length) delete weak[ch];
+      persistWeak();
+      return;
+    }
+  } else {
+    rec.f += 1;
+    rec.o = 0;
+  }
+  weak[ch][key] = rec;
+  persistWeak();
+}
+
+/**
+ * 这个字哪些笔画是薄弱点：失败 ≥ 2 次。
+ *
+ * 只错一次是很正常的（手抖、第一次不熟），不算薄弱点。
+ *
+ * 门槛就这一条，不再叠「失败率 ≥40%」——加上「连对两次即移除」之后，
+ * 任何还在册的记录都满足 `t ≤ 2f+1`（中间不可能夹两次连续成功），
+ * 于是失败率恒 ≥ 50%，那条判断永远为真，是死代码。
+ * 测试里锁了这个不变量。
+ */
+function weakStrokesOf(ch) {
+  const rec = weak[ch];
+  if (!rec) return [];
+  const out = [];
+  Object.keys(rec).forEach((k) => {
+    const r = rec[k];
+    if (r.f >= 2) {
+      out.push({ index: Number(k), fails: r.f, tries: r.t });
+    }
+  });
+  // 笔画序号升序：读起来跟笔顺一致
+  out.sort((a, b) => a.index - b.index);
+  return out;
+}
+
+/** 有没有需要专门练的笔画 */
+function hasWeakStrokes(ch) {
+  return weakStrokesOf(ch).length > 0;
+}
+
+/**
+ * 全部薄弱点，按「最需要练」排序：失败次数多的在前。
+ *
+ * 同一字的多个笔画算作一条记录各占一行——「日的第2笔」和「日的第4笔」
+ * 是两个不同的动作，合成一条就没法分别练。
+ */
+function allWeakStrokes() {
+  const out = [];
+  Object.keys(weak).forEach((ch) => {
+    weakStrokesOf(ch).forEach((w) => {
+      out.push({ ch, index: w.index, fails: w.fails, tries: w.tries });
+    });
+  });
+  out.sort((a, b) => {
+    if (b.fails !== a.fails) return b.fails - a.fails;
+    // 兜底：码点 + 笔画序号，保证三端顺序一致
+    if (a.ch !== b.ch) return a.ch.codePointAt(0) - b.ch.codePointAt(0);
+    return a.index - b.index;
+  });
+  return out;
+}
+
+/**
+ * 有薄弱笔画的字，按「最弱的那一笔」排序（每个字只出现一次）。
+ *
+ * 练习入口用这个：一个字的第 2 笔和第 4 笔都在练同一份描红，
+ * 按笔画列出会重复练同一个字。
+ */
+function weakChars() {
+  const seen = {};
+  const out = [];
+  allWeakStrokes().forEach((w) => {
+    if (seen[w.ch]) {
+      seen[w.ch].count += 1;
+      return;
+    }
+    const rec = { ch: w.ch, count: 1, worst: w.index, fails: w.fails };
+    seen[w.ch] = rec;
+    out.push(rec);
+  });
+  return out;
+}
+
+/** 某一笔练好了：把它从薄弱点里去掉（不删整个字的记录） */
+function clearWeakStroke(ch, index) {
+  if (!weak[ch]) return;
+  delete weak[ch][String(index)];
+  if (!Object.keys(weak[ch]).length) delete weak[ch];
+  persistWeak();
+}
+
+/** 整个字从薄弱点里清掉（重练通过时用） */
+function clearWeak(ch) {
+  if (!weak[ch]) return;
+  delete weak[ch];
+  persistWeak();
+}
+
 function writeStarsTotal() {
   return Object.keys(writes).reduce((n, ch) => n + (writes[ch].stars || 0), 0);
 }
@@ -333,12 +467,14 @@ function resetAll() {
   stats = { days: {}, streak: 0, lastDay: 0, quizzes: 0, perfect: 0 };
   wrong = {};
   writes = {};
+  weak = {};
   last = null;
   store.remove('progress');
   store.remove('settings');
   store.remove('stats');
   store.remove('wrong');
   store.remove('write');
+  store.remove('weak');
   store.remove('last');
 }
 
@@ -362,6 +498,13 @@ module.exports = {
   clearWrong,
   getWrite,
   saveWrite,
+  recordStroke,
+  weakStrokesOf,
+  hasWeakStrokes,
+  allWeakStrokes,
+  weakChars,
+  clearWeakStroke,
+  clearWeak,
   writeStarsTotal,
   writeCount,
   allWriteRecords,

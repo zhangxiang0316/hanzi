@@ -87,6 +87,16 @@ enum LayoutRules {
         scale >= TypeScale.factor(forStep: 4)
     }
 
+    /// 「笔画薄弱点」一行放几个。
+    ///
+    /// 默认字号下四个一排，每个 74pt（内容宽 326 = 4×74 + 3×10），
+    /// 实测四枚都在 74x74，达标。辅助功能字号下 `第 12 笔` 要 130pt，
+    /// 塞进 74pt 里连 `minimumScaleFactor(0.8)` 都救不回来，直接截断，
+    /// 所以退回两列（每个 158pt）。
+    static func weakColumns(scale: CGFloat) -> Int {
+        scale >= TypeScale.factor(forStep: 4) ? 2 : 4
+    }
+
     /// 大字号下容器要跟着一起长，否则文字撑破格子。
     ///
     /// 只放大、不缩小（缩小时留白不变更稳），并且封顶——辅助字号下

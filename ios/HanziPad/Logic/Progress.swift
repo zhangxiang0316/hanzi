@@ -69,6 +69,13 @@ final class Progress {
     private var wrong: [String: WrongInternal] = [:]
     private var writes: [String: WriteRecord] = [:]
 
+    /// 笔画薄弱点：字 → (笔画序号 → 记录)。
+    ///
+    /// 描红判分本来每笔都会算出「为什么不过」（起笔错 / 偏离 / 写短了），
+    /// 但之前只拿它拼一句即时提示就丢掉了。留下来才看得出
+    /// 「这个字的第 2 笔你反复写不好」——比整字分数具体。
+    private var weak: [String: [Int: WeakStroke]] = [:]
+
     private var streakCount = 0
     private var lastDay = 0
     private var quizzes = 0
@@ -142,6 +149,21 @@ final class Progress {
             }
         }
 
+        if let obj = store.readObject("weak"), let raw = obj["items"] as? [String: [String: [String: Any]]] {
+            for (ch, strokes) in raw {
+                var m: [Int: WeakStroke] = [:]
+                for (k, o) in strokes {
+                    guard let i = Int(k) else { continue }
+                    m[i] = WeakStroke(
+                        fails: o["f"] as? Int ?? 0,
+                        tries: o["t"] as? Int ?? 0,
+                        ok: o["o"] as? Int ?? 0
+                    )
+                }
+                if !m.isEmpty { weak[ch] = m }
+            }
+        }
+
         if let obj = store.readObject("settings") {
             var s = Settings()
             s.dailyNew = obj["dailyNew"] as? Int ?? 5
@@ -188,6 +210,18 @@ final class Progress {
             map[ch] = o
         }
         store.writeObject("wrong", ["items": map])
+    }
+
+    private func persistWeak() {
+        var map: [String: [String: [String: Any]]] = [:]
+        for (ch, m) in weak {
+            var strokes: [String: [String: Any]] = [:]
+            for (i, r) in m {
+                strokes[String(i)] = ["f": r.fails, "t": r.tries, "o": r.ok]
+            }
+            map[ch] = strokes
+        }
+        store.writeObject("weak", ["items": map])
     }
 
     private func persistWrites() {
@@ -350,6 +384,110 @@ final class Progress {
         persistWrong()
     }
 
+    // MARK: - 笔画薄弱点
+
+    /// 某一笔的失败 / 尝试 / 连胜次数
+    struct WeakStroke {
+        var fails: Int
+        var tries: Int
+        var ok: Int
+    }
+
+    /// 一条薄弱点（用于列表展示）
+    struct WeakPoint {
+        let ch: String
+        let index: Int
+        let fails: Int
+        let tries: Int
+    }
+
+    /// 记录一笔的结果。
+    ///
+    /// `passed` 是这一笔过没过判分线。失败次数才是「薄弱」的依据：
+    /// 一次成功不能抵消两次失败——真正写不好的笔画会一直被记着。
+    ///
+    /// 练好的判定是**连续写对 2 次**（`ok` 记连胜）。
+    /// 为什么不「写对一次就清掉」：那样 `tries` 永远等于 `fails`，
+    /// 而且手抖蒙对一次就前功尽弃。
+    func recordStroke(_ ch: String, index: Int, passed: Bool) {
+        guard !ch.isEmpty else { return }
+        var m = weak[ch] ?? [:]
+        let old = m[index] ?? WeakStroke(fails: 0, tries: 0, ok: 0)
+        if passed {
+            if old.ok + 1 >= 2 {
+                // 连续两次写对：这一笔练稳了，不用再提示
+                m.removeValue(forKey: index)
+                if m.isEmpty { weak.removeValue(forKey: ch) } else { weak[ch] = m }
+                persistWeak()
+                return
+            }
+            m[index] = WeakStroke(fails: old.fails, tries: old.tries + 1, ok: old.ok + 1)
+        } else {
+            m[index] = WeakStroke(fails: old.fails + 1, tries: old.tries + 1, ok: 0)
+        }
+        weak[ch] = m
+        persistWeak()
+    }
+
+    /// 这个字哪些笔画是薄弱点：失败 ≥ 2 次。
+    ///
+    /// 只错一次是很正常的（手抖、第一次不熟），不算薄弱点。
+    /// 不再叠「失败率 ≥40%」——加上「连对两次即移除」之后，任何还在册的
+    /// 记录都满足 `tries ≤ 2f+1`，失败率恒 ≥50%，那条判断是死代码。
+    func weakStrokesOf(_ ch: String) -> [WeakPoint] {
+        guard let m = weak[ch] else { return [] }
+        return m.filter { $0.value.fails >= 2 }
+            .map { WeakPoint(ch: ch, index: $0.key, fails: $0.value.fails, tries: $0.value.tries) }
+            .sorted { $0.index < $1.index }
+    }
+
+    /// 有没有需要专门练的笔画
+    func hasWeakStrokes(_ ch: String) -> Bool {
+        !weakStrokesOf(ch).isEmpty
+    }
+
+    /// 全部薄弱点，按「最需要练」排序：失败次数多的在前。
+    ///
+    /// 同一字的多个笔画各占一条——「日的第2笔」和「日的第4笔」
+    /// 是两个不同的动作，合成一条就没法分别练。
+    func allWeakStrokes() -> [WeakPoint] {
+        weak.keys.flatMap { weakStrokesOf($0) }.sorted { a, b in
+            if a.fails != b.fails { return a.fails > b.fails }
+            // Swift 的 sort 不保证稳定，必须给确定的 tiebreak，否则三端顺序会不一致
+            let ca = a.ch.unicodeScalars.first?.value ?? 0
+            let cb = b.ch.unicodeScalars.first?.value ?? 0
+            if ca != cb { return ca < cb }
+            return a.index < b.index
+        }
+    }
+
+    /// 有薄弱笔画的字，每个字只出现一次（取最弱的那一笔）。
+    ///
+    /// 练习入口用这个：一个字的第 2 笔和第 4 笔都在练同一份描红，
+    /// 按笔画列出会重复练同一个字。
+    func weakChars() -> [WeakPoint] {
+        var seen = Set<String>()
+        var out: [WeakPoint] = []
+        for w in allWeakStrokes() where seen.insert(w.ch).inserted {
+            out.append(w)
+        }
+        return out
+    }
+
+    /// 某一笔练好了：把它从薄弱点里去掉
+    func clearWeakStroke(_ ch: String, index: Int) {
+        guard var m = weak[ch] else { return }
+        m.removeValue(forKey: index)
+        if m.isEmpty { weak.removeValue(forKey: ch) } else { weak[ch] = m }
+        persistWeak()
+    }
+
+    /// 整个字从薄弱点里清掉
+    func clearWeak(_ ch: String) {
+        guard weak.removeValue(forKey: ch) != nil else { return }
+        persistWeak()
+    }
+
     // MARK: - 描红成绩
 
     func writeRecord(_ ch: String) -> WriteRecord? { writes[ch] }
@@ -464,6 +602,7 @@ final class Progress {
         days.removeAll()
         wrong.removeAll()
         writes.removeAll()
+        weak.removeAll()
         streakCount = 0
         lastDay = 0
         quizzes = 0

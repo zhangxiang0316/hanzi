@@ -138,7 +138,11 @@ private struct WritePageBody: View {
 
                 HStack(alignment: .top, spacing: 22) {
                     WriteCanvasHost(session: session) { pts in
-                        handle(session.submit(pts))
+                        // 先记住这一笔的序号：.passed 之后 session.index 已经 +1 了
+                        let idx = session.index
+                        let outcome = session.submit(pts)
+                        recordStroke(outcome, index: idx)
+                        handle(outcome)
                     }
                     .frame(maxWidth: wide ? 480 : 560, maxHeight: wide ? 480 : 560)
 
@@ -348,6 +352,23 @@ private struct WritePageBody: View {
     private func handle(_ outcome: WriteSession.Outcome) {
         if case .finished = outcome {
             showResult = true
+        }
+    }
+
+    /// 记一笔笔画薄弱点。
+    ///
+    /// 只有判分没过（.rejected）才算失败；`.tooShort` 不计——
+    /// 点一下、划得太短多半是误触，记进去的话两次手滑就把一个笔画
+    /// 标成「薄弱」，那个提示就没人信了。与小程序、Android 一致。
+    private func recordStroke(_ outcome: WriteSession.Outcome, index: Int) {
+        switch outcome {
+        case .passed, .finished:
+            // 连着对两次才算练稳（见 Progress.recordStroke）
+            app.progress.recordStroke(ch, index: index, passed: true)
+        case .rejected:
+            app.progress.recordStroke(ch, index: index, passed: false)
+        case .tooShort:
+            break
         }
     }
 }

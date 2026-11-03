@@ -47,6 +47,26 @@
     </view>
   </view>
 
+  <!-- 笔画薄弱点：只有真的写错过才出现，平时不占地方 -->
+  <view class="weak-box" wx:if="{{weakCount}}">
+    <view class="weak-head">
+      <text class="weak-title">这几笔还不太稳</text>
+      <text class="weak-sub">点一下再写一遍</text>
+    </view>
+    <view class="weak-row">
+      <view
+        class="weak-chip tap"
+        wx:for="{{weakStrokes}}"
+        wx:key="key"
+        data-ch="{{item.ch}}"
+        bindtap="onWeakStroke"
+      >
+        <text class="weak-char hanzi">{{item.ch}}</text>
+        <text class="weak-label">第 {{item.index + 1}} 笔</text>
+      </view>
+    </view>
+  </view>
+
   <view class="poly-card tap {{polyCount ? '' : 'is-off'}}" bindtap="onPolyphone">
     <view class="poly-icon">🎭</view>
     <view class="poly-body">

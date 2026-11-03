@@ -232,6 +232,11 @@ final class AppState {
         for (i, ch) in learned.prefix(6).enumerated() {
             progress.saveWrite(ch, score: [96, 88, 72, 65, 50, 90][i % 6])
         }
+        // 造笔画薄弱点，否则「这几笔还不太稳」永远是空的，截图和自检都看不到
+        for (i, ch) in learned.prefix(6).enumerated() {
+            let idx = i % 2
+            for _ in 0..<(2 + i) { progress.recordStroke(ch, index: idx, passed: false) }
+        }
         progress.recordQuiz(total: 10, correct: 10)
     }
     #endif

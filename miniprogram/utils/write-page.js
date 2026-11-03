@@ -242,7 +242,9 @@ module.exports = function createWritePage(options) {
       const targetLen = trace.polylineLength(target);
       const minLen = Math.min(this.box * 0.04, targetLen * 0.35);
       if (len < minLen) {
-        // 一定要说清楚，否则孩子以为「写了没反应」
+        // 一定要说清楚，否则孩子以为「写了没反应」。
+        // 这里**不记**薄弱点：点一下、划得太短多半是误触，
+        // 记进去的话两次手滑就把一个笔画标成「薄弱」，那个提示就没人信了。
         this.setData({
           hint: pts.length < 2
             ? '这一笔太短了——按住别松手，沿着虚线划一小段'
@@ -257,6 +259,9 @@ module.exports = function createWritePage(options) {
           score: res.score,
           snap: res.score >= 68,
         });
+        // 写对了也要记一笔：连着对两次才算练稳（见 recordStroke）。
+        // 直接清掉的话「失败率」那条门槛就永远没有数据可判。
+        progress.recordStroke(this.ch, idx, true);
         const next = idx + 1;
         const total = this.data2.n;
         const avg = Math.round(
@@ -274,6 +279,9 @@ module.exports = function createWritePage(options) {
           wx.vibrateShort && wx.vibrateShort({ type: 'light' });
         }
       } else {
+        // 不过关就记一笔薄弱点。之前 res.reason 只拼一句提示就丢了，
+        // 于是「这个字的第 2 笔总写不好」这件事从来没被记住过。
+        progress.recordStroke(this.ch, this.strokeIndex, false);
         this.setData({ hint: this.reasonText(res.reason) });
         this.render();
         wx.vibrateShort && wx.vibrateShort({ type: 'medium' });

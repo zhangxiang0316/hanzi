@@ -438,3 +438,59 @@
   font-size: 20rpx;
   color: var(--ink-3);
 }
+
+/* 笔画薄弱点：写错过才出现，平时不占地方 */
+.weak-box {
+  margin: 20rpx 32rpx 0;
+  padding: 22rpx 24rpx;
+  border-radius: 24rpx;
+  background: #fff6ec;
+  border: 2rpx solid #f6e3cd;
+}
+
+.weak-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.weak-title {
+  font-size: 27rpx;
+  font-weight: 700;
+  color: #8a4f31;
+}
+
+.weak-sub {
+  font-size: 23rpx;
+  color: #b98a63;
+}
+
+.weak-row {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.weak-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 108rpx;
+  padding: 12rpx 0 10rpx;
+  margin: 0 12rpx 12rpx 0;
+  border-radius: 18rpx;
+  background: #fff;
+  border: 2rpx solid #f0dcc4;
+}
+
+.weak-char {
+  font-size: 52rpx;
+  line-height: 1.1;
+  color: #5a4432;
+}
+
+.weak-label {
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  color: #a9866a;
+}

@@ -22,6 +22,9 @@ Page({
     books: [],
     bookName: '',
     recentChars: [],
+    /** 笔画薄弱点：前几个「这个字的第 N 笔写不好」 */
+    weakStrokes: [],
+    weakCount: 0,
     writeChar: '',
     days: [],
   },
@@ -57,7 +60,17 @@ Page({
       h: Math.min(100, Math.round((d.answers / 12) * 100)),
     }));
 
+    // 笔画薄弱点：判分本来每笔都会算出「为什么不过」，之前只拼一句提示就丢了。
+    // 取失败次数最多的前 4 个，够提示「下次该练哪一笔」而不至于变成一张报表。
+    const weakAll = progress.allWeakStrokes();
     this.setData({
+      weakStrokes: weakAll.slice(0, 4).map((w) => ({
+        key: w.ch + ':' + w.index,
+        ch: w.ch,
+        index: w.index,
+        fails: w.fails,
+      })),
+      weakCount: weakAll.length,
       dueCount: due.length,
       today: { answers: today.answers, rate: progress.getAccuracyToday() },
       wrongCount: progress.wrongCount(),
@@ -175,6 +188,11 @@ Page({
       return;
     }
     wx.navigateTo({ url: routes.writeUrl(ch) });
+  },
+
+  /** 薄弱笔画：直接进那个字的描红，从第一笔重新写一遍 */
+  onWeakStroke(e) {
+    this.openWrite(e.currentTarget.dataset.ch);
   },
 
   onWriteHint() {

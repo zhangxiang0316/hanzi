@@ -52,7 +52,15 @@ extension View {
     /// 记录这个控件的布局尺寸。Release 下编译成 `self`，零开销。
     func measureTapTarget(_ name: String) -> some View {
         background(GeometryReader { g in
-            Color.clear.onAppear { TapTargetProbe.shared.record(name, g.size) }
+            // `onAppear` 只触发一次，而且常常在宽度定下来之前就触发了，
+            // 于是量到 `0x120` 这种半截尺寸——看着像「控件太窄」，
+            // 其实是测量时机的问题。`onChange` 会把布局稳定后的真实尺寸补上。
+            // 这个坑是加「笔画薄弱点」四个一排的小卡片时踩到的。
+            Color.clear
+                .onAppear { TapTargetProbe.shared.record(name, g.size) }
+                .onChange(of: g.size) { _, size in
+                    TapTargetProbe.shared.record(name, size)
+                }
         })
     }
 }

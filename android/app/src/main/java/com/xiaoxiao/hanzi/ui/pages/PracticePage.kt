@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.xiaoxiao.hanzi.data.Repo
@@ -343,6 +344,63 @@ fun PracticePage(app: AppState) {
                             }
                         }
                         repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
+                    }
+                }
+            }
+        }
+
+        // 笔画薄弱点：只有真的写错过才出现，平时不占地方
+        val weakAll = app.progress.allWeakStrokes()
+        if (weakAll.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            Surface(
+                Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(Dimens.radiusInner.dp),
+                color = p.cardWarm,
+                border = BorderStroke(1.dp, p.line)
+            ) {
+                Column(Modifier.padding(12.dp)) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("这几笔还不太稳", fontSize = 13.sp,
+                             fontWeight = FontWeight.SemiBold, color = p.ink1)
+                        Text("点一下再写一遍", fontSize = 11.sp, color = p.ink3)
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // 取失败次数最多的前 4 个：够提示「下次该练哪一笔」，
+                        // 又不至于变成一张报表
+                        weakAll.take(4).forEach { w ->
+                            Surface(
+                                Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable { app.nav.push(Screen.Write(w.ch)) },
+                                shape = RoundedCornerShape(10.dp),
+                                color = p.card,
+                                border = BorderStroke(1.dp, p.line)
+                            ) {
+                                Column(
+                                    Modifier.padding(vertical = 8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(w.ch, fontSize = 24.sp, color = p.ink1, maxLines = 1)
+                                    // 四枚一排时每枚只有 74dp，`第 12 笔` 在系统大字号下
+                                    // 会换行把卡片撑高，限制成一行让它自己缩
+                                    Text(
+                                        "第 ${w.index + 1} 笔",
+                                        fontSize = 9.sp,
+                                        color = p.ink3,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                        repeat(4 - minOf(4, weakAll.size)) { Spacer(Modifier.weight(1f)) }
                     }
                 }
             }

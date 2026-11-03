@@ -124,6 +124,9 @@ struct PracticePageView: View {
                         }
                     }
 
+                    // 薄弱点是个性化的「你该练什么」，比通用入口更该靠前
+                    weakSection
+
                     dictationSection
 
                     recentSection
@@ -203,6 +206,74 @@ struct PracticePageView: View {
                     }
                     .buttonStyle(PressableStyle())
                     .measureTapTarget("练习-听写\(level.title)")
+                }
+            }
+        }
+    }
+
+    /// 笔画薄弱点：只有真的写错过才出现，平时不占地方。
+    ///
+    /// 判分本来每笔都会算出「为什么不过」，但之前只拼一句即时提示就丢了。
+    /// 这里把它变成可点的一行——点一下直接进那个字的描红。
+    @ViewBuilder
+    private var weakSection: some View {
+        let weakAll = app.progress.allWeakStrokes()
+        if !weakAll.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHead("这几笔还不太稳", trailing: AnyView(
+                    Text("点一下再写一遍")
+                        .font(Fonts.caption).foregroundStyle(Palette.ink3)
+                ))
+                HanziCard {
+                    // 取失败次数最多的前 4 个：够提示「下次该练哪一笔」，
+                    // 又不至于变成一张报表。
+                    // 列数随字号变（见 LayoutRules.weakColumns）：
+                    // 辅助功能字号下四列会把「第 12 笔」挤成省略号。
+                    let cols = LayoutRules.weakColumns(scale: dt.layoutScale)
+                    let rows = stride(from: 0, to: min(4, weakAll.count), by: cols).map {
+                        Array(weakAll[$0..<min($0 + cols, min(4, weakAll.count))])
+                    }
+                    VStack(spacing: 10) {
+                      ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                        HStack(spacing: 10) {
+                          ForEach(row, id: \.ch) { w in
+                            Button {
+                                app.push(AppState.WriteRoute(ch: w.ch))
+                            } label: {
+                                VStack(spacing: 4) {
+                                    Text(w.ch)
+                                        .font(.system(size: LayoutRules.scaled(30, by: dt.layoutScale, cap: 1.4)))
+                                        .foregroundStyle(Palette.ink1)
+                                    Text("第 \(w.index + 1) 笔")
+                                        .font(Fonts.caption)
+                                        .foregroundStyle(Palette.ink3)
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.8)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(
+                                    RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
+                                        .fill(Palette.cardWarm)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
+                                        .strokeBorder(Palette.line, lineWidth: 1)
+                                )
+                            }
+                            .buttonStyle(PressableStyle())
+                            .measureTapTarget("练习-薄弱笔画-\(w.ch)")
+                          }
+                          // 不足一行时补空位，保证列宽一致（与册次网格同款做法）
+                          if row.count < cols {
+                            ForEach(0..<(cols - row.count), id: \.self) { _ in
+                                Color.clear.frame(maxWidth: .infinity)
+                            }
+                          }
+                        }
+                      }
+                    }
+                    .measureTapTarget("练习-薄弱行")
                 }
             }
         }

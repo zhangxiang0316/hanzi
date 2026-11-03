@@ -281,11 +281,17 @@ fun WritePage(
                             val target = medianInPixels(strokes, strokeIndex, geom)
                             val targetLen = Trace.polylineLength(target)
                             val minLen = minOf(geom.box * 0.04f, targetLen * 0.35f)
-                            val tooShort = current.size < 2 ||
+                            // 必须先记下「是不是只点了一下」——下面 clear() 之后
+                            // current.size 恒为 0，再判断就永远走第一个分支，
+                            // 「写了但太短」的孩子会一直被告知「按住别松手」。
+                            val barelyTouched = current.size < 2
+                            val tooShort = barelyTouched ||
                                 Trace.polylineLength(userPts) < minLen
                             if (tooShort) {
+                                // 这里**不记**薄弱点：点一下、划得太短多半是误触，
+                                // 记进去的话两次手滑就把一个笔画标成「薄弱」
                                 current.clear()
-                                failure = if (current.size < 2) {
+                                failure = if (barelyTouched) {
                                     "这一笔太短了——按住别松手，沿着虚线划一小段"
                                 } else {
                                     "这一笔太短了，沿着虚线完整写一遍"
@@ -297,6 +303,9 @@ fun WritePage(
                             if (r == null) {
                                 // 判太短，上面已给出提示
                             } else if (r.score >= Trace.ACCEPT) {
+                                // 写对了也要记一笔：连着对两次才算练稳。
+                                // 直接清掉的话「蒙对一次」就前功尽弃（见 recordStroke）。
+                                app.progress.recordStroke(ch, strokeIndex, true)
                                 scores.add(r.score)
                                 current.clear()
                                 failure = ""
@@ -313,6 +322,7 @@ fun WritePage(
                             } else {
                                 // 不达标：清空这一笔让用户重写，并说明原因
                                 current.clear()
+                                app.progress.recordStroke(ch, strokeIndex, false)
                                 failure = reasonText(r.reason)
                             }
                         }
