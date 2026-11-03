@@ -38,9 +38,15 @@ struct HanziButton: View {
         Button(action: action) {
             Text(title)
                 .font(Fonts.s(15, .semibold, .body))
+                // 中文按钮**绝不能换行**：一旦折行，按钮高度从 40 变 58，
+                // 整行跟着错位，还容易被误认成两个按钮。
+                // 空间实在不够时宁可缩一点字，也不折行。
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
                 .frame(maxWidth: fullWidth ? .infinity : nil)
                 .padding(.horizontal, 20)
-                .padding(.vertical, 11)
+                // 上下留 13 而不是 11：让高度到 44，满足最小触控区
+                .padding(.vertical, 13)
                 .background(background)
                 .foregroundStyle(foreground)
                 .clipShape(RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous))

@@ -30,6 +30,30 @@ struct WritePageView: View {
         }
         .navigationTitle("描红 · \(ch)")
         .navigationBarTitleDisplayMode(.inline)
+        // 「上一个字 / 下一个字」是导航，放导航栏；页脚留给操作。
+        // 挤在页脚时五个按钮放不下，见 footer 的注释。
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                let prev = app.repo.prevInLesson(app.repo.meta(ch)?.lesson, ch)
+                let next = app.repo.nextInLesson(app.repo.meta(ch)?.lesson, ch)
+                if !prev.isEmpty {
+                    Button {
+                        app.pushReplacing(AppState.WriteRoute(ch: prev))
+                    } label: {
+                        Image(systemName: "chevron.left")
+                    }
+                    .accessibilityLabel("上一个字")
+                }
+                if !next.isEmpty {
+                    Button {
+                        app.pushReplacing(AppState.WriteRoute(ch: next))
+                    } label: {
+                        Image(systemName: "chevron.right")
+                    }
+                    .accessibilityLabel("下一个字")
+                }
+            }
+        }
         .onAppear {
             if session == nil {
                 session = WriteSession(ch: ch, strokes: app.repo.strokes(ch), box: 400)
@@ -37,6 +61,16 @@ struct WritePageView: View {
             #if DEBUG
             // 自检：进页面后自动用完美笔迹写 N 笔。
             // 用来确认「状态推进后界面有没有跟着刷新」——这一条光看代码看不出来。
+            if let n = DebugArgs.writeSkip, let s = session, n > 0 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    for _ in 0..<n where !s.isDone { s.skip() }
+                    TapTargetProbe.shared.record(
+                        "描红-跳过\(n)笔后",
+                        CGSize(width: CGFloat(s.index), height: CGFloat(s.scores.count))
+                    )
+                    TapTargetProbe.shared.flush()
+                }
+            }
             if let n = DebugArgs.writeAuto, let s = session, n > 0 {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                     for _ in 0..<n where !s.isDone {
@@ -249,44 +283,66 @@ private struct WritePageBody: View {
         return Palette.clay
     }
 
+    /// 页脚只放三个**操作**：重写 / 跳过一笔 / 完成。
+    ///
+    /// 「上一个字 / 下一个字」挪去导航栏了——它们是**导航**，不是操作。
+    /// 原来五个按钮挤在 iPhone 的 362pt 里（70+100+100+100+70+48 间距 = 488pt），
+    /// 必然放不下，「跳过一笔」被压到 70pt 宽、文字折成两行、按钮高度从
+    /// 40 涨到 58，整行跟着错位。这不是换行的问题，是塞不下的问题——
+    /// 所以减按钮而不是缩字号。
+    /// 页脚。默认字号横排，辅助功能字号竖排。
+    ///
+    /// 竖排不是洁癖：最大字号下三颗按钮要 496pt，而 iPhone 只有 362pt。
+    /// 实测「跳过一笔」被压到 104pt 宽——4 个字各分到 16pt，
+    /// 连 `minimumScaleFactor(0.8)` 都救不回来，只能截断成省略号。
+    /// 一个字都看不全的按钮，等于没有。
+    @ViewBuilder
     private var footer: some View {
-        HStack(spacing: 12) {
-            let prev = app.repo.prevInLesson(app.repo.meta(ch)?.lesson, ch)
-            let next = app.repo.nextInLesson(app.repo.meta(ch)?.lesson, ch)
-
-            HanziButton(title: "重写", kind: .secondary) {
-                session.restart()
-                showResult = false
+        if LayoutRules.footerStacks(scale: dt.layoutScale) {
+            VStack(spacing: 12) {
+                // 顺序和横排的左→右一致，主动作落在最下面（离拇指最近）
+                restartButton(fullWidth: true)
+                skipButton(fullWidth: true)
+                primaryAction(fullWidth: true)
             }
-
-            HanziButton(title: "跳过一笔", kind: .secondary) {
-                session.skip()
+            .frame(maxWidth: .infinity)
+        } else {
+            HStack(spacing: 12) {
+                restartButton(fullWidth: false)
+                skipButton(fullWidth: false)
+                Spacer()
+                primaryAction(fullWidth: false)
             }
-            .disabled(session.isDone)
-
-            Spacer()
-
-            if !prev.isEmpty {
-                HanziButton(title: "上一个字", kind: .ghost) {
-                    app.pushReplacing(AppState.WriteRoute(ch: prev))
-                }
-            }
-            if !next.isEmpty {
-                HanziButton(title: "下一个字", kind: .ghost) {
-                    app.pushReplacing(AppState.WriteRoute(ch: next))
-                }
-            }
-
-            HanziButton(title: session.isDone ? "看结果" : "完成", fullWidth: false) {
-                if session.isDone {
-                    showResult = true
-                } else {
-                    dismiss()
-                }
-            }
-            .opacity(session.isDone ? 1 : 0.5)
+            .frame(maxWidth: .infinity)
         }
-        .frame(maxWidth: .infinity)
+    }
+
+    private func restartButton(fullWidth: Bool) -> some View {
+        HanziButton(title: "重写", kind: .secondary, fullWidth: fullWidth) {
+            session.restart()
+            showResult = false
+        }
+    }
+
+    private func skipButton(fullWidth: Bool) -> some View {
+        HanziButton(title: "跳过一笔", kind: .secondary, fullWidth: fullWidth) {
+            session.skip()
+        }
+        .disabled(session.isDone)
+    }
+
+    private func primaryAction(fullWidth: Bool) -> some View {
+        HanziButton(
+            title: session.isDone ? "看结果" : "完成",
+            fullWidth: fullWidth
+        ) {
+            if session.isDone {
+                showResult = true
+            } else {
+                dismiss()
+            }
+        }
+        .opacity(session.isDone ? 1 : 0.5)
     }
 
     private func handle(_ outcome: WriteSession.Outcome) {

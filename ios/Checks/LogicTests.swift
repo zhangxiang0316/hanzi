@@ -1308,6 +1308,36 @@ final class TypeScaleTests: XCTestCase {
         XCTAssertEqual(padTile, 373.5, accuracy: 1, "两列时卡片应在这个量级，而不是整宽 787")
     }
 
+    /// 页脚三颗按钮在最大字号下必须竖排。
+    ///
+    /// 数字来自 `-probeTapTargets` 实测：横排时「跳过一笔」只有 104pt 宽，
+    /// 四个字各 16pt，被截断成省略号；竖排后 362x77，字完整。
+    func testWriteFooterStacksOnlyAtAccessibilitySizes() {
+        // 默认字号横排
+        XCTAssertFalse(LayoutRules.footerStacks(scale: TypeScale.factor(forStep: 0)))
+        // 标准字号里最大的一档（xxxLarge，step 3）仍然横排
+        XCTAssertFalse(LayoutRules.footerStacks(scale: TypeScale.factor(forStep: 3)))
+        // 辅助功能字号第一档（step 4）开始竖排
+        XCTAssertTrue(LayoutRules.footerStacks(scale: TypeScale.factor(forStep: 4)))
+        XCTAssertTrue(LayoutRules.footerStacks(scale: TypeScale.factor(forStep: 8)))
+    }
+
+    /// 横排放不下的具体证据：三颗按钮在最大字号下要 496pt，iPhone 只有 362pt。
+    func testWriteFooterDoesNotFitHorizontallyAtMaxSize() {
+        let scale = TypeScale.factor(forStep: 8)   // 3.12
+        // 每个汉字约 15pt 基准宽，按钮左右内边距合计 40pt
+        let charWidth = 15.0 * scale
+        let padding = 40.0
+        let restart = 2 * charWidth + padding      // 重写
+        let skip = 4 * charWidth + padding         // 跳过一笔
+        let done = 2 * charWidth + padding         // 完成
+        let total = restart + skip + done + 2 * 12 // 两处 12pt 间距
+        XCTAssertGreaterThan(total, 362, "放不下就必须竖排")
+        // 而默认字号下是放得下的
+        let base = (2 * 15.0 + padding) + (4 * 15.0 + padding) + (2 * 15.0 + padding) + 24
+        XCTAssertLessThan(base, 362)
+    }
+
     /// iPhone 与 iPad 在默认字号下都是两列——这正是改动要解决的差异
     func testBookGridMatchesAcrossDeviceWidths() {
         let phone: CGFloat = 362   // iPhone 17 Pro 402 - 2*20

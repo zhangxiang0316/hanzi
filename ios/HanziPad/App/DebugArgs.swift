@@ -12,7 +12,16 @@ enum DebugArgs {
         guard let i = args.firstIndex(of: "-writeAuto"), i + 1 < args.count else { return nil }
         return Int(args[i + 1])
     }
+    /// `-writeSkip N`：进入描红页后自动跳过 N 笔（不写，直接跳）
+    ///
+    /// 和 `-writeAuto` 成对：那个验证「写了之后界面刷新没有」，
+    /// 这个验证「跳过之后界面/按钮有没有变形」。
+    static var writeSkip: Int? {
+        guard let i = args.firstIndex(of: "-writeSkip"), i + 1 < args.count else { return nil }
+        return Int(args[i + 1])
+    }
     #else
     static var writeAuto: Int? { nil }
+    static var writeSkip: Int? { nil }
     #endif
 }

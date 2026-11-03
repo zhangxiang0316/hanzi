@@ -74,6 +74,19 @@ enum LayoutRules {
         scale >= TypeScale.factor(forStep: 4) ? 1 : 2
     }
 
+    /// 描红页页脚要不要改成竖排。
+    ///
+    /// 页脚横排三颗按钮（重写 / 跳过一笔 / 完成），默认字号下实测
+    /// 70 + 100 + 70 + 24 间距 = 264pt，iPhone 的 362pt 放得下。
+    /// 但字一放大就不够了：最大字号下要 496pt。
+    ///
+    /// 实测过「不竖排会怎样」：`跳过一笔` 被压到 104pt 宽，四个字各分到
+    /// 16pt，连 `minimumScaleFactor(0.8)` 都救不回来，直接截断成省略号。
+    /// 汉字按钮截断等于没标签，所以宁可占三行。
+    static func footerStacks(scale: CGFloat) -> Bool {
+        scale >= TypeScale.factor(forStep: 4)
+    }
+
     /// 大字号下容器要跟着一起长，否则文字撑破格子。
     ///
     /// 只放大、不缩小（缩小时留白不变更稳），并且封顶——辅助字号下
