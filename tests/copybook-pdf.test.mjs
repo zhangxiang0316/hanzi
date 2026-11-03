@@ -230,3 +230,128 @@ test('每个字都真的产生了路径指令（不是空页）', () => {
   assert.ok(/\d l\n/.test(s), '没有 lineto 指令');
   assert.ok(s.split('\nf\n').length > 3, '填充次数太少，字可能没画出来');
 });
+
+// ---------------------------------------------------------------------------
+// 轮廓缓存
+//
+// 小程序的分包笔画数据只有分包页面执行过才注册。用户冷启动直接进「我的字帖」
+// 点导出时一个分包都没加载过，get() 全返回 null，PDF 会是一张白纸。
+// 缓存是在写的时候把原始 base64 存到本地，之后任何时候都能出 PDF。
+// ---------------------------------------------------------------------------
+
+const strokeStore = require('../miniprogram/utils/stroke-store.js');
+const store = require('../miniprogram/utils/store.js');
+
+/** 每个用例前清干净，避免互相污染 */
+function resetStore() {
+  strokeStore._reset();
+  Object.keys(store._dump()).forEach((k) => delete store._dump()[k]);
+}
+
+const BOOKS = { '1a': () => strokes1a };
+
+test('注册了册就能取到笔画', () => {
+  resetStore();
+  strokeStore.registerAll(BOOKS);
+  const d = strokeStore.get('天');
+  assert.ok(d && d.strokes.length > 1, '天 应该有笔画');
+});
+
+test('没注册的册取不到（这正是冷启动的处境）', () => {
+  resetStore();
+  // 故意不注册
+  assert.equal(strokeStore.get('天'), null);
+});
+
+test('remember 存下轮廓后，不注册册也能取到', () => {
+  resetStore();
+  strokeStore.registerAll(BOOKS);
+  assert.equal(strokeStore.remember('天'), true);
+
+  // 模拟冷启动：清掉内存里的加载器和缓存，只留本地存储
+  strokeStore.clear();
+  strokeStore._reset(); // 忘掉所有加载器，模拟冷启动
+  // 不注册任何册
+  const d = strokeStore.get('天');
+  assert.ok(d, '冷启动后应该能从本地缓存取到笔画');
+  assert.ok(d.strokes.length > 1);
+  // 恢复给后面的用例
+  strokeStore.registerAll(BOOKS);
+});
+
+test('remember 对册没加载的字返回 false，不抛异常', () => {
+  resetStore();
+  assert.equal(strokeStore.remember('天'), false);
+  assert.equal(strokeStore.remember(''), false);
+  assert.equal(strokeStore.remember('龘'), false);
+});
+
+test('isCached 反映缓存状态', () => {
+  resetStore();
+  strokeStore.registerAll(BOOKS);
+  assert.equal(strokeStore.isCached('天'), false);
+  strokeStore.remember('天');
+  assert.equal(strokeStore.isCached('天'), true);
+});
+
+test('rememberAll 批量补齐，返回新增数', () => {
+  resetStore();
+  strokeStore.registerAll(BOOKS);
+  const n = strokeStore.rememberAll(['天', '地', '人']);
+  assert.equal(n, 3);
+  // 再调一次不重复计数
+  assert.equal(strokeStore.rememberAll(['天', '地', '人']), 0);
+});
+
+test('缓存键和档案无关：两个孩子的同一个字共用一份', () => {
+  resetStore();
+  strokeStore.registerAll(BOOKS);
+  store.setProfile('');
+  strokeStore.remember('天');
+  const before = Object.keys(store._dump()).filter((k) => k.includes('outline-cache')).length;
+  // 切到另一个档案
+  store.setProfile('p2');
+  strokeStore.clear();
+  assert.equal(strokeStore.isCached('天'), true, '换个孩子也该能取到同一份轮廓');
+  const after = Object.keys(store._dump()).filter((k) => k.includes('outline-cache')).length;
+  assert.equal(after, before, '不该按档案各存一份');
+  store.setProfile('');
+});
+
+test('缓存有上限，超出后丢最早的', () => {
+  resetStore();
+  // 单册只有 300~450 字，凑不满上限，得把几册都用上
+  const books = {
+    '1a': () => strokes1a,
+    '1b': () => require('../miniprogram/packageStrokes/data/strokes-1b.js'),
+    '2a': () => require('../miniprogram/packageStrokes/data/strokes-2a.js'),
+    '2b': () => require('../miniprogram/packageStrokes/data/strokes-2b.js'),
+  };
+  strokeStore.registerAll(books);
+  // 所有册的字按顺序全部塞进去，一定超过上限
+  const all = Object.values(books).flatMap((f) => Object.keys(f()));
+  assert.ok(all.length > strokeStore.CACHE_MAX,
+    `样本 ${all.length} 个，要不小于上限 ${strokeStore.CACHE_MAX}`);
+  all.forEach((ch) => strokeStore.remember(ch));
+
+  const cache = store.readRaw(strokeStore.CACHE_KEY, {});
+  assert.ok(Object.keys(cache).length <= strokeStore.CACHE_MAX,
+    `缓存 ${Object.keys(cache).length} 条，超过上限 ${strokeStore.CACHE_MAX}`);
+  // 留下的是最后存的那些（最早的被丢掉）
+  assert.ok(cache[all[all.length - 1]], '最后存入的字应该还在');
+  assert.ok(!cache[all[0]], '最早存入的字应该被丢掉');
+});
+
+test('缓存的字能直接生成 PDF（冷启动场景）', () => {
+  resetStore();
+  strokeStore.registerAll(BOOKS);
+  strokeStore.rememberAll(['天', '地']);
+  // 模拟冷启动：忘掉所有加载器和已加载的数据
+  strokeStore._reset();
+
+  const r = cp.buildPdf(['天', '地'], (ch) => strokeStore.get(ch), { dateLabel: '' });
+  assert.deepEqual(r.drawn, ['天', '地'], '冷启动也该画得出来');
+  assert.deepEqual(r.skipped, []);
+
+  strokeStore.registerAll(BOOKS);
+});

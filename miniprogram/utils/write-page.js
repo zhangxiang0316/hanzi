@@ -299,6 +299,9 @@ module.exports = function createWritePage(options) {
       const result = scoreChar(this.accepted);
       const record = progress.saveWrite(this.ch, result.score);
       progress.learn(this.ch);
+      // 趁分包还加载着，把这个字的轮廓存进本地缓存：
+      // 字帖导出在冷启动时也能出 PDF（否则分包没加载过，取不到笔画）
+      strokeStore.remember(this.ch);
       const tips = [
         '多写几次，手会更稳。',
         '写完读一读这个字，记得更牢。',

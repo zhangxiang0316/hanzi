@@ -98,8 +98,38 @@ function _dump() {
   return memory;
 }
 
+/**
+ * 不走档案命名空间的读写。
+ *
+ * 只给「和哪个孩子无关」的缓存用——比如笔画轮廓缓存：同一个字对哥哥和
+ * 弟弟是同一份数据，按档案各存一份纯属浪费空间，而小程序存储上限只有 10MB。
+ */
+function readRaw(name, fallback) {
+  const k = PREFIX + name;
+  try {
+    if (hasWx) {
+      const v = wx.getStorageSync(k);
+      return v === '' || v === undefined || v === null ? fallback : v;
+    }
+    return memory[k] === undefined ? fallback : memory[k];
+  } catch (e) {
+    return fallback;
+  }
+}
+
+function writeRaw(name, value) {
+  const k = PREFIX + name;
+  try {
+    if (hasWx) wx.setStorageSync(k, value);
+    else memory[k] = value;
+  } catch (e) {
+    // ignore
+  }
+}
+
 module.exports = {
   read, write, remove, clearAll, clearProfile,
   setProfile, currentProfile, keyOf,
+  readRaw, writeRaw,
   _dump, PREFIX,
 };

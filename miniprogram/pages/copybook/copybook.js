@@ -28,6 +28,9 @@ Page({
 
   onShow() {
     this.refresh();
+    // 本次会话里加载过的册，顺手把字帖里的字都存进轮廓缓存。
+    // 老用户升级后没有历史缓存，靠这一步逐次补齐。
+    strokeStore.rememberAll(this.data.all.map((x) => x.ch));
   },
 
   refresh() {
@@ -96,6 +99,11 @@ Page({
       }
     };
 
+    // 先试一次：能取到几个字。取不到说明这些字的册本次会话没加载过、
+    // 本地也没缓存（老用户从没写过的字），直接告诉用户去写一遍，
+    // 而不是导出一张缺字的字帖让他打印。
+    const missing = chars.filter((ch) => !strokeFor(ch));
+
     let out;
     try {
       out = copybookPdf.buildPdf(chars, strokeFor, {
@@ -110,8 +118,10 @@ Page({
     if (!out.drawn.length) {
       wx.hideLoading();
       wx.showModal({
-        title: '还没有笔画数据',
-        content: '先去描几个字，字帖才画得出来。',
+        title: '还画不出来',
+        content: missing.length === chars.length
+          ? '这些字还没有笔顺数据。去描红页把它们再写一遍，就能导出了。'
+          : '笔画数据没取到，再试一次看看。',
         showCancel: false,
       });
       return;
@@ -137,7 +147,13 @@ Page({
           },
         });
         if (out.skipped.length) {
-          console.warn('[copybook] 这些字没有笔画数据，已跳过：', out.skipped.join(''));
+          // 不静默少字：导出的字帖会缺这几个，得让用户知道
+          wx.showModal({
+            title: '有字没画出来',
+            content: `「${out.skipped.join('')}」没有笔顺数据，这次没排进字帖。`
+              + '去描红页把它们写一遍，下次就有了。',
+            showCancel: false,
+          });
         }
       },
       fail: (err) => {
