@@ -12,24 +12,41 @@ const DEFAULT_SETTINGS = {
   showPinyin: true,
 };
 
-let progress = store.read('progress', {});
-let settings = Object.assign({}, DEFAULT_SETTINGS, store.read('settings', {}));
-let stats = store.read('stats', { days: {}, streak: 0, lastDay: 0, quizzes: 0, perfect: 0 });
-let wrong = store.read('wrong', {});
-let writes = store.read('write', {});
+let progress = {};
+let settings = Object.assign({}, DEFAULT_SETTINGS);
+let stats = { days: {}, streak: 0, lastDay: 0, quizzes: 0, perfect: 0 };
+let wrong = {};
+let writes = {};
 /**
- * 笔画薄弱点：`{ 字: { 笔画序号: { f: 失败次数, t: 尝试次数, d: 最近一天 } } }`
+ * 笔画薄弱点：`{ 字: { 笔画序号: { f: 失败次数, t: 尝试次数, o: 连胜, d: 最近一天 } } }`
  *
  * 描红判分本来每笔都会算出「为什么不过」（起笔错 / 偏离 / 写短了），
  * 但之前只拿它拼一句即时提示就丢掉了。留下来才看得出「这个字的第 2 笔
  * 你反复写不好」——这比整字分数具体，也更能指导下一步练什么。
  */
-let weak = store.read('weak', {});
-let last = store.read('last', null);
+let weak = {};
+let last = null;
 
-if (!stats.days) stats.days = {};
-if (!stats.streak) stats.streak = 0;
-if (!stats.lastDay) stats.lastDay = 0;
+/**
+ * 从当前命名空间重读全部状态。
+ *
+ * 切换孩子档案时必须调用：存储的键换了前缀，但这份内存状态还是上一个
+ * 孩子的。不重读的话界面会显示「名字换了、数据没变」——比不换还糟。
+ */
+function load() {
+  progress = store.read('progress', {}) || {};
+  settings = Object.assign({}, DEFAULT_SETTINGS, store.read('settings', {}) || {});
+  stats = store.read('stats', { days: {}, streak: 0, lastDay: 0, quizzes: 0, perfect: 0 });
+  wrong = store.read('wrong', {}) || {};
+  writes = store.read('write', {}) || {};
+  weak = store.read('weak', {}) || {};
+  last = store.read('last', null);
+  if (!stats.days) stats.days = {};
+  if (!stats.streak) stats.streak = 0;
+  if (!stats.lastDay) stats.lastDay = 0;
+}
+
+load();
 
 function persistProgress() {
   store.write('progress', progress);
@@ -497,6 +514,7 @@ module.exports = {
   wrongCount,
   clearWrong,
   getWrite,
+  reload: load,
   saveWrite,
   recordStroke,
   weakStrokesOf,

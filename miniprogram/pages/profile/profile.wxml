@@ -2,8 +2,31 @@
   <view class="head">
     <view class="avatar">🐣</view>
     <view class="head-info">
-      <view class="head-name">小小识字家</view>
+      <view class="head-name">{{profileName}}</view>
       <view class="head-sub">已学习 {{days}} 天 · 连续 {{streak}} 天</view>
+    </view>
+  </view>
+
+  <!-- 多孩子档案：一间屋里两个孩子共用一个平板是常态，
+       数据必须分开，否则弟弟写几个字就把哥哥的进度搅乱了 -->
+  <view class="section-head">
+    <view class="section-title">孩子</view>
+    <view class="section-sub" wx:if="{{profileCount > 1}}">各用各的进度</view>
+  </view>
+  <view class="profile-box">
+    <view class="profile-row">
+      <view
+        class="profile-chip {{activeProfileId === item.id ? 'on' : ''}}"
+        wx:for="{{profiles}}"
+        wx:key="id"
+        data-id="{{item.id}}"
+        bindtap="onSwitchProfile"
+      >{{item.name}}</view>
+      <view class="profile-chip add" wx:if="{{canAddProfile}}" bindtap="onAddProfile">＋</view>
+    </view>
+    <view class="profile-tools" wx:if="{{profileCount > 1}}">
+      <text class="profile-tool tap" bindtap="onRenameProfile">改名</text>
+      <text class="profile-tool tap danger" bindtap="onRemoveProfile">删除这个孩子</text>
     </view>
   </view>
 

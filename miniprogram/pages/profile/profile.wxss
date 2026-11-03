@@ -299,3 +299,60 @@
   font-size: 19rpx;
   color: #b9b0a1;
 }
+
+/* 多孩子档案 */
+.profile-box {
+  margin: 0 32rpx;
+  padding: 22rpx 24rpx;
+  border-radius: 28rpx;
+  background: #fff;
+  border: 2rpx solid #eee6d8;
+}
+
+.profile-row {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.profile-chip {
+  min-width: 120rpx;
+  /* 20rpx 上下内边距实测 45px 高，和 iOS 的 44pt 触达线对齐；
+     16rpx 只有 41px，手指点偏的概率明显更高 */
+  padding: 20rpx 26rpx;
+  margin: 0 14rpx 0 0;
+  border-radius: 999rpx;
+  background: #f7f2e9;
+  color: #6b5a45;
+  font-size: 27rpx;
+  text-align: center;
+}
+
+.profile-chip.on {
+  background: #3e8e7e;
+  color: #fff;
+  font-weight: 700;
+}
+
+.profile-chip.add {
+  /* 76rpx 只有 40px 宽，加号本身点不准；88rpx ≈ 46px 才够 */
+  min-width: 88rpx;
+  padding: 20rpx 0;
+  background: transparent;
+  border: 2rpx dashed #d6c8b2;
+  color: #a08a70;
+}
+
+.profile-tools {
+  display: flex;
+  margin-top: 16rpx;
+}
+
+.profile-tool {
+  margin-right: 32rpx;
+  font-size: 24rpx;
+  color: #8a7a66;
+}
+
+.profile-tool.danger {
+  color: #c0503c;
+}

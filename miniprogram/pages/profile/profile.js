@@ -1,5 +1,6 @@
 const catalog = require('../../utils/catalog');
 const progress = require('../../utils/progress');
+const profile = require('../../utils/profile');
 
 const GRADE_TEXT = { 1: '一年级', 2: '二年级', 3: '三年级', 4: '四年级', 5: '五年级', 6: '六年级' };
 
@@ -22,6 +23,11 @@ Page({
     wrongCount: 0,
     writeCount: 0,
     version: '1.0.0',
+    profiles: [],
+    profileName: '',
+    activeProfileId: '',
+    profileCount: 1,
+    canAddProfile: true,
   },
 
   onShow() {
@@ -30,6 +36,13 @@ Page({
 
   refresh() {
     const settings = progress.getSettings();
+    this.setData({
+      profiles: profile.list(),
+      profileName: profile.active().name,
+      activeProfileId: profile.activeId(),
+      profileCount: profile.count(),
+      canAddProfile: profile.canAdd(),
+    });
     const learned = progress.totalLearned();
     const total = catalog.getAllChars().length;
     // 年级范围不能写死"一到三年级"：加四年级后会变成假的。按实际册次算。
@@ -87,6 +100,78 @@ Page({
 
   onAbout() {
     wx.navigateTo({ url: '/pages/about/about' });
+  },
+
+  /**
+   * 切换孩子。
+   *
+   * 切完必须 `progress.reload()`——存储的键换了前缀，但 progress 里那份
+   * 内存状态还是上一个孩子的，不重读会显示「名字换了、数据没变」。
+   */
+  onSwitchProfile(e) {
+    const id = e.currentTarget.dataset.id;
+    if (id === profile.activeId()) return;
+    if (!profile.setActive(id)) return;
+    progress.reload();
+    this.refresh();
+    wx.showToast({ title: '已切到 ' + profile.active().name, icon: 'none' });
+  },
+
+  onAddProfile() {
+    if (!profile.canAdd()) {
+      wx.showToast({ title: '最多 ' + profile.MAX + ' 个', icon: 'none' });
+      return;
+    }
+    wx.showModal({
+      title: '添加一个孩子',
+      editable: true,
+      placeholderText: '孩子的名字（8 字以内）',
+      success: (res) => {
+        if (!res.confirm) return;
+        const p = profile.add(res.content);
+        if (!p) return;
+        // 新建后直接切过去：家长的意图就是「给这个孩子开始用」
+        profile.setActive(p.id);
+        progress.reload();
+        this.refresh();
+      },
+    });
+  },
+
+  onRenameProfile() {
+    const cur = profile.active();
+    wx.showModal({
+      title: '改名',
+      editable: true,
+      content: cur.name,
+      placeholderText: '孩子的名字（8 字以内）',
+      success: (res) => {
+        if (!res.confirm) return;
+        if (!profile.rename(cur.id, res.content)) {
+          wx.showToast({ title: '名字不能为空', icon: 'none' });
+          return;
+        }
+        this.refresh();
+      },
+    });
+  },
+
+  onRemoveProfile() {
+    const cur = profile.active();
+    if (profile.count() <= 1) return;
+    wx.showModal({
+      title: '删除「' + cur.name + '」？',
+      content: '这个孩子的学习进度、错题本、描红记录都会一起删掉，不能恢复。',
+      confirmText: '删除',
+      confirmColor: '#c0503c',
+      success: (res) => {
+        if (!res.confirm) return;
+        const next = profile.remove(cur.id);
+        if (next === null) return;
+        progress.reload();
+        this.refresh();
+      },
+    });
   },
 
   onReset() {

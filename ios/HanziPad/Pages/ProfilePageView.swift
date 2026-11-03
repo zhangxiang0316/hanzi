@@ -14,6 +14,7 @@ struct ProfilePageView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     header
+                    profileSection
                     statsGrid
                     studyLinks
                     badgeSection
@@ -43,7 +44,7 @@ struct ProfilePageView: View {
                 Text("🌱").font(Fonts.s(30, .regular, .largeTitle, maxScale: 1.4))
             }
             VStack(alignment: .leading, spacing: 4) {
-                Text("小小识字家")
+                Text(app.profiles.active.name)
                     .font(Fonts.s(19, .bold, .title3))
                     .foregroundStyle(Palette.ink1)
                 Text("已连续学习 \(app.progress.streak) 天")
@@ -52,6 +53,136 @@ struct ProfilePageView: View {
             }
             Spacer()
         }
+    }
+
+    // MARK: - 孩子
+
+    @State private var showAddProfile = false
+    @State private var showRenameProfile = false
+    @State private var showRemoveProfile = false
+    @State private var nameDraft = ""
+
+    /// 多孩子档案：一间屋里两个孩子共用一个 iPad 是常态，
+    /// 数据必须分开，否则弟弟写几个字就把哥哥的进度搅乱了。
+    private var profileSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHead("孩子", trailing: AnyView(
+                Text(app.profiles.count > 1 ? "各用各的进度" : "")
+                    .font(Fonts.caption).foregroundStyle(Palette.ink3)
+            ))
+            HanziCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    // 最多 4 个档案 + 一个「＋」。用自适应网格而不是固定 HStack：
+                    // 辅助功能字号下名字会长到放不下，硬排会截断。
+                    let cols = [GridItem(.adaptive(minimum: LayoutRules.scaled(84, by: dt.layoutScale)),
+                                         spacing: 8)]
+                    LazyVGrid(columns: cols, // alignment 默认 .center
+                              alignment: .leading, spacing: 8) {
+                        ForEach(app.profiles.list) { pf in
+                            let on = pf.id == app.profiles.activeId
+                            Button {
+                                switchTo(pf.id)
+                            } label: {
+                                Text(pf.name)
+                                    .font(Fonts.bodySmall)
+                                    .fontWeight(on ? .bold : .regular)
+                                    .foregroundStyle(on ? Color.white : Palette.ink2)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
+                                    .frame(maxWidth: .infinity)
+                                    // 11pt 上下内边距实测只有 38pt 高，不到 44 的触达线；
+                                    // 14pt 刚好 44+，与小程序 20rpx(45px) 对齐
+                                    .padding(.vertical, 14)
+                                    .background(
+                                        Capsule().fill(on ? Palette.jade : Palette.cardWarm)
+                                    )
+                                    .overlay(
+                                        Capsule().strokeBorder(on ? Palette.jade : Palette.line, lineWidth: 1)
+                                    )
+                            }
+                            .buttonStyle(PressableStyle())
+                            .measureTapTarget("档案-\(pf.name)")
+                        }
+                        if app.profiles.canAdd {
+                            Button {
+                                nameDraft = ""
+                                showAddProfile = true
+                            } label: {
+                                Text("＋")
+                                    .font(Fonts.bodySmall)
+                                    .foregroundStyle(Palette.ink3)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 14)
+                                    .background(Capsule().fill(Palette.card))
+                                    .overlay(Capsule().strokeBorder(Palette.line, lineWidth: 1))
+                            }
+                            .buttonStyle(PressableStyle())
+                            .measureTapTarget("档案-添加")
+                        }
+                    }
+                    if app.profiles.count > 1 {
+                        HStack(spacing: 20) {
+                            Button("改名") {
+                                nameDraft = app.profiles.active.name
+                                showRenameProfile = true
+                            }
+                            .font(Fonts.caption)
+                            .foregroundStyle(Palette.ink2)
+                            .measureTapTarget("档案-改名")
+                            Button("删除这个孩子") {
+                                showRemoveProfile = true
+                            }
+                            .font(Fonts.caption)
+                            .foregroundStyle(Palette.clay)
+                            .measureTapTarget("档案-删除")
+                            Spacer()
+                        }
+                    }
+                }
+            }
+        }
+        .alert("添加一个孩子", isPresented: $showAddProfile) {
+            TextField("名字（8 字以内）", text: $nameDraft)
+            Button("取消", role: .cancel) { }
+            Button("确定") {
+                if let p = app.profiles.add(nameDraft) {
+                    // 新建后直接切过去：家长的意图就是「给这个孩子开始用」
+                    switchTo(p.id)
+                }
+            }
+        } message: {
+            Text("每个孩子各有一份学习进度。")
+        }
+        .alert("改名", isPresented: $showRenameProfile) {
+            TextField("名字（8 字以内）", text: $nameDraft)
+            Button("取消", role: .cancel) { }
+            Button("确定") { app.profiles.rename(app.profiles.activeId, nameDraft) }
+        }
+        .alert("删除「\(app.profiles.active.name)」？", isPresented: $showRemoveProfile) {
+            Button("取消", role: .cancel) { }
+            Button("删除", role: .destructive) {
+                if let next = app.profiles.remove(app.profiles.activeId) {
+                    _ = next
+                    app.progress.reload()
+                    app.currentBook = app.repo.defaultBook()
+                }
+            }
+        } message: {
+            Text("这个孩子的学习进度、错题本、描红记录都会一起删掉，不能恢复。")
+        }
+    }
+
+    /// 切换孩子。
+    ///
+    /// 切完必须 `progress.reload()`——存储的命名空间变了，但 Progress 里那份
+    /// 内存状态还是上一个孩子的，不重读会显示「名字换了、数据没变」。
+    /// 册次也要跟着重读：每个孩子可能读不同册。
+    private func switchTo(_ id: String) {
+        guard app.profiles.setActive(id) else { return }
+        app.progress.reload()
+        // 册次也要跟着重读：每个孩子可能读不同册。
+        // 必须**先** reload 再读 settings，否则读到的是上一个孩子的册次。
+        app.currentBook = app.progress.settings.book
     }
 
     private var statsGrid: some View {

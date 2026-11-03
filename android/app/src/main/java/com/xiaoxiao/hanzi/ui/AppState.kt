@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.xiaoxiao.hanzi.data.Repo
 import com.xiaoxiao.hanzi.logic.Plan
+import com.xiaoxiao.hanzi.logic.ProfileManager
 import com.xiaoxiao.hanzi.logic.Progress
 import com.xiaoxiao.hanzi.logic.Store
 import com.xiaoxiao.hanzi.logic.Tts
@@ -20,6 +21,8 @@ import com.xiaoxiao.hanzi.logic.Tts
 class AppState(app: Application, ttsFactory: ((() -> Unit) -> Tts)? = null) {
 
     val store = Store(app)
+    /** 多孩子档案。必须在 progress 之前建：它的构造函数负责把命名空间对上。 */
+    val profiles = ProfileManager(store)
     val progress = Progress(store)
     val nav = Navigator()
 

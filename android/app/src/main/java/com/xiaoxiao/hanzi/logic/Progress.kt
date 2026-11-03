@@ -69,6 +69,28 @@ class Progress(private val store: Store) {
         load()
     }
 
+    /**
+     * 从当前命名空间重读全部状态。
+     *
+     * 切换孩子档案时必须调用：存储的键换了前缀，但这份内存状态还是上一个
+     * 孩子的。不重读的话界面会显示「名字换了、数据没变」——比不换还糟。
+     */
+    fun reload() {
+        entries.clear()
+        days.clear()
+        wrong.clear()
+        writes.clear()
+        weak.clear()
+        streakCount = 0
+        lastDay = 0
+        quizzes = 0
+        perfect = 0
+        lastLesson = null
+        lastBook = null
+        settings = Settings()
+        load()
+    }
+
     // ---------- 序列化 ----------
 
     private fun load() {

@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -59,6 +60,10 @@ fun ProfilePage(app: AppState) {
     app.revision
 
     var showReset by remember { mutableStateOf(false) }
+    var showAddProfile by remember { mutableStateOf(false) }
+    var showRenameProfile by remember { mutableStateOf(false) }
+    var showRemoveProfile by remember { mutableStateOf(false) }
+    var nameDraft by remember { mutableStateOf("") }
 
     val learned = app.progress.totalLearned()
     val mastered = app.progress.totalMastered()
@@ -91,7 +96,10 @@ fun ProfilePage(app: AppState) {
             ) { Text("🐣", fontSize = 28.sp) }
             Spacer(Modifier.width(12.dp))
             Column {
-                Text("小小识字家", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = p.ink1)
+                Text(
+                    app.profiles.active().name,
+                    fontSize = 17.sp, fontWeight = FontWeight.Bold, color = p.ink1
+                )
                 Spacer(Modifier.height(3.dp))
                 Text(
                     "已学习 $activeDays 天 · 连续 $streak 天",
@@ -189,6 +197,74 @@ fun ProfilePage(app: AppState) {
                     }
                     // 补齐末行，避免最后一行卡片被拉伸
                     repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+        }
+
+        SectionHead("孩子", if (app.profiles.count() > 1) "各用各的进度" else "")
+        HanziCard(padding = 12) {
+            // 最多 4 个档案 + 一个「＋」，一行放得下（每个最宽 88dp）
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                app.profiles.profiles().forEach { pf ->
+                    val on = pf.id == app.profiles.activeId()
+                    Surface(
+                        Modifier
+                            .weight(1f, fill = false)
+                            .clip(RoundedCornerShape(999.dp))
+                            .clickable(enabled = !on) { switchProfile(app, pf.id) },
+                        shape = RoundedCornerShape(999.dp),
+                        color = if (on) p.jade else p.cardWarm,
+                        border = BorderStroke(1.dp, if (on) p.jade else p.line)
+                    ) {
+                        Text(
+                            pf.name,
+                            fontSize = 13.sp,
+                            fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
+                            color = if (on) Color.White else p.ink2,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp)
+                        )
+                    }
+                }
+                if (app.profiles.canAdd()) {
+                    Surface(
+                        Modifier
+                            .clip(RoundedCornerShape(999.dp))
+                            .clickable { showAddProfile = true },
+                        shape = RoundedCornerShape(999.dp),
+                        color = p.card,
+                        border = BorderStroke(1.dp, p.line)
+                    ) {
+                        Text(
+                            "＋",
+                            fontSize = 15.sp,
+                            color = p.ink3,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                        )
+                    }
+                }
+            }
+            if (app.profiles.count() > 1) {
+                Spacer(Modifier.height(10.dp))
+                Row {
+                    Text(
+                        "改名",
+                        fontSize = 12.sp,
+                        color = p.ink2,
+                        modifier = Modifier
+                            .clickable { showRenameProfile = true }
+                            .padding(vertical = 8.dp)
+                    )
+                    Spacer(Modifier.width(20.dp))
+                    Text(
+                        "删除这个孩子",
+                        fontSize = 12.sp,
+                        color = p.clay,
+                        modifier = Modifier
+                            .clickable { showRemoveProfile = true }
+                            .padding(vertical = 8.dp)
+                    )
                 }
             }
         }
@@ -299,6 +375,55 @@ fun ProfilePage(app: AppState) {
         Spacer(Modifier.height(24.dp))
     }
 
+    if (showAddProfile) {
+        NameDialog(
+            title = "添加一个孩子",
+            initial = "",
+            onDismiss = { showAddProfile = false },
+            onConfirm = { name ->
+                val pf = app.profiles.add(name)
+                showAddProfile = false
+                // 新建后直接切过去：家长的意图就是「给这个孩子开始用」
+                if (pf != null) switchProfile(app, pf.id)
+            }
+        )
+    }
+
+    if (showRenameProfile) {
+        NameDialog(
+            title = "改名",
+            initial = app.profiles.active().name,
+            onDismiss = { showRenameProfile = false },
+            onConfirm = { name ->
+                // 空名字 rename 会返回 false，此时静默保留原名（对话框已经关了）
+                app.profiles.rename(app.profiles.activeId(), name)
+                showRenameProfile = false
+                app.touch()
+            }
+        )
+    }
+
+    if (showRemoveProfile) {
+        val cur = app.profiles.active()
+        AlertDialog(
+            onDismissRequest = { showRemoveProfile = false },
+            title = { Text("删除「${cur.name}」？") },
+            text = { Text("这个孩子的学习进度、错题本、描红记录都会一起删掉，不能恢复。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    app.profiles.remove(cur.id)
+                    app.progress.reload()
+                    app.setBook(Repo.defaultBook())
+                    showRemoveProfile = false
+                    app.touch()
+                }) { Text("删除", color = p.clay) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRemoveProfile = false }) { Text("取消") }
+            }
+        )
+    }
+
     if (showReset) {
         AlertDialog(
             onDismissRequest = { showReset = false },
@@ -315,6 +440,49 @@ fun ProfilePage(app: AppState) {
             }
         )
     }
+}
+
+/**
+ * 切换孩子。
+ *
+ * 切完必须 `progress.reload()`——存储的键换了前缀，但 Progress 里那份
+ * 内存状态还是上一个孩子的，不重读会显示「名字换了、数据没变」。
+ */
+private fun switchProfile(app: AppState, id: String) {
+    if (!app.profiles.setActive(id)) return
+    app.progress.reload()
+    // 每个孩子可能读不同册次，册次也跟着重读
+    app.setBook(app.progress.settings.book)
+    app.touch()
+}
+
+/** 输入孩子名字的小对话框 */
+@Composable
+private fun NameDialog(
+    title: String,
+    initial: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var text by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { if (it.length <= 8) text = it },
+                singleLine = true,
+                label = { Text("名字（8 字以内）") }
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(text) }) { Text("确定") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("取消") }
+        }
+    )
 }
 
 @Composable

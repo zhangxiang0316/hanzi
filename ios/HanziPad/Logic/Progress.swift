@@ -597,6 +597,27 @@ final class Progress {
         ]
     }
 
+    /// 从当前命名空间重读全部状态。
+    ///
+    /// 切换孩子档案时必须调用：存储的命名空间变了，但这份内存状态还是上一个
+    /// 孩子的。不重读的话界面会显示「名字换了、数据没变」——比不换还糟。
+    func reload() {
+        entries.removeAll()
+        days.removeAll()
+        wrong.removeAll()
+        writes.removeAll()
+        weak.removeAll()
+        streakCount = 0
+        lastDay = 0
+        quizzes = 0
+        perfect = 0
+        lastStudyDay = 0
+        settings = Settings(book: Repo.shared.defaultBook())
+        lastLesson = nil
+        lastBook = nil
+        load()
+    }
+
     func resetAll() {
         entries.removeAll()
         days.removeAll()

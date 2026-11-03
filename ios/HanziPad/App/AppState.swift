@@ -12,6 +12,8 @@ final class AppState {
 
     let repo: Repo
     let progress: Progress
+    /// 多孩子档案。必须在 progress 之前建：它的构造函数负责把命名空间对上。
+    let profiles: ProfileManager
 
     /// 当前册次。读写 Progress 里的设置，这样重启后记得上次学到哪一册
     var currentBook: String {
@@ -90,6 +92,9 @@ final class AppState {
         // 非隔离上下文求值）。所以做成可选，在初始化体内取。
         let r = repo ?? Repo.shared
         self.repo = r
+        // ProfileManager 先建：它的 init 会把 store 的命名空间对上，
+        // 之后 Progress 读的就是当前孩子的数据
+        self.profiles = ProfileManager(store: store)
         self.progress = Progress(store: store)
         applyDebugLaunchArgs()
     }
