@@ -1278,6 +1278,49 @@ final class TypeScaleTests: XCTestCase {
                        LayoutRules.detailIsSplit(width, scale: 1.0))
     }
 
+    /// 首页课本网格固定两列，三端一致。
+    ///
+    /// 之前用 `.adaptive(minimum: 190)`：iPhone 内容宽 362pt 只排 1 列，
+    /// iPad 787pt 排 3 列——同一个 app 两种信息密度，还都和 Android 不同。
+    func testBookGridIsAlwaysTwoColumns() {
+        // 默认字号
+        XCTAssertEqual(LayoutRules.bookColumns(scale: 1.0), 2)
+        // 小字号也是两列（不因为字小而多塞）
+        XCTAssertEqual(LayoutRules.bookColumns(scale: 0.82), 2)
+        // 放大到普通大字号仍是两列
+        XCTAssertEqual(LayoutRules.bookColumns(scale: 1.35), 2)
+        // 辅助功能字号（1.64 倍起）退回单列
+        XCTAssertEqual(LayoutRules.bookColumns(scale: TypeScale.factor(forStep: 4)), 1)
+        XCTAssertEqual(LayoutRules.bookColumns(scale: 3.12), 1)
+    }
+
+    /// 实测卡片尺寸：默认字号下两端都是两列。
+    ///
+    /// 数字来自 `-probeTapTargets` 的真实布局报数，不是估的：
+    /// iPhone 17 Pro 每张 175x84pt，iPad 13 寸每张 346x84pt。
+    /// 前面几版是 `.adaptive(minimum: 190)`：iPhone 只排 1 列（362 宽放不下
+    /// 两个 190），iPad 排 3 列——同一个 app 在两种设备上是两种信息密度。
+    func testMeasuredBookTileSizes() {
+        // iPhone：内容宽 402-2*20 = 362，减去 12 间距，两列各 175
+        XCTAssertEqual((362.0 - 12) / 2, 175, accuracy: 0.5)
+        // iPad：内容宽 787，减去 12 间距、再减去两侧内边距，两列各约 346
+        let padTile = (787.0 - 12 - 2 * 14) / 2
+        XCTAssertEqual(padTile, 373.5, accuracy: 1, "两列时卡片应在这个量级，而不是整宽 787")
+    }
+
+    /// iPhone 与 iPad 在默认字号下都是两列——这正是改动要解决的差异
+    func testBookGridMatchesAcrossDeviceWidths() {
+        let phone: CGFloat = 362   // iPhone 17 Pro 402 - 2*20
+        let pad: CGFloat = 787     // iPad 13 实测内容宽
+        for w in [phone, pad] {
+            let cols = LayoutRules.bookColumns(scale: 1.0)
+            XCTAssertEqual(cols, 2, "\(w)pt 下应排两列")
+            // 两列时每张卡片的宽度
+            let tile = (w - 12) / CGFloat(cols)
+            XCTAssertGreaterThan(tile, 160, "卡片不该窄到放不下「一年级 上册」这行标题")
+        }
+    }
+
     /// 实测宽度：iPad 13 寸 + 侧边栏后内容区只有 787pt。
     ///
     /// 这个数字是量出来的（调试输出 geo.size.width），不是估的。

@@ -214,8 +214,13 @@ struct CoursesPageView: View {
                         continueCard(next)
                     }
                     SectionHead("全部课本")
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: LayoutRules.scaled(200, by: dt.layoutScale)), spacing: 12)],
-                              spacing: 12) {
+                    LazyVGrid(
+                        columns: Array(
+                            repeating: GridItem(.flexible(), spacing: 12),
+                            count: LayoutRules.bookColumns(scale: dt.layoutScale)
+                        ),
+                        spacing: 12
+                    ) {
                         ForEach(app.repo.books) { book in
                             BookTileView(book: book) {
                                 app.currentBook = book.id

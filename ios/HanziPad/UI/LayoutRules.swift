@@ -61,6 +61,19 @@ enum LayoutRules {
         width < 700 ? width : 760
     }
 
+    /// 首页课本网格的列数：固定两列，与 Android 的 `chunked(2)`、
+    /// 小程序的 `calc(50% - 12rpx)` 保持一致。
+    ///
+    /// 之前用的是 `.adaptive(minimum: 190)`，结果三端各不相同：
+    /// iPhone 上算下来只排 1 列（内容宽 362pt，放不下两个 190），
+    /// iPad 上排 3 列。同一个 app 在两种设备上是两种信息密度。
+    ///
+    /// 辅助功能字号下退回单列：两列时卡片只有 175pt 宽，
+    /// 3 倍大的字塞不进去，硬排两列等于把字挤没。
+    static func bookColumns(scale: CGFloat) -> Int {
+        scale >= TypeScale.factor(forStep: 4) ? 1 : 2
+    }
+
     /// 大字号下容器要跟着一起长，否则文字撑破格子。
     ///
     /// 只放大、不缩小（缩小时留白不变更稳），并且封顶——辅助字号下

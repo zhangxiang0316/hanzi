@@ -230,7 +230,11 @@ struct HomePageView: View {
         VStack(alignment: .leading, spacing: 12) {
             SectionHead("跟课本学")
             LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: LayoutRules.scaled(190, by: dt.layoutScale)), spacing: 12)],
+                // 固定两列，和 Android / 小程序一致
+                columns: Array(
+                    repeating: GridItem(.flexible(), spacing: 12),
+                    count: LayoutRules.bookColumns(scale: dt.layoutScale)
+                ),
                 spacing: 12
             ) {
                 ForEach(app.repo.books) { book in
