@@ -33,6 +33,8 @@ sealed class Screen {
     /** 我的字帖：写过的字汇总 */
     object Copybook : Screen()
     object Wrong : Screen()
+    /** 识字量测试：一次性流程，起始页/答题/结果都在同一个 Screen 里切 */
+    object Vocab : Screen()
     object About : Screen()
 }
 

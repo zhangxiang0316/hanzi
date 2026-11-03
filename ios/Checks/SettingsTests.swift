@@ -29,6 +29,7 @@ final class SettingsTests: XCTestCase {
         s.showPinyin = false
         s.speechRate = 0.6
         s.speakEnabled = false
+        s.vocabSize = 700
         a.updateSettings(s)
 
         // 换一个实例读同一个 store，模拟重启
@@ -38,12 +39,13 @@ final class SettingsTests: XCTestCase {
         XCTAssertFalse(b.settings.showPinyin)
         XCTAssertEqual(b.settings.speechRate, 0.6, accuracy: 0.001)
         XCTAssertFalse(b.settings.speakEnabled)
+        XCTAssertEqual(b.settings.vocabSize, 700)
     }
 
-    /// 五个字段必须一起存 —— 漏掉任意一个，重启后就会退回默认值
+    /// 每个字段都必须一起存 —— 漏掉任意一个，重启后就会退回默认值
     func testEveryFieldIsPersisted() {
         let props = Mirror(reflecting: Progress.Settings()).children.compactMap(\.label).sorted()
-        let expected = ["book", "dailyNew", "showPinyin", "speakEnabled", "speechRate"]
+        let expected = ["book", "dailyNew", "showPinyin", "speakEnabled", "speechRate", "vocabSize"]
         XCTAssertEqual(props, expected,
                        "Settings 的字段变了，persistSettings/load 需要同步改")
     }

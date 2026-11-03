@@ -250,7 +250,11 @@
 
   function interpolate(str, data) {
     if (typeof str !== 'string' || str.indexOf('{{') < 0) return str;
-    const single = str.match(/^\{\{([\s\S]+?)\}\}$/);
+    // 「整串就是一个表达式」才走单值分支（保留原始类型，比如 false / 0）。
+    // 捕获组里不能出现 `}}`：原来的 `[\s\S]+?` 会把 `{{a}}/{{b}}` 整串
+    // 吞成一个表达式 `a}}/{{b`，求值抛错后被 catch 成空串，
+    // 于是预览里所有「多个插值拼一行」的文案（页码、日期、进度）都是空的。
+    const single = str.match(/^\{\{((?:(?!\}\})[\s\S])+)\}\}$/);
     if (single) return evalExpr(single[1], data);
     return str.replace(/\{\{([\s\S]+?)\}\}/g, (_, e) => {
       const v = evalExpr(e, data);

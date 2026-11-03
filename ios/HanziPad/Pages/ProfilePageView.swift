@@ -289,6 +289,46 @@ struct ProfilePageView: View {
         return VStack(alignment: .leading, spacing: 12) {
             SectionHead("学习")
 
+            // 识字量测试：「学过多少字」是点过多少个字，不是认识多少，
+            // 家长真正想知道的是后者，所以按抽测单独给一个入口。
+            Button {
+                app.push(AppState.VocabRoute())
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "ruler")
+                        .font(Fonts.s(15, .medium, .body))
+                        .foregroundStyle(Palette.jade)
+                        .frame(width: 26)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("识字量测试").font(Fonts.body).foregroundStyle(Palette.ink1)
+                        Text("从八册各抽几个字，估算认字量")
+                            .font(Fonts.caption).foregroundStyle(Palette.ink3)
+                    }
+                    Spacer()
+                    Text(app.progress.vocabSize > 0
+                         ? "上次 \(Vocab.sizeLabel(app.progress.vocabSize)) 字"
+                         : "测一测")
+                        .font(Fonts.caption)
+                        .foregroundStyle(Palette.ink3)
+                    Image(systemName: "chevron.right")
+                        .font(Fonts.s(12, .semibold, .caption))
+                        .foregroundStyle(Palette.ink3)
+                }
+                // 和错题本、字帖两行保持同一套内边距和外框，
+                // 漏了 padding(16) 只有 34pt 高，不到 44pt 的触达线
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
+                        .fill(Palette.card)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
+                        .strokeBorder(Palette.line, lineWidth: 1)
+                )
+                .measureTapTarget("我的-识字量入口")
+            }
+            .buttonStyle(PressableStyle())
+
             Button {
                 app.push(AppState.WrongRoute())
             } label: {

@@ -560,5 +560,6 @@ module.exports = {
   buildWordQuiz,
   mulberry32,
   shuffle,
+  option,
   TYPE_ORDER,
 };

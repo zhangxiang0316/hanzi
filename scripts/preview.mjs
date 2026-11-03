@@ -108,6 +108,7 @@ async function shots() {
     { name: '05-write', hash: '#/packageStrokes/pages/write/write?ch=%E6%97%A5', wait: 900 },
     { name: '06-practice', hash: '#/pages/practice/practice', wait: 600 },
     { name: '07-profile', hash: '#/pages/profile/profile', wait: 500 },
+    { name: '12-vocab', hash: '#/pages/vocab/vocab', wait: 500 },
     { name: '08-wrong', hash: '#/pages/wrong/wrong', wait: 500 },
     { name: '09-about', hash: '#/pages/about/about', wait: 400 },
   ];

@@ -1,6 +1,7 @@
 const catalog = require('../../utils/catalog');
 const progress = require('../../utils/progress');
 const profile = require('../../utils/profile');
+const vocab = require('../../utils/vocab');
 
 const GRADE_TEXT = { 1: '一年级', 2: '二年级', 3: '三年级', 4: '四年级', 5: '五年级', 6: '六年级' };
 
@@ -28,6 +29,8 @@ Page({
     activeProfileId: '',
     profileCount: 1,
     canAddProfile: true,
+    vocabSize: 0,
+    vocabText: '',
   },
 
   onShow() {
@@ -42,6 +45,8 @@ Page({
       activeProfileId: profile.activeId(),
       profileCount: profile.count(),
       canAddProfile: profile.canAdd(),
+      vocabSize: progress.getVocabSize(),
+      vocabText: vocab.sizeLabel(progress.getVocabSize()),
     });
     const learned = progress.totalLearned();
     const total = catalog.getAllChars().length;
@@ -108,6 +113,10 @@ Page({
    * 切完必须 `progress.reload()`——存储的键换了前缀，但 progress 里那份
    * 内存状态还是上一个孩子的，不重读会显示「名字换了、数据没变」。
    */
+  onVocab() {
+    wx.navigateTo({ url: '/pages/vocab/vocab' });
+  },
+
   onSwitchProfile(e) {
     const id = e.currentTarget.dataset.id;
     if (id === profile.activeId()) return;

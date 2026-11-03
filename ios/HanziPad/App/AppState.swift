@@ -190,6 +190,8 @@ final class AppState {
                 push(CopybookRoute())
             case "wrong":
                 push(WrongRoute())
+            case "vocab":
+                push(VocabRoute())
             case "about":
                 push(AboutRoute())
             case "result":
@@ -280,6 +282,8 @@ final class AppState {
     struct WrongRoute: Hashable {}
     /// 我的字帖：写过的字汇总成一张字帖。
     struct CopybookRoute: Hashable {}
+    /// 识字量测试：一次性流程，开始/答题/结果都在同一个页面里切
+    struct VocabRoute: Hashable {}
     /// 听写。带上难度和册次，因为同一个入口能进三档。
     struct DictationRoute: Hashable {
         let level: String
@@ -326,6 +330,9 @@ struct AppRoutes: ViewModifier {
             .navigationDestination(for: WrongRoute.self) { _ in
                 WrongPageView()
             }
+            .navigationDestination(for: VocabRoute.self) { _ in
+                VocabPageView()
+            }
     }
 }
 
@@ -338,6 +345,7 @@ typealias DictationRoute = AppState.DictationRoute
 typealias CopybookRoute = AppState.CopybookRoute
 typealias AboutRoute = AppState.AboutRoute
 typealias WrongRoute = AppState.WrongRoute
+typealias VocabRoute = AppState.VocabRoute
 
 extension View {
     func appRoutes() -> some View { modifier(AppRoutes()) }

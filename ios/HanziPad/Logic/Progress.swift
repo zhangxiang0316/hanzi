@@ -18,6 +18,21 @@ final class Progress {
         var speechRate: Float = 0.85
         /// 是否开启朗读
         var speakEnabled: Bool = true
+        /// 上次识字量测试估出来的字数，0 表示没测过。
+        /// 存在 Settings 里而不是单独一个键：它就是一个「上次测出来多少」的
+        /// 缓存，跟册次、每天新学一样属于设置区。
+        var vocabSize: Int = 0
+    }
+
+    /// 上次识字量测试的结果（0 = 没测过）
+    var vocabSize: Int { settings.vocabSize }
+
+    /// 记下这次测出的识字量（0 表示没测过，不覆盖已有结果）
+    func setVocabSize(_ size: Int) {
+        guard size > 0 else { return }
+        var s = settings
+        s.vocabSize = size
+        updateSettings(s)
     }
 
     struct DayStat: Equatable {
@@ -169,6 +184,7 @@ final class Progress {
             s.dailyNew = obj["dailyNew"] as? Int ?? 5
             s.book = obj["book"] as? String ?? "1a"
             s.showPinyin = obj["showPinyin"] as? Bool ?? true
+            s.vocabSize = obj["vocabSize"] as? Int ?? 0
             s.speechRate = (obj["speechRate"] as? Double).map(Float.init) ?? 0.85
             s.speakEnabled = obj["speakEnabled"] as? Bool ?? true
             settings = s
@@ -239,6 +255,7 @@ final class Progress {
             "showPinyin": settings.showPinyin,
             "speechRate": Double(settings.speechRate),
             "speakEnabled": settings.speakEnabled,
+            "vocabSize": settings.vocabSize,
         ])
     }
 

@@ -41,6 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.xiaoxiao.hanzi.data.Repo
+import com.xiaoxiao.hanzi.logic.Vocab
 import com.xiaoxiao.hanzi.ui.AppState
 import com.xiaoxiao.hanzi.ui.Dimens
 import com.xiaoxiao.hanzi.ui.HanziCard
@@ -345,6 +346,16 @@ fun ProfilePage(app: AppState) {
             border = BorderStroke(1.dp, p.line)
         ) {
             Column {
+                // 识字量测试：「学过多少字」是点过多少个字，不是认识多少，
+                // 家长真正想知道的是后者，所以按抽测单独给一个入口。
+                LinkRow(
+                    "识字量测试",
+                    if (app.progress.vocabSize() > 0)
+                        "上次 ${Vocab.sizeLabel(app.progress.vocabSize())} 字 ›" else "测一测 ›"
+                ) {
+                    app.nav.push(Screen.Vocab)
+                }
+                Box(Modifier.fillMaxWidth().height(1.dp).background(p.lineSoft))
                 LinkRow("错题本", "${app.progress.wrongCount()} 个字 ›") {
                     app.nav.push(Screen.Wrong)
                 }

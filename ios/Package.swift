@@ -30,6 +30,7 @@ let package = Package(
                 "HanziPad/Logic/Quiz.swift",
                 "HanziPad/Logic/Progress.swift",
                 "HanziPad/Logic/Profile.swift",
+                "HanziPad/Logic/Vocab.swift",
                 "HanziPad/Logic/Plan.swift",
                 "HanziPad/Logic/WriteSession.swift",
                 "HanziPad/Logic/TabSlot.swift",

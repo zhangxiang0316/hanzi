@@ -14,8 +14,24 @@ class Progress(private val store: Store) {
     data class Settings(
         val dailyNew: Int = 5,
         val book: String = "1a",
-        val showPinyin: Boolean = true
+        val showPinyin: Boolean = true,
+        /**
+         * 上次识字量测试估出来的字数，0 表示没测过。
+         *
+         * 存在 Settings 里而不是单独一个键：它就是一个「上次测出来多少」的
+         * 缓存，跟册次、每天新学一样属于设置区。
+         */
+        val vocabSize: Int = 0
     )
+
+    /** 上次识字量测试的结果（0 = 没测过） */
+    fun vocabSize(): Int = settings.vocabSize
+
+    /** 记下这次测出的识字量（0 表示没测过，不覆盖已有结果） */
+    fun setVocabSize(size: Int) {
+        if (size <= 0) return
+        updateSettings(settings.copy(vocabSize = size))
+    }
 
     data class DayStat(val learned: Int = 0, val answers: Int = 0, val correct: Int = 0)
 
@@ -115,7 +131,8 @@ class Progress(private val store: Store) {
             settings = Settings(
                 dailyNew = obj.optInt("dailyNew", 5),
                 book = obj.optString("book", "1a"),
-                showPinyin = obj.optBoolean("showPinyin", true)
+                showPinyin = obj.optBoolean("showPinyin", true),
+                vocabSize = obj.optInt("vocabSize", 0)
             )
         }
 
@@ -236,6 +253,7 @@ class Progress(private val store: Store) {
             "settings",
             JSONObject().put("dailyNew", settings.dailyNew).put("book", settings.book)
                 .put("showPinyin", settings.showPinyin)
+                .put("vocabSize", settings.vocabSize)
         )
     }
 

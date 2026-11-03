@@ -414,6 +414,21 @@ function writeStarsHistogram() {
   return out;
 }
 
+/**
+ * 上次识字量测试的结果。存在 settings 里而不是单独一个键：
+ * 它就是一个「上次测出来多少」的缓存，跟册次、每天新学一样属于设置区。
+ */
+function getVocabSize() {
+  return settings.vocabSize || 0;
+}
+
+/** 记下这次测出的识字量（0 表示没测过，不覆盖已有结果） */
+function setVocabSize(size) {
+  const n = Math.max(0, Math.round(size || 0));
+  if (!n) return;
+  updateSettings({ vocabSize: n, vocabDate: day.dayNumber() });
+}
+
 function getSettings() {
   return Object.assign({}, settings);
 }
@@ -527,6 +542,8 @@ module.exports = {
   writeCount,
   allWriteRecords,
   writeStarsHistogram,
+  getVocabSize,
+  setVocabSize,
   getSettings,
   updateSettings,
   getLast,

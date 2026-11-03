@@ -105,6 +105,10 @@
   </view>
 
   <view class="links">
+    <view class="link tap" bindtap="onVocab">
+      <text class="link-name">识字量测试</text>
+      <text class="link-value">{{vocabSize > 0 ? '上次 ' + vocabText + ' 字 ›' : '测一测 ›'}}</text>
+    </view>
     <view class="link tap" bindtap="onWrong">
       <text class="link-name">错题本</text>
       <text class="link-value">{{wrongCount}} 个字 ›</text>

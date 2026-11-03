@@ -1,0 +1,88 @@
+<view class="page">
+  <!-- 开始页：先说清楚这是「估算」不是「考试」 -->
+  <block wx:if="{{stage === 'intro'}}">
+    <view class="hero">
+      <view class="hero-emoji">📏</view>
+      <view class="hero-title">测测认识多少字</view>
+      <view class="hero-sub">从八册里各抽几个字，看看认字量大概到哪儿了</view>
+    </view>
+
+    <view class="note">
+      <view class="note-row">
+        <text class="note-dot">·</text>
+        <text class="note-text">最多 40 个字，两三分钟</text>
+      </view>
+      <view class="note-row">
+        <text class="note-dot">·</text>
+        <text class="note-text">答不出来很正常，不会的字直接跳过</text>
+      </view>
+      <view class="note-row">
+        <text class="note-dot">·</text>
+        <text class="note-text">结果是估算，不是精确值</text>
+      </view>
+    </view>
+
+  </block>
+
+  <!-- 答题 -->
+  <block wx:elif="{{stage === 'test'}}">
+    <view class="bar">
+      <view class="bar-fill" style="width: {{pct}}%"></view>
+    </view>
+    <view class="progress-text">{{qIndex + 1}} / {{total}} · {{bookName}}</view>
+
+    <view class="card">
+      <view class="prompt hanzi">{{q.prompt}}</view>
+    </view>
+
+    <view class="options">
+      <view
+        class="option tap {{item.state}}"
+        wx:for="{{q.options}}"
+        wx:key="v"
+        data-v="{{item.v}}"
+        bindtap="onPick"
+      >{{item.label}}</view>
+    </view>
+
+    <view class="hint">会读就选，不会就随便选一个，后面还会继续</view>
+  </block>
+
+  <!-- 结果 -->
+  <block wx:else>
+    <view class="result">
+      <view class="result-label">估算认识</view>
+      <view class="result-num">{{sizeText}}</view>
+      <view class="result-unit">个字</view>
+      <view class="result-verdict">{{verdict}}</view>
+      <view class="result-note" wx:if="{{stopName}}">到{{stopName}}就停下来了，后面的册次还没学到</view>
+      <view class="result-note" wx:else>八册都测完了</view>
+    </view>
+
+    <view class="detail">
+      <view class="detail-title">各册情况</view>
+      <view class="detail-row" wx:for="{{groups}}" wx:key="book">
+        <text class="detail-name">{{item.name}}</text>
+        <text class="detail-score">{{item.correct}} / {{item.asked}}</text>
+        <text class="detail-contrib" wx:if="{{item.contribution}}">+{{item.contribution}}</text>
+        <text class="detail-contrib mute" wx:else>不计</text>
+      </view>
+    </view>
+
+  </block>
+
+  <view class="foot">
+    <button
+      wx:if="{{stage === 'intro'}}"
+      class="btn btn-primary btn-block"
+      hover-class="btn-hover"
+      bindtap="onStart"
+    >开始测</button>
+    <block wx:elif="{{stage === 'result'}}">
+      <button class="btn btn-primary btn-block" hover-class="btn-hover" bindtap="onRestart">再测一次</button>
+      <button class="btn btn-soft btn-block foot-btn-second" hover-class="btn-hover" bindtap="onDone">回到我的</button>
+    </block>
+  </view>
+
+  <view class="safe-bottom"></view>
+</view>

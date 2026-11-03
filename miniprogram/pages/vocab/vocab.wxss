@@ -1,0 +1,248 @@
+.page {
+  min-height: 100vh;
+  background: var(--paper);
+  /* 给底部固定按钮留出空间，否则最后一个按钮会被压住 */
+  padding-bottom: 200rpx;
+  box-sizing: border-box;
+}
+
+/* 主操作固定在底部：一个「开始测」按钮跟着内容浮在屏幕中间，
+   看着像忘了排版，手指也不容易够到 */
+.foot {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 20rpx 40rpx calc(20rpx + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(251, 247, 238, 0) 0%, var(--paper) 30%);
+}
+
+/* ---------- 开始页 ---------- */
+
+.hero {
+  padding: 80rpx 48rpx 40rpx;
+  text-align: center;
+}
+
+.hero-emoji {
+  font-size: 96rpx;
+  line-height: 1.2;
+}
+
+.hero-title {
+  margin-top: 20rpx;
+  font-size: 46rpx;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.hero-sub {
+  margin-top: 14rpx;
+  font-size: 26rpx;
+  line-height: 1.6;
+  color: var(--ink-3);
+}
+
+.note {
+  margin: 0 40rpx 40rpx;
+  padding: 26rpx 30rpx;
+  border-radius: 24rpx;
+  background: #ffffff;
+  border: 2rpx solid rgba(233, 223, 205, 0.8);
+}
+
+.note-row {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 12rpx;
+}
+
+.note-row:last-child {
+  margin-bottom: 0;
+}
+
+.note-dot {
+  margin-right: 12rpx;
+  font-size: 26rpx;
+  color: var(--jade);
+  line-height: 1.6;
+}
+
+.note-text {
+  flex: 1;
+  font-size: 25rpx;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+/* ---------- 答题 ---------- */
+
+.bar {
+  margin: 30rpx 40rpx 0;
+  height: 12rpx;
+  border-radius: 999rpx;
+  background: #eee6d8;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 999rpx;
+  background: var(--jade);
+  transition: width 0.25s ease;
+}
+
+.progress-text {
+  margin: 14rpx 40rpx 0;
+  font-size: 23rpx;
+  color: var(--ink-3);
+}
+
+.card {
+  margin: 40rpx 40rpx 0;
+  padding: 70rpx 0;
+  border-radius: 32rpx;
+  background: #fffdf7;
+  border: 2rpx solid rgba(233, 223, 205, 0.9);
+  text-align: center;
+}
+
+.prompt {
+  font-size: 200rpx;
+  line-height: 1.05;
+  color: var(--ink);
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin: 36rpx 40rpx 0;
+}
+
+.option {
+  width: 48%;
+  margin-bottom: 20rpx;
+  padding: 30rpx 0;
+  border-radius: 24rpx;
+  background: #ffffff;
+  border: 2rpx solid rgba(233, 223, 205, 0.9);
+  text-align: center;
+  font-size: 34rpx;
+  color: var(--ink);
+}
+
+.option.right {
+  background: #e8f2ee;
+  border-color: var(--jade);
+  color: var(--jade-deep);
+  font-weight: 700;
+}
+
+.option.wrong {
+  background: #fbeceb;
+  border-color: #c0503c;
+  color: #c0503c;
+}
+
+.hint {
+  margin: 8rpx 40rpx 0;
+  font-size: 23rpx;
+  line-height: 1.6;
+  color: var(--ink-3);
+  text-align: center;
+}
+
+/* ---------- 结果 ---------- */
+
+.result {
+  padding: 70rpx 48rpx 30rpx;
+  text-align: center;
+}
+
+.result-label {
+  font-size: 25rpx;
+  color: var(--ink-3);
+}
+
+.result-num {
+  margin-top: 10rpx;
+  font-size: 108rpx;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--jade-deep);
+}
+
+.result-unit {
+  font-size: 26rpx;
+  color: var(--ink-3);
+}
+
+.result-verdict {
+  margin-top: 24rpx;
+  font-size: 28rpx;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.result-note {
+  margin-top: 14rpx;
+  font-size: 23rpx;
+  line-height: 1.6;
+  color: var(--ink-3);
+}
+
+.detail {
+  margin: 20rpx 40rpx 32rpx;
+  padding: 24rpx 28rpx;
+  border-radius: 24rpx;
+  background: #ffffff;
+  border: 2rpx solid rgba(233, 223, 205, 0.8);
+}
+
+.detail-title {
+  margin-bottom: 14rpx;
+  font-size: 25rpx;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.detail-row {
+  display: flex;
+  align-items: center;
+  padding: 12rpx 0;
+  border-bottom: 2rpx solid rgba(233, 223, 205, 0.5);
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-name {
+  flex: 1;
+  font-size: 25rpx;
+  color: var(--ink-2);
+}
+
+.detail-score {
+  width: 130rpx;
+  text-align: right;
+  font-size: 25rpx;
+  color: var(--ink);
+}
+
+.detail-contrib {
+  width: 110rpx;
+  text-align: right;
+  font-size: 24rpx;
+  color: var(--jade-deep);
+}
+
+.detail-contrib.mute {
+  color: var(--ink-3);
+}
+
+/* 两个按钮叠在底栏里时要留间距 */
+.foot-btn-second {
+  margin-top: 16rpx;
+}

@@ -9,6 +9,7 @@
     "pages/profile/profile",
     "pages/copybook/copybook",
     "pages/wrong/wrong",
+    "pages/vocab/vocab",
     "pages/about/about"
   ],
   "subpackages": [
