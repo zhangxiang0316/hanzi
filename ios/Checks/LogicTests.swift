@@ -1134,6 +1134,104 @@ final class LogicTests: XCTestCase {
         ])
     }
 
+    // MARK: - 形近字
+
+    /// 形近字与同音字互补：同音字考「音一样，写哪个」（袋/带），
+    /// 形近字考「长得像，别混」（未/末、天/夫）。
+    /// 表由 `scripts/build-similar.mjs` 用笔顺数据算出，不是人工标注的。
+    @MainActor
+    func testSimilarCharsCoverTypicalConfusions() {
+        let repo = TestRepo.make()
+        let mustHave: [(String, String)] = [
+            ("日", "目"), ("天", "夫"), ("木", "术"), ("大", "太"),
+            ("未", "末"), ("己", "已"), ("土", "士"), ("鸟", "乌"),
+            ("人", "入"), ("木", "本"), ("牛", "午"), ("白", "自"),
+        ]
+        for (a, b) in mustHave {
+            XCTAssertTrue(repo.similarChars(a).contains(b),
+                          "\(a) 的形近字里应该有 \(b)，实际是 \(repo.similarChars(a).joined())")
+            // 关系必须对称
+            XCTAssertTrue(repo.similarChars(b).contains(a),
+                          "\(b) 的形近字里应该有 \(a)")
+        }
+    }
+
+    /// 候选对必须笔画数相同或差 1——差两笔以上的字，孩子数一遍就能分开
+    @MainActor
+    func testSimilarCharsStayWithinOneStroke() {
+        let repo = TestRepo.make()
+        for ch in repo.allSimilarChars().prefix(400) {
+            guard let sc = repo.meta(ch)?.s else { continue }
+            for other in repo.similarChars(ch) {
+                guard let so = repo.meta(other)?.s else { continue }
+                XCTAssertLessThanOrEqual(abs(so - sc), 1,
+                                         "\(ch)(\(sc)画) 与 \(other)(\(so)画) 笔画数差太多")
+            }
+        }
+    }
+
+    @MainActor
+    func testSimilarCharsExcludeSelf() {
+        let repo = TestRepo.make()
+        for ch in repo.allSimilarChars() {
+            XCTAssertFalse(repo.similarChars(ch).contains(ch), "\(ch) 的形近字里出现了自己")
+        }
+    }
+
+    /// 覆盖率是生成算法参数的直接后果，改动脚本时会变——
+    /// 变了就要重新看样本质量，所以锁死
+    @MainActor
+    func testSimilarCharScale() {
+        let repo = TestRepo.make()
+        XCTAssertEqual(repo.allSimilarChars().count, 2569)
+        for ch in repo.allSimilarChars() {
+            XCTAssertLessThanOrEqual(repo.similarChars(ch).count, 5)
+        }
+        // 一到二年级四册都要有足够的题源，否则练习入口常年是灰的
+        for b in ["1a", "1b", "2a", "2b"] {
+            let n = repo.bookSimilarChars(b).count
+            XCTAssertGreaterThanOrEqual(n, 60, "\(b) 只有 \(n) 个形近字")
+        }
+    }
+
+    /// 干扰项必须真的是形近字，否则孩子扫一眼就能排除，练不到辨析
+    @MainActor
+    func testSimilarQuizOptionsAreSimilar() {
+        let repo = TestRepo.make()
+        let r = Quiz.build(chars: ["天", "大", "本", "术", "日", "目"], book: "1a",
+                           lesson: nil, count: 6, seed: 20240101, types: ["similar"])
+        XCTAssertGreaterThanOrEqual(r.questions.count, 4)
+        for q in r.questions {
+            XCTAssertEqual(q.type, "similar")
+            XCTAssertEqual(q.options.count, 4)
+            XCTAssertTrue(q.options.contains { $0.value == q.answer })
+            for o in q.options where o.value != q.answer {
+                XCTAssertTrue(repo.similarChars(q.ch).contains(o.value),
+                              "\(o.value) 不是 \(q.ch) 的形近字")
+            }
+        }
+    }
+
+    /// 形近字的跨端黄金值：同一 seed、同一批字，三端必须出同一套题。
+    /// 期望值由小程序 `utils/quiz.js` 算出。
+    @MainActor
+    func testSimilarQuizMatchesCrossPlatformGolden() {
+        let repo = TestRepo.make()
+        let chars = Array(repo.bookSimilarChars("2a").prefix(5))
+        let r = Quiz.build(chars: chars, book: "2a", lesson: nil,
+                           count: 5, seed: 20240101, types: ["similar"])
+        let got = r.questions.map { q in
+            "\(q.ch)|\(q.prompt)|\(q.options.map(\.value).joined())"
+        }
+        XCTAssertEqual(got, [
+            "塘|水＿|填塘塔搭",
+            "脑|呆头呆＿|掘脑柱恼",
+            "袋|＿子|紫柴袋装",
+            "灰|＿白|东灰发灵",
+            "哇|好＿|佳桂咕哇",
+        ])
+    }
+
     /// 多音字的跨端黄金值：同一 seed、同一批字，三端必须出同一套题。
     /// 期望值由小程序 `utils/quiz.js` 算出。
     func testPolyphoneMatchesCrossPlatformGolden() {

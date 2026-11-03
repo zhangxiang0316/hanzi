@@ -38,6 +38,8 @@ android/keystore/release.*
 # 另外两个目录被一起提交进了历史。
 ios/.build*/
 ios/DerivedData/
+# 在仓库根跑 swift/xcodebuild 时会在这里生成（曾误提交过）
+/.build/
 
 # JetBrains / 编辑器
 .idea/

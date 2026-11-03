@@ -224,6 +224,18 @@ enum Plan {
                 mode: "homophone", title: title ?? (bookName + " · 同音字"),
                 book: bookId, chars: picked, count: min(10, max(4, picked.count))
             )
+        case "similar":
+            // 形近字：只从本册里挑「有形近字」的字。本册不足 4 个就从全部补，
+            // 否则一二年级早期册次会组不出一套题
+            var pool = Repo.shared.bookSimilarChars(bookId)
+            if pool.count < 4 { pool = Repo.shared.allSimilarChars() }
+            let rand = Quiz.mulberry32(UInt32(truncatingIfNeeded: Int(Date().timeIntervalSince1970 * 1000)))
+            let picked = Array(Quiz.shuffle(pool, rand).prefix(min(12, pool.count)))
+            let bookName = Repo.shared.book(bookId)?.name ?? ""
+            return Session(
+                mode: "similar", title: title ?? (bookName + " · 形近字"),
+                book: bookId, chars: picked, count: min(10, max(4, picked.count))
+            )
         case "radical":
             // 部首：排除「部首就是自己」的独体字，否则答案是题干
             var pool = Repo.shared.bookChars(bookId).filter {

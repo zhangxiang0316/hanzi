@@ -42,6 +42,7 @@ Page({
           types: session.mode === 'polyphone' ? ['polyphone']
             : session.mode === 'homophone' ? ['homophone']
             : session.mode === 'radical' ? ['radical']
+            : session.mode === 'similar' ? ['similar']
             : undefined,
         });
     this.questions = built.questions;

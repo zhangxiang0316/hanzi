@@ -227,6 +227,54 @@ object Quiz {
     }
 
     /**
+     * 形近字填空：给一个词，挖掉其中一个字，选项**全部是形近字**。
+     *
+     * 与同音字是一对：同音字考「音一样，写哪个」；形近字考「长得像，别混」。
+     * 这两个是低年级错字的两个主因——「袋/带」是音，「未/末」是形。
+     *
+     * 干扰项必须真的形近（来自算出来的形近字表），凑不够 3 个就不出这道题：
+     * 混进形状无关的字，孩子扫一眼就能排除，练不到辨析。
+     */
+    private fun similarQ(
+        ch: String,
+        lessonId: String?,
+        pool: List<String>,
+        rand: () -> Double
+    ): Question? {
+        val m = Repo.meta(ch) ?: return null
+        if (m.words.isEmpty()) return null
+        // 传册次不是课次，和同音字同理：课次会让「同册优先」静默失效
+        val ds = Repo.similarDistractors(ch, m.book, 3)
+        if (ds.size < 3) return null
+
+        val cands = m.words.filter { it.word.contains(ch) }
+        if (cands.isEmpty()) return null
+        val word = cands[(rand() * cands.size).toInt().coerceIn(0, cands.size - 1)]
+        val masked = word.word.replace(ch, "＿")
+
+        val raw = ArrayList<Option>()
+        raw.add(Option(ch, ch))
+        ds.forEach { raw.add(Option(it, it)) }
+        val options = uniqueOptions(shuffle(raw, rand))
+        if (options.size != 4) return null
+
+        return Question(
+            type = "similar",
+            ch = ch,
+            lesson = lessonId,
+            title = "形近字填空",
+            prompt = masked,
+            promptKind = "word",
+            sub = "这几个字长得像，别写混了",
+            options = options,
+            answer = ch,
+            explain = "「${word.word}」写「$ch」；${ds.joinToString("、")} 和它长得像，但笔画不一样。",
+            index = 0,
+            total = 0
+        )
+    }
+
+    /**
      * 部首：给一个字，选出它的部首。
      *
      * 部首查字法是二年级语文园地的正式内容。与「数笔画」是一对——
@@ -398,6 +446,7 @@ object Quiz {
             "strokeCount" -> strokeCountQ(ch, lessonId, pool, rand)
             "homophone" -> homophoneQ(ch, lessonId, pool, rand)
             "radical" -> radicalQ(ch, lessonId, pool, rand)
+            "similar" -> similarQ(ch, lessonId, pool, rand)
             "char2word" -> charToWord(ch, lessonId, pool, rand)
             "polyphone" -> polyphone(ch, lessonId, pool, rand)
             else -> null

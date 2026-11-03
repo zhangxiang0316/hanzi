@@ -17,6 +17,7 @@ Page({
     wordCount: 0,
     homoCount: 0,
     radicalCount: 0,
+    similarCount: 0,
     heroChar: '字',
     books: [],
     bookName: '',
@@ -64,6 +65,7 @@ Page({
       wordCount: words.bookWordCount(book ? book.id : catalog.defaultBook()),
       homoCount: catalog.homophoneChars(book ? book.id : catalog.defaultBook()).length,
       radicalCount: catalog.bookRadicals(book ? book.id : catalog.defaultBook()).length,
+      similarCount: catalog.bookSimilarChars(book ? book.id : catalog.defaultBook()).length,
       heroChar: due.length ? due[0] : writeChar,
       books,
       bookName: book ? book.name : '',
@@ -102,6 +104,17 @@ Page({
     const app = getApp();
     app.globalData.session = sessionUtil.buildSession('radical', {});
     wx.navigateTo({ url: '/pages/quiz/quiz?mode=radical' });
+  },
+
+  /** 形近字：长得像的字别写混（未/末、天/夫） */
+  onSimilar() {
+    if (!this.data.similarCount) {
+      wx.showToast({ title: '这一册没有形近字', icon: 'none' });
+      return;
+    }
+    const app = getApp();
+    app.globalData.session = sessionUtil.buildSession('similar', {});
+    wx.navigateTo({ url: '/pages/quiz/quiz?mode=similar' });
   },
 
   /** 同音字：一个音有好几个字，练「写哪个」 */

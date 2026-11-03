@@ -85,6 +85,20 @@ struct PracticePageView: View {
                                                           book: app.currentBook, lesson: nil))
                         }
 
+                        // 形近字：长得像的字别写混（未/末、天/夫）。
+                        // 和同音字正好互补——那个考「音一样写哪个」，这个考「长得像别混」。
+                        let simCount = app.repo.bookSimilarChars(app.currentBook).count
+                        modeCard(
+                            emoji: "🪞", title: "形近字",
+                            desc: simCount > 0
+                                ? "本册 \(simCount) 个字长得像，练分清"
+                                : "这一册没有形近字",
+                            color: Palette.clay, enabled: simCount > 0
+                        ) {
+                            app.push(AppState.QuizPayload(mode: "similar",
+                                                          book: app.currentBook, lesson: nil))
+                        }
+
                         // 看拼音选词语：题源是课本词语表，不是生字表。
                         // 孩子要读的是整个词，光认单字读不出来也白搭。
                         let wordCount = app.repo.bookWordCount(app.currentBook)

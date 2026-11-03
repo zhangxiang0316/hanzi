@@ -208,6 +208,19 @@ fun PracticePage(app: AppState) {
             if (homoCount > 0) app.nav.push(Screen.Quiz("homophone", app.currentBook, null))
         }
 
+        // 形近字：长得像的字别写混（未/末、天/夫）。
+        // 和同音字正好互补——那个考「音一样写哪个」，这个考「长得像别混」
+        val simCount = Repo.bookSimilarChars(app.currentBook).size
+        ActionCard(
+            emoji = "🪞",
+            title = "形近字",
+            desc = if (simCount > 0) "本册 $simCount 个字长得像，练分清" else "这一册没有形近字",
+            badge = 0,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            if (simCount > 0) app.nav.push(Screen.Quiz("similar", app.currentBook, null))
+        }
+
         // 看拼音选词语：题源是课本词语表，不是生字表。
         // 孩子要读的是整个词，光认单字读不出来也白搭。
         val wordCount = Words.bookWordCount(app.currentBook)

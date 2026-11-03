@@ -48,6 +48,8 @@ final class Repo {
     /// 保持 meta.json 的原始顺序（按教材出现顺序），用于「全部字」列表
     private(set) var charOrder: [String] = []
     private var rawStrokes: [String: String] = [:]
+    /// 形近字表（自动生成，见 scripts/build-similar.mjs）
+    private var similarMap: [String: [String]] = [:]
 
     private var bookCharsCache: [String: [String]] = [:]
     /// 课文词语表缓存（见 Logic/Words.swift）
@@ -102,6 +104,14 @@ final class Repo {
         if let data = try? Data(contentsOf: strokesURL),
            let map = try? decoder.decode([String: String].self, from: data) {
             rawStrokes = map
+        }
+
+        // 形近字表是可选资源：缺了只是没有这个练习入口，
+        // 其余功能不受影响，所以不进上面的 guard
+        if let similarURL = url("similar", from: source),
+           let data = try? Data(contentsOf: similarURL),
+           let map = try? decoder.decode([String: [String]].self, from: data) {
+            similarMap = map
         }
     }
 
@@ -296,6 +306,61 @@ final class Repo {
             return (a.ch.unicodeScalars.first?.value ?? 0) < (b.ch.unicodeScalars.first?.value ?? 0)
         }
         return sorted.prefix(count).map(\.ch)
+    }
+
+    // MARK: - 形近字
+
+    /// 形近字是低年级另一个主要混淆来源（未/末、天/夫、日/目、人/入），
+    /// 和同音字正好互补：一个是「音一样写哪个」，一个是「长得像别混」。
+    ///
+    /// 表不是抄的，是用笔顺数据算出来的——见 `scripts/build-similar.mjs`。
+    /// 算法要两条指标同时满足才算形近：笔画几何距离（中线重采样后贪心匹配）
+    /// 和像素相关系数。单独用任何一条都不行：只用笔画会放进「人→久九儿」，
+    /// 只用像素则分不开「天/夫」和随机字对。
+
+    /// 这个字的形近字（生成时按距离升序，已按码点做最终 tiebreak）
+    func similarChars(_ ch: String) -> [String] {
+        similarMap[ch] ?? []
+    }
+
+    /// 这个字有没有形近字
+    func hasSimilar(_ ch: String) -> Bool {
+        !similarChars(ch).isEmpty
+    }
+
+    /// 形近字题的干扰项。
+    ///
+    /// 优先取**本册**的形近字：跨册会把三年级的字塞给一年级孩子，
+    /// 那就不是在练辨析，是在考认字量。排序三级——同册优先 → 原表顺序
+    /// （距离近的在前）→ 码点。第三级不能省：Swift 的 sort 不保证稳定，
+    /// 三端并列顺序不一致就会让同一个 seed 出不同的题。
+    func similarDistractors(_ ch: String, book: String?, count: Int) -> [String] {
+        let bookId = book ?? (metaMap[ch]?.b ?? defaultBook())
+        var inBook = Set<String>()
+        for c in bookChars(bookId) { inBook.insert(c) }
+        let list = similarChars(ch)
+        var order: [String: Int] = [:]
+        for (i, c) in list.enumerated() { order[c] = i }
+        let sorted = list.sorted { a, b in
+            let ba = inBook.contains(a) ? 0 : 1
+            let bb = inBook.contains(b) ? 0 : 1
+            if ba != bb { return ba < bb }
+            let oa = order[a] ?? 0
+            let ob = order[b] ?? 0
+            if oa != ob { return oa < ob }
+            return (a.unicodeScalars.first?.value ?? 0) < (b.unicodeScalars.first?.value ?? 0)
+        }
+        return Array(sorted.prefix(count))
+    }
+
+    /// 某一册里所有有形近字的字（按教材顺序）
+    func bookSimilarChars(_ bookId: String) -> [String] {
+        bookChars(bookId).filter { hasSimilar($0) }
+    }
+
+    /// 全部册次里所有有形近字的字
+    func allSimilarChars() -> [String] {
+        charOrder.filter { hasSimilar($0) }
     }
 
     // MARK: - 部首

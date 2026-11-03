@@ -25,6 +25,9 @@ object Repo {
     private val decodeCache = HashMap<String, StrokeCodec.CharStrokes>()
     private val bookCharsCache = HashMap<String, List<String>>()
 
+    /** 形近字表（自动生成，见 scripts/build-similar.mjs） */
+    private var similarMap: HashMap<String, List<String>> = HashMap()
+
     /** 全部汉字（按构建时的顺序，用于组词 / 干扰项取样） */
     var allChars: List<String> = emptyList()
         private set
@@ -35,23 +38,57 @@ object Repo {
         if (loaded) return
         synchronized(this) {
             if (loaded) return
+            // 形近字表是可选资源：缺了只是没有这个练习入口，
+            // 其余功能不受影响
+            val similar = runCatching { readAsset(context, "data/similar.json") }.getOrNull()
             parse(
                 readAsset(context, "data/catalog.json"),
                 readAsset(context, "data/meta.json"),
-                readAsset(context, "data/strokes.json")
+                readAsset(context, "data/strokes.json"),
+                similar
             )
         }
     }
 
     /** 供测试直接注入 JSON 文本，不依赖 Android Context */
-    fun loadFromStrings(catalogJson: String, metaJson: String, strokesJson: String) {
+    fun loadFromStrings(
+        catalogJson: String,
+        metaJson: String,
+        strokesJson: String,
+        similarJson: String? = null
+    ) {
         synchronized(this) {
-            if (loaded) return
-            parse(catalogJson, metaJson, strokesJson)
+            if (loaded) {
+                // 形近字表是后来才加的可选资源。Repo 是单例，如果第一个测试
+                // 用三参数版本加载过，后面的调用会被 `loaded` 守卫挡住，
+                // similarMap 永远是空的——单独跑这个测试类时通过，
+                // 整套跑就全挂。这里补一次，且只在还没加载时补。
+                if (similarJson != null && similarMap.isEmpty()) {
+                    similarMap = parseSimilar(similarJson)
+                }
+                return
+            }
+            parse(catalogJson, metaJson, strokesJson, similarJson)
         }
     }
 
-    private fun parse(catalogJson: String, metaJson: String, strokesJson: String) {
+    private fun parseSimilar(json: String): HashMap<String, List<String>> {
+        val obj = JSONObject(json)
+        val mm = HashMap<String, List<String>>(obj.length())
+        val keys = obj.keys()
+        while (keys.hasNext()) {
+            val ch = keys.next()
+            mm[ch] = obj.getJSONArray(ch).toStringList()
+        }
+        return mm
+    }
+
+    private fun parse(
+        catalogJson: String,
+        metaJson: String,
+        strokesJson: String,
+        similarJson: String? = null
+    ) {
         val catalog = JSONObject(catalogJson)
 
         val bookArr = catalog.getJSONArray("books")
@@ -161,6 +198,8 @@ object Repo {
             sm[ch] = strokesObj.getString(ch)
         }
         rawStrokes = sm
+
+        if (similarJson != null) similarMap = parseSimilar(similarJson)
 
         loaded = true
     }
@@ -355,6 +394,53 @@ object Repo {
             .thenBy { it.first.codePointAt(0) })
         return sorted.take(count).map { it.first }
     }
+
+    // MARK: - 形近字
+
+    /**
+     * 形近字是低年级另一个主要混淆来源（未/末、天/夫、日/目、人/入），
+     * 和同音字正好互补：一个是「音一样写哪个」，一个是「长得像别混」。
+     *
+     * 表不是抄的，是用笔顺数据算出来的——见 `scripts/build-similar.mjs`。
+     * 算法要两条指标同时满足才算形近：笔画几何距离（中线重采样后贪心匹配）
+     * 和像素相关系数。单独用任何一条都不行：只用笔画会放进「人→久九儿」，
+     * 只用像素则分不开「天/夫」和随机字对。
+     */
+
+    /** 这个字的形近字（生成时按距离升序，已按码点做最终 tiebreak） */
+    fun similarChars(ch: String): List<String> = similarMap[ch] ?: emptyList()
+
+    /** 这个字有没有形近字 */
+    fun hasSimilar(ch: String): Boolean = similarChars(ch).isNotEmpty()
+
+    /**
+     * 形近字题的干扰项。
+     *
+     * 优先取**本册**的形近字：跨册会把三年级的字塞给一年级孩子，
+     * 那就不是在练辨析，是在考认字量。排序三级——同册优先 → 原表顺序
+     * （距离近的在前）→ 码点。第三级不能省，否则三端并列顺序不一致，
+     * 同一个 seed 会出不同的题。
+     */
+    fun similarDistractors(ch: String, book: String?, count: Int): List<String> {
+        val m = metaMap[ch] ?: return emptyList()
+        val bookId = book ?: m.book
+        val inBook = bookChars(bookId).toHashSet()
+        val list = similarChars(ch)
+        val order = HashMap<String, Int>(list.size)
+        list.forEachIndexed { i, c -> order[c] = i }
+        return list.sortedWith(
+            compareBy<String> { if (inBook.contains(it)) 0 else 1 }
+                .thenBy { order[it] ?: 0 }
+                .thenBy { it.codePointAt(0) }
+        ).take(count)
+    }
+
+    /** 某一册里所有有形近字的字（按教材顺序） */
+    fun bookSimilarChars(book: String): List<String> =
+        bookChars(book).filter { hasSimilar(it) }
+
+    /** 全部册次里所有有形近字的字 */
+    fun allSimilarChars(): List<String> = allChars.filter { hasSimilar(it) }
 
     // MARK: - 部首
 

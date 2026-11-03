@@ -81,6 +81,21 @@ function buildSession(mode, opts) {
       count: Math.min(10, Math.max(4, picked.length)),
     };
   }
+  if (mode === 'similar') {
+    // 形近字：只从本册里挑「有形近字」的字。
+    // 本册不足 4 个就从全部补，否则一二年级早期册次会组不出一套题
+    const book = o.book || catalog.defaultBook();
+    let pool = catalog.bookSimilarChars(book);
+    if (pool.length < 4) pool = catalog.allSimilarChars();
+    const picked = sample(pool, Math.min(12, pool.length));
+    return {
+      mode: 'similar',
+      title: o.title || catalog.getBook(book).name + ' · 形近字',
+      book,
+      chars: picked,
+      count: Math.min(10, Math.max(4, picked.length)),
+    };
+  }
   if (mode === 'radical') {
     // 部首：只挑「部首不是自己」的字（独体字答案就在题干里，等于送分）
     const book = o.book || catalog.defaultBook();

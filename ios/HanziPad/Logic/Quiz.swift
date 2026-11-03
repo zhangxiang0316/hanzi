@@ -207,6 +207,40 @@ enum Quiz {
         )
     }
 
+    /// 形近字：给出一个词语，选对的那个字。
+    ///
+    /// 和同音字是一对：同音字考「音一样，写哪个」；形近字考「长得像，别混」。
+    /// 这两个是低年级错字的两个主因——「袋/带」是音，「未/末」是形。
+    ///
+    /// 干扰项必须真的形近（来自算出来的形近字表），凑不够 3 个就不出这道题：
+    /// 混进形状无关的字，孩子扫一眼就能排除，练不到辨析。
+    private static func similarQ(
+        _ ch: String, _ lessonId: String?, _ pool: [String], _ rand: () -> Double
+    ) -> Question? {
+        guard let m = Repo.shared.meta(ch), !m.words.isEmpty else { return nil }
+        // 传册次不是课次，和同音字同理：课次会让「同册优先」静默失效
+        let ds = Repo.shared.similarDistractors(ch, book: m.b, count: 3)
+        if ds.count < 3 { return nil }
+
+        let cands = m.words.filter { $0.word.contains(ch) }
+        if cands.isEmpty { return nil }
+        let idx = min(max(Int(rand() * Double(cands.count)), 0), cands.count - 1)
+        let word = cands[idx]
+        let masked = word.word.replacingOccurrences(of: ch, with: "＿")
+
+        let options = uniqueOptions(
+            shuffle([Option(value: ch, label: ch)] + ds.map { Option(value: $0, label: $0) }, rand))
+        if options.count < 4 { return nil }
+        return Question(
+            type: "similar", ch: ch, lesson: lessonId,
+            title: "形近字填空", prompt: masked, promptKind: "word",
+            sub: "这几个字长得像，别写混了",
+            options: options, answer: ch,
+            explain: "「\(word.word)」写「\(ch)」；\(ds.joined(separator: "、")) 和它长得像，但笔画不一样。",
+            index: 0, total: 0
+        )
+    }
+
     /// 部首：给一个字，选出它的部首。
     ///
     /// 部首查字法是二年级语文园地的正式内容。与「数笔画」是一对——
@@ -365,6 +399,7 @@ enum Quiz {
         case "strokeCount": return strokeCountQ(ch, lessonId, pool, rand)
         case "homophone": return homophoneQ(ch, lessonId, pool, rand)
         case "radical": return radicalQ(ch, lessonId, pool, rand)
+        case "similar": return similarQ(ch, lessonId, pool, rand)
         case "char2word": return charToWord(ch, lessonId, pool, rand)
         case "polyphone": return polyphone(ch, lessonId, pool, rand)
         default: return nil

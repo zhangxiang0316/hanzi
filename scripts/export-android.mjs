@@ -9,6 +9,7 @@
  *   catalog.json   册次 / 单元 / 课 / 每课生字
  *   meta.json      字 → 拼音、部首、笔画数、组词、出处
  *   strokes.json   字 → 笔顺 base64（合并所有册，一次读入）
+ *   similar.json   字 → 形近字表（自动生成的，见 build-similar.mjs）
  *
  * 为什么合并 strokes：小程序的三个分包是为了绕开 2MB 上限，Android 没有这个
  * 限制，assets 里可以放 4MB+ 的单文件，合并后省掉「按册懒加载」的一套逻辑。
@@ -27,6 +28,7 @@ const OUT = path.join(ROOT, 'android/app/src/main/assets/data');
 const catalog = require(path.join(MP, 'data/catalog.js'));
 const meta = require(path.join(MP, 'data/meta.js'));
 const routes = require(path.join(MP, 'utils/routes.js'));
+const similar = require(path.join(MP, 'data/similar.js'));
 
 const BOOK_IDS = catalog.books.map((b) => b.id);
 
@@ -71,6 +73,7 @@ function main() {
     'catalog.json': writeJson('catalog.json', catalog),
     'meta.json': writeJson('meta.json', meta),
     'strokes.json': writeJson('strokes.json', merged),
+    'similar.json': writeJson('similar.json', similar),
   };
 
   const kb = (n) => `${(n / 1024).toFixed(1)} KB`;

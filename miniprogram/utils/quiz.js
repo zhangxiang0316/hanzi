@@ -242,6 +242,46 @@ function radical(ch, lessonId, pool, rand) {
   };
 }
 
+/**
+ * 形近字：给出一个词语，选对的那个字。
+ *
+ * 和同音字是一对：同音字考「音一样，写哪个」；形近字考「长得像，别混」。
+ * 这两个是低年级错字的两个主因——「袋/带」是音，「未/末」是形。
+ *
+ * 干扰项必须真的形近（来自算出来的形近字表），凑不够 3 个就不出这道题：
+ * 混进形状无关的字，孩子扫一眼就能排除，练不到辨析。
+ */
+function similar(ch, lessonId, pool, rand) {
+  const m = catalog.getMeta(ch);
+  if (!m || !m.w || !m.w.length) return null;
+  // 传册次不是课次，和同音字同理：课次会让「同册优先」静默失效
+  const ds = catalog.similarDistractors(ch, m.b, 3);
+  if (ds.length < 3) return null;
+
+  const cands = m.w.filter((w) => w && w.w && w.w.indexOf(ch) >= 0);
+  if (!cands.length) return null;
+  const word = cands[Math.floor(rand() * cands.length)];
+  const masked = word.w.replace(ch, '＿');
+
+  const options = uniqueOptions(
+    shuffle([option(ch, ch)].concat(ds.map((c) => option(c, c))), rand)
+  );
+  if (options.length < 4) return null;
+  return {
+    type: 'similar',
+    ch,
+    lesson: lessonId,
+    title: '形近字填空',
+    prompt: masked,
+    promptKind: 'word',
+    sub: '这几个字长得像，别写混了',
+    options,
+    answer: ch,
+    explain: '「' + word.w + '」写「' + ch + '」；' + ds.join('、') +
+      ' 和它长得像，但笔画不一样。',
+  };
+}
+
 function strokeCount(ch, lessonId, pool, rand) {
   const m = catalog.getMeta(ch);
   if (!m) return null;
@@ -309,6 +349,7 @@ const MAKERS = {
   polyphone,
   homophone,
   radical,
+  similar,
 };
 
 /**

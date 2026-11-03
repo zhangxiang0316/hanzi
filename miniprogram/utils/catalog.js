@@ -405,6 +405,65 @@ function radicalDistractors(radical, bookId, count) {
   return pool.slice(0, count);
 }
 
+// MARK: - 形近字
+
+/**
+ * 形近字是低年级另一个主要混淆来源（未/末、天/夫、日/目、人/入），
+ * 和同音字正好互补：一个是「音一样写哪个」，一个是「长得像别混」。
+ *
+ * 表不是抄的，是用笔顺数据算出来的——见 `scripts/build-similar.mjs`。
+ * 算法要两条指标同时满足才算形近：笔画几何距离（中线重采样后贪心匹配）
+ * 和像素相关系数。单独用任何一条都不行：只用笔画会放进「人→久九儿」，
+ * 只用像素则分不开「天/夫」和随机字对。
+ */
+const similarTable = require('../data/similar.js');
+
+/** 这个字的形近字（按生成时的距离升序，已按码点做最终 tiebreak） */
+function similarChars(ch) {
+  const list = similarTable[ch];
+  return list ? list.slice() : [];
+}
+
+/** 这个字有没有形近字 */
+function hasSimilar(ch) {
+  return similarChars(ch).length > 0;
+}
+
+/**
+ * 形近字题的干扰项。
+ *
+ * 优先取**本册**的形近字：跨册会把三年级的字塞给一年级孩子，
+ * 那就不是在练辨析，是在考认字量。本册不够就用全库补。
+ * 排序三级——同册优先 → 原表顺序（距离近的在前）→ 码点，
+ * 第三级不能省，否则三端并列顺序不一致，同一个 seed 会出不同的题。
+ */
+function similarDistractors(ch, bookId, count) {
+  const inBook = {};
+  bookChars(bookId || (meta[ch] && meta[ch].b)).forEach((c) => { inBook[c] = true; });
+  const list = similarChars(ch);
+  const order = {};
+  list.forEach((c, i) => { order[c] = i; });
+  const pool = list.slice();
+  pool.sort((a, b) => {
+    const ba = inBook[a] ? 0 : 1;
+    const bb = inBook[b] ? 0 : 1;
+    if (ba !== bb) return ba - bb;
+    if (order[a] !== order[b]) return order[a] - order[b];
+    return a.codePointAt(0) - b.codePointAt(0);
+  });
+  return pool.slice(0, count);
+}
+
+/** 某一册里所有有形近字的字（按教材顺序） */
+function bookSimilarChars(bookId) {
+  return bookChars(bookId).filter((c) => hasSimilar(c));
+}
+
+/** 全部册次里所有有形近字的字 */
+function allSimilarChars() {
+  return getAllChars().filter((c) => hasSimilar(c));
+}
+
 /** 在本课内的下一个 / 上一个字（用于详情页翻页）。 */
 function nextInLesson(lessonId, ch) {
   const list = lessonChars(lessonId);
@@ -470,6 +529,11 @@ module.exports = {
   homophoneChars,
   allHomophoneGroups,
   homophoneDistractors,
+  similarChars,
+  hasSimilar,
+  similarDistractors,
+  bookSimilarChars,
+  allSimilarChars,
   radicalOf,
   allRadicals,
   bookRadicals,

@@ -74,6 +74,15 @@
     <view class="poly-arrow">→</view>
   </view>
 
+  <view class="poly-card tap {{similarCount ? '' : 'is-off'}}" bindtap="onSimilar">
+    <view class="poly-icon">🪞</view>
+    <view class="poly-body">
+      <view class="card-title">形近字</view>
+      <view class="card-desc">{{similarCount ? '本册 ' + similarCount + ' 个字长得像，练分清' : '这一册没有形近字'}}</view>
+    </view>
+    <view class="poly-arrow">→</view>
+  </view>
+
   <view class="poly-card tap" bindtap="onWords">
     <view class="poly-icon">📖</view>
     <view class="poly-body">

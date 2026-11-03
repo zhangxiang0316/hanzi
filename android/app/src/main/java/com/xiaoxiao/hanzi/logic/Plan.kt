@@ -206,6 +206,18 @@ object Plan {
                     book, picked, minOf(10, maxOf(4, picked.size))
                 )
             }
+            "similar" -> {
+                // 形近字：只从本册里挑「有形近字」的字。本册不足 4 个就从全部补，
+                // 否则一二年级早期册次会组不出一套题
+                var pool = Repo.bookSimilarChars(book)
+                if (pool.size < 4) pool = Repo.allSimilarChars()
+                val picked = Quiz.shuffle(pool, Quiz.mulberry32(System.currentTimeMillis().toInt()))
+                    .take(minOf(12, pool.size))
+                Session(
+                    "similar", title ?: "${Repo.book(book)?.name} · 形近字",
+                    book, picked, minOf(10, maxOf(4, picked.size))
+                )
+            }
             "radical" -> {
                 // 部首：排除「部首就是自己」的独体字，否则答案是题干
                 var pool = Repo.bookChars(book).filter {
