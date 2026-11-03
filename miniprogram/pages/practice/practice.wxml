@@ -56,6 +56,15 @@
     <view class="poly-arrow">→</view>
   </view>
 
+  <view class="poly-card tap {{homoCount ? '' : 'is-off'}}" bindtap="onHomophone">
+    <view class="poly-icon">🔤</view>
+    <view class="poly-body">
+      <view class="card-title">同音字</view>
+      <view class="card-desc">{{homoCount ? '本册 ' + homoCount + ' 个字有同音伙伴，练写对' : '这一册没有同音字组'}}</view>
+    </view>
+    <view class="poly-arrow">→</view>
+  </view>
+
   <view class="poly-card tap" bindtap="onWords">
     <view class="poly-icon">📖</view>
     <view class="poly-body">

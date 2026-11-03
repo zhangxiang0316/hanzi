@@ -273,6 +273,89 @@ object Repo {
     /** 全部多音字 */
     fun allPolyphones(): List<String> = allChars.filter { isPolyphone(it) }
 
+    // MARK: - 同音字
+
+    /**
+     * 同音字：读音完全相同（含声调）的一组字。
+     *
+     * 这份关系不用新数据——`CharMeta.py` 里就有完整拼音，按它分组即可。
+     * 全库 588 组、2163 个字；一到四年级就有 383 组。
+     *
+     * 为什么值得单独做：同音字是听写最主要的错因。「地弟第递」「坐作做座」
+     * 读音一样、字形不同，孩子记住音不等于会写。多音字练「一个字读哪个音」，
+     * 同音字练「这个音写哪个字」——是同一个问题的两个方向。
+     */
+    fun homophones(ch: String): List<String> {
+        val m = metaMap[ch] ?: return emptyList()
+        if (m.py.isEmpty()) return emptyList()
+        // 按 Unicode 码点排序，不依赖 allChars 的顺序：
+        // 三端的数据来源顺序不同，不显式排序的话笔画数相同时干扰项的
+        // 并列顺序会不一致——同一个 seed 会出不同的题。
+        // 这条是跨端黄金值测试抓出来的。
+        return allChars.filter { it != ch && metaMap[it]?.py == m.py }
+            .sortedBy { it.codePointAt(0) }
+    }
+
+    /** 这个字有没有同音字（没有的话同音字题型无从出题） */
+    fun hasHomophones(ch: String): Boolean = homophones(ch).isNotEmpty()
+
+    /**
+     * 某一册里的同音字组合（每组 ≥2 个字，组内按教材顺序）。
+     *
+     * 只用本册的字组队：跨册组队会让二年级孩子遇到三年级的字，
+     * 那就不是在练同音字，是在考认字量。
+     */
+    fun homophoneGroups(book: String): List<Pair<String, List<String>>> {
+        val order = ArrayList<String>()
+        val byPy = HashMap<String, MutableList<String>>()
+        for (ch in bookChars(book)) {
+            val py = metaMap[ch]?.py ?: continue
+            if (py.isEmpty()) continue
+            if (byPy[py] == null) {
+                byPy[py] = ArrayList()
+                order.add(py)
+            }
+            byPy[py]!!.add(ch)
+        }
+        val out = ArrayList<Pair<String, List<String>>>()
+        for (py in order) {
+            val list = byPy[py]!!
+            if (list.size >= 2) out.add(py to list)
+        }
+        // 组大的排前面：错得更多的先练；同规模按拼音稳定排序
+        out.sortWith(compareByDescending<Pair<String, List<String>>> { it.second.size }
+            .thenBy { it.first })
+        return out
+    }
+
+    /** 某册里所有参与同音字组的字（按教材顺序去重） */
+    fun homophoneChars(book: String): List<String> {
+        val set = HashSet<String>()
+        homophoneGroups(book).forEach { set.addAll(it.second) }
+        return bookChars(book).filter { set.contains(it) }
+    }
+
+    /**
+     * 同音字组里「最适合当干扰项」的字。
+     *
+     * 优先同册、笔画数接近的——「地」和「递」都是 `dì`，但一个 6 画一个 10 画，
+     * 一眼就能排除，当干扰项没意义。笔画差 3 以内才有迷惑性。
+     */
+    fun homophoneDistractors(ch: String, book: String?, count: Int): List<String> {
+        val m = metaMap[ch] ?: return emptyList()
+        val bookId = book ?: m.book
+        val inBook = bookChars(bookId).toHashSet()
+        val pool = homophones(ch).map { it to (metaMap[it]?.strokes ?: 0) }
+        // 三级排序：同册优先 → 笔画接近 → 码点。
+        // 第三级不能省：笔画差相同的字会有并列，没有确定的 tiebreak
+        // 三端就会各排各的，同一个 seed 出不同的题。
+        val sorted = pool.sortedWith(compareBy<Pair<String, Int>> {
+            if (inBook.contains(it.first)) 0 else 1
+        }.thenBy { Math.abs(it.second - m.strokes) }
+            .thenBy { it.first.codePointAt(0) })
+        return sorted.take(count).map { it.first }
+    }
+
     /** 所有带笔顺数据的字（教材顺序优先，再补额外字） */
     fun allCharsWithStrokes(): List<String> {
         val seen = HashSet<String>()

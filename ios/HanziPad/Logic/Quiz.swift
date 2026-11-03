@@ -172,6 +172,41 @@ enum Quiz {
         )
     }
 
+    /// 同音字填空：给一个词，挖掉其中一个字，选项**全部同音**。
+    ///
+    /// 与「词语填空」的区别就在选项：那个用的是同册随机字，一眼就能排除；
+    /// 这里的选项读音完全一样，只能靠「这个字该怎么写」来选。
+    /// `dì dì` 到底是「弟弟」还是「第第」——这正是听写里最常见的错。
+    ///
+    /// 与多音字正好互补：多音字练「一个字有几个音」，同音字练「一个音有几个字」。
+    private static func homophoneQ(
+        _ ch: String, _ lessonId: String?, _ pool: [String], _ rand: () -> Double
+    ) -> Question? {
+        guard let m = Repo.shared.meta(ch), !m.words.isEmpty else { return nil }
+        // 干扰项必须真的同音，凑不够 3 个就不出这道题——
+        // 混进非同音的字等于把答案送给孩子，练不到东西
+        let ds = Repo.shared.homophoneDistractors(ch, book: m.b, count: 3)
+        if ds.count < 3 { return nil }
+
+        let cands = m.words.filter { $0.word.contains(ch) }
+        if cands.isEmpty { return nil }
+        let idx = min(max(Int(rand() * Double(cands.count)), 0), cands.count - 1)
+        let word = cands[idx]
+        let masked = word.word.replacingOccurrences(of: ch, with: "＿")
+
+        let options = uniqueOptions(
+            shuffle([Option(value: ch, label: ch)] + ds.map { Option(value: $0, label: $0) }, rand))
+        if options.count < 4 { return nil }
+        return Question(
+            type: "homophone", ch: ch, lesson: lessonId,
+            title: "同音字填空", prompt: masked, promptKind: "word",
+            sub: "都不是一个音，选对的那个字",
+            options: options, answer: ch,
+            explain: "「\(word.word)」写「\(ch)」；\(ds.joined(separator: "、")) 和它同音（\(m.py)），但意思不同。",
+            index: 0, total: 0
+        )
+    }
+
     private static func strokeCountQ(
         _ ch: String, _ lessonId: String?, _ pool: [String], _ rand: () -> Double
     ) -> Question? {
@@ -300,6 +335,7 @@ enum Quiz {
         case "char2pinyin": return charToPinyin(ch, lessonId, pool, rand)
         case "fillWord": return fillWord(ch, lessonId, pool, rand)
         case "strokeCount": return strokeCountQ(ch, lessonId, pool, rand)
+        case "homophone": return homophoneQ(ch, lessonId, pool, rand)
         case "char2word": return charToWord(ch, lessonId, pool, rand)
         case "polyphone": return polyphone(ch, lessonId, pool, rand)
         default: return nil

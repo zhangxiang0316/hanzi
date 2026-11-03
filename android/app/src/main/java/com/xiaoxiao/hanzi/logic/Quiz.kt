@@ -177,6 +177,55 @@ object Quiz {
         )
     }
 
+    /**
+     * 同音字填空：给一个词，挖掉其中一个字，选项**全部同音**。
+     *
+     * 与「词语填空」的区别就在选项：那个用的是同册随机字，一眼就能排除；
+     * 这里的选项读音完全一样，只能靠「这个字该怎么写」来选。
+     * `dì dì` 到底是「弟弟」还是「第第」——这正是听写里最常见的错。
+     *
+     * 与多音字正好互补：多音字练「一个字有几个音」，同音字练「一个音有几个字」。
+     */
+    private fun homophoneQ(
+        ch: String,
+        lessonId: String?,
+        pool: List<String>,
+        rand: () -> Double
+    ): Question? {
+        val m = Repo.meta(ch) ?: return null
+        if (m.words.isEmpty()) return null
+        // 干扰项必须真的同音，凑不够 3 个就不出这道题——
+        // 混进非同音的字等于把答案送给孩子，练不到东西
+        val ds = Repo.homophoneDistractors(ch, m.book, 3)
+        if (ds.size < 3) return null
+
+        val cands = m.words.filter { it.word.contains(ch) }
+        if (cands.isEmpty()) return null
+        val word = cands[(rand() * cands.size).toInt().coerceIn(0, cands.size - 1)]
+        val masked = word.word.replace(ch, "＿")
+
+        val raw = ArrayList<Option>()
+        raw.add(Option(ch, ch))
+        ds.forEach { raw.add(Option(it, it)) }
+        val options = uniqueOptions(shuffle(raw, rand))
+        if (options.size != 4) return null
+
+        return Question(
+            type = "homophone",
+            ch = ch,
+            lesson = lessonId,
+            title = "同音字填空",
+            prompt = masked,
+            promptKind = "word",
+            sub = "都不是一个音，选对的那个字",
+            options = options,
+            answer = ch,
+            explain = "「${word.word}」写「$ch」；${ds.joinToString("、")} 和它同音（${m.py}），但意思不同。",
+            index = 0,
+            total = 0
+        )
+    }
+
     private fun strokeCountQ(ch: String, lessonId: String?, pool: List<String>, rand: () -> Double): Question? {
         val m = Repo.meta(ch) ?: return null
         val correct = m.strokes
@@ -303,6 +352,7 @@ object Quiz {
             "char2pinyin" -> charToPinyin(ch, lessonId, pool, rand)
             "fillWord" -> fillWord(ch, lessonId, pool, rand)
             "strokeCount" -> strokeCountQ(ch, lessonId, pool, rand)
+            "homophone" -> homophoneQ(ch, lessonId, pool, rand)
             "char2word" -> charToWord(ch, lessonId, pool, rand)
             "polyphone" -> polyphone(ch, lessonId, pool, rand)
             else -> null

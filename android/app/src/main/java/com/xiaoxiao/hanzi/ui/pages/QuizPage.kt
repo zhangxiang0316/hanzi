@@ -88,7 +88,11 @@ fun QuizPage(app: AppState, mode: String, bookId: String, lessonId: String?) {
             else -> Plan.buildSession(mode, app.progress, bookId, lessonId)
         }
         // 多音字模式只出多音字题；其余模式用默认题型轮转
-        val types = if (s.mode == "polyphone") listOf("polyphone") else null
+        val types = when (s.mode) {
+            "polyphone" -> listOf("polyphone")
+            "homophone" -> listOf("homophone")
+            else -> null
+        }
         val result = Quiz.build(s.chars, bookId, lessonId, s.count, types = types)
         Triple(s, result.questions, result.targets)
     }

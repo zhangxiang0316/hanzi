@@ -195,6 +195,17 @@ object Plan {
                     minOf(10, maxOf(4, picked.size))
                 )
             }
+            "homophone" -> {
+                // 同音字：只从本册里挑「有同音伙伴」的字。本册不足 4 个就从全部补
+                var pool = Repo.homophoneChars(book)
+                if (pool.size < 4) pool = Repo.allChars.filter { Repo.hasHomophones(it) }
+                val picked = Quiz.shuffle(pool, Quiz.mulberry32(System.currentTimeMillis().toInt()))
+                    .take(minOf(12, pool.size))
+                Session(
+                    "homophone", title ?: (Repo.book(book)?.name.let { "$it · 同音字" }),
+                    book, picked, minOf(10, maxOf(4, picked.size))
+                )
+            }
             else -> {
                 val learned = Repo.bookChars(book).filter { prog.hasLearned(it) }
                 val pool = if (learned.size >= 8) learned else Repo.bookChars(book)

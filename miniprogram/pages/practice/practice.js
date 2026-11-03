@@ -15,6 +15,7 @@ Page({
     polyCount: 0,
     dictLevels: dictation.LEVELS,
     wordCount: 0,
+    homoCount: 0,
     heroChar: '字',
     books: [],
     bookName: '',
@@ -60,6 +61,7 @@ Page({
       wrongCount: progress.wrongCount(),
       polyCount: catalog.polyphones(book ? book.id : catalog.defaultBook()).length,
       wordCount: words.bookWordCount(book ? book.id : catalog.defaultBook()),
+      homoCount: catalog.homophoneChars(book ? book.id : catalog.defaultBook()).length,
       heroChar: due.length ? due[0] : writeChar,
       books,
       bookName: book ? book.name : '',
@@ -91,6 +93,17 @@ Page({
     const app = getApp();
     app.globalData.session = sessionUtil.buildSession('free', {});
     wx.navigateTo({ url: '/pages/quiz/quiz?from=practice' });
+  },
+
+  /** 同音字：一个音有好几个字，练「写哪个」 */
+  onHomophone() {
+    if (!this.data.homoCount) {
+      wx.showToast({ title: '这一册没有同音字组', icon: 'none' });
+      return;
+    }
+    const app = getApp();
+    app.globalData.session = sessionUtil.buildSession('homophone', {});
+    wx.navigateTo({ url: '/pages/quiz/quiz?mode=homophone' });
   },
 
   /** 看拼音选词语：题源是课本词语表 */

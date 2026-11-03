@@ -162,6 +162,50 @@ function fillWord(ch, lessonId, pool, rand) {
   };
 }
 
+/**
+ * 同音字填空：给一个词，挖掉其中一个字，选项**全部同音**。
+ *
+ * 与「词语填空」的区别就在选项：那个用的是同册随机字，一眼就能排除；
+ * 这里的选项读音完全一样，只能靠「这个字该怎么写」来选。
+ * 「dì dì」到底是「弟弟」还是「第第」——这正是听写里最常见的错。
+ *
+ * 与多音字正好互补：多音字练「一个字有几个音」，同音字练「一个音有几个字」。
+ */
+function homophone(ch, lessonId, pool, rand) {
+  const m = catalog.getMeta(ch);
+  if (!m || !m.w || !m.w.length) return null;
+  // 干扰项必须真的同音，凑不够 3 个就不出这道题——
+  // 混进非同音的字等于把答案送给孩子，练不到东西
+  // 传**册次**不是课次：干扰项要优先同册的字，
+  // 传 lessonId（如 2a-k1）会让 bookChars 返回空，退化成纯按笔画挑
+  const ds = catalog.homophoneDistractors(ch, m.b, 3);
+  if (ds.length < 3) return null;
+
+  // 找一个含有本字的组词当题面
+  const cands = m.w.filter((w) => w && w.w && w.w.indexOf(ch) >= 0);
+  if (!cands.length) return null;
+  const word = cands[Math.floor(rand() * cands.length)];
+  const masked = word.w.replace(ch, '＿');
+
+  const options = uniqueOptions(
+    shuffle([option(ch, ch)].concat(ds.map((c) => option(c, c))), rand)
+  );
+  if (options.length < 4) return null;
+  return {
+    type: 'homophone',
+    ch,
+    lesson: lessonId,
+    title: '同音字填空',
+    prompt: masked,
+    promptKind: 'word',
+    sub: '都不是一个音，选对的那个字',
+    options,
+    answer: ch,
+    explain: '「' + word.w + '」写「' + ch + '」；' + ds.join('、') +
+      ' 和它同音（' + (m.py || '') + '），但意思不同。',
+  };
+}
+
 function strokeCount(ch, lessonId, pool, rand) {
   const m = catalog.getMeta(ch);
   if (!m) return null;
@@ -227,6 +271,7 @@ const MAKERS = {
   strokeCount,
   char2word,
   polyphone,
+  homophone,
 };
 
 /**

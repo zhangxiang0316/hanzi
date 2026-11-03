@@ -211,6 +211,19 @@ enum Plan {
                 mode: "polyphone", title: title ?? (bookName + " · 多音字"),
                 book: bookId, chars: picked, count: min(10, max(4, picked.count))
             )
+        case "homophone":
+            // 同音字：只从本册里挑「有同音伙伴」的字。本册不足 4 个就从全部补
+            var pool = Repo.shared.homophoneChars(bookId)
+            if pool.count < 4 {
+                pool = Repo.shared.charOrder.filter { Repo.shared.hasHomophones($0) }
+            }
+            let rand = Quiz.mulberry32(UInt32(truncatingIfNeeded: Int(Date().timeIntervalSince1970 * 1000)))
+            let picked = Array(Quiz.shuffle(pool, rand).prefix(min(12, pool.count)))
+            let bookName = Repo.shared.book(bookId)?.name ?? ""
+            return Session(
+                mode: "homophone", title: title ?? (bookName + " · 同音字"),
+                book: bookId, chars: picked, count: min(10, max(4, picked.count))
+            )
         default:
             let learned = Repo.shared.bookChars(bookId).filter { prog.hasLearned($0) }
             let pool = learned.count >= 8 ? learned : Repo.shared.bookChars(bookId)

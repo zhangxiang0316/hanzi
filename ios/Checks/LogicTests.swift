@@ -881,6 +881,130 @@ final class LogicTests: XCTestCase {
     /// 期望值由小程序 `utils/quiz.js` 的 `buildWordQuiz` 算出，是另外
     /// 一份独立实现。任何一端改了随机数调用顺序、干扰项挑选或洗牌方式，
     /// 这条测试都会红——这是「三端行为一致」这个硬约束的兜底。
+    // MARK: - 同音字
+
+    /// 同音字是听写最主要的错因：「地弟第递」读音一样、字形不同，
+    /// 记住音不等于会写。数据不用新增——按 `CharMeta.py` 分组即可。
+    @MainActor
+    func testHomophonesGroupedByFullPinyin() {
+        let repo = TestRepo.make()
+        XCTAssertEqual(Set(repo.homophones("地")), Set(["弟", "第", "帝", "递"]))
+        XCTAssertTrue(repo.homophones("天").contains("添"))
+        // 声调不同不算同音：「地」是 dì，「底」是 dǐ
+        XCTAssertFalse(repo.homophones("地").contains("底"))
+        // 不含自己
+        XCTAssertFalse(repo.homophones("天").contains("天"))
+    }
+
+    @MainActor
+    func testHomophoneGroupCounts() {
+        let repo = TestRepo.make()
+        // 八册累加（同一组跨册会各算一次）= 382
+        var total = 0
+        for b in repo.books { total += repo.homophoneGroups(b.id).count }
+        XCTAssertEqual(total, 382)
+
+        // 全库去重 = 588
+        var byPy: [String: [String]] = [:]
+        for ch in repo.allChars {
+            guard let py = repo.meta(ch)?.py, !py.isEmpty else { continue }
+            byPy[py, default: []].append(ch)
+        }
+        XCTAssertEqual(byPy.values.filter { $0.count >= 2 }.count, 588)
+    }
+
+    @MainActor
+    func testHomophoneGroupsStayInsideBook() {
+        let repo = TestRepo.make()
+        let groups = repo.homophoneGroups("2a")
+        XCTAssertGreaterThan(groups.count, 30)
+        let chars = Set(repo.bookChars("2a"))
+        for g in groups {
+            for ch in g.chars {
+                XCTAssertTrue(chars.contains(ch), "\(ch) 不属于 2a，不该出现在本册分组里")
+                // 组内读音必须完全一致
+                XCTAssertEqual(repo.meta(ch)?.py, g.py)
+            }
+        }
+    }
+
+    @MainActor
+    func testHomophoneDistractorsAreHomophones() {
+        let repo = TestRepo.make()
+        let ds = repo.homophoneDistractors("坐", book: "2a", count: 3)
+        XCTAssertEqual(ds.count, 3)
+        let py = repo.meta("坐")?.py
+        for d in ds {
+            XCTAssertEqual(repo.meta(d)?.py, py, "\(d) 不和「坐」同音，当干扰项等于送分")
+            XCTAssertNotEqual(d, "坐")
+        }
+    }
+
+    /// 核心断言：每个干扰项都必须和答案同音。
+    /// 混进非同音的字等于把答案直接送给孩子，这个功能就白做了。
+    @MainActor
+    func testHomophoneQuizOptionsSharePinyin() {
+        let repo = TestRepo.make()
+        let chars = Array(repo.homophoneChars("2a").prefix(6))
+        let r = Quiz.build(chars: chars, book: "2a", lesson: nil,
+                           count: 6, seed: 20240101, types: ["homophone"])
+        XCTAssertGreaterThanOrEqual(r.questions.count, 4)
+
+        for q in r.questions {
+            XCTAssertEqual(q.type, "homophone")
+            XCTAssertEqual(q.options.count, 4)
+            XCTAssertTrue(q.options.contains { $0.value == q.answer })
+            let py = repo.meta(q.answer)?.py
+            for o in q.options {
+                XCTAssertEqual(repo.meta(o.value)?.py, py, "\(o.value) 与 \(q.answer) 不同音")
+            }
+            XCTAssertTrue(q.prompt.contains("＿"), "题面应有空格")
+        }
+    }
+
+    @MainActor
+    func testHomophoneQuizSkipsCharsWithoutPeers() {
+        let repo = TestRepo.make()
+        guard let lonely = repo.allChars.first(where: { !repo.hasHomophones($0) }) else {
+            return XCTFail("应存在没有同音字的字")
+        }
+        let r = Quiz.build(chars: [lonely], book: "2a", lesson: nil,
+                           count: 3, seed: 1, types: ["homophone"])
+        XCTAssertTrue(r.questions.isEmpty, "\(lonely) 没有同音字，不该出题")
+    }
+
+    @MainActor
+    func testHomophoneSessionPicksOnlyCharsWithPeers() {
+        let repo = TestRepo.make()
+        let prog = Progress(store: MemoryStore())
+        let s = Plan.buildSession(mode: "homophone", prog: prog, book: "2a")
+        XCTAssertEqual(s.mode, "homophone")
+        XCTAssertGreaterThanOrEqual(s.chars.count, 4)
+        for ch in s.chars {
+            XCTAssertTrue(repo.hasHomophones(ch), "\(ch) 没有同音字，不该进会话")
+        }
+    }
+
+    /// 同音字的跨端黄金值：同一 seed、同一批字，三端必须出同一套题。
+    /// 期望值由小程序 `utils/quiz.js` 算出。
+    @MainActor
+    func testHomophoneQuizMatchesCrossPlatformGolden() {
+        let repo = TestRepo.make()
+        let chars = Array(repo.homophoneChars("2a").prefix(5))
+        let r = Quiz.build(chars: chars, book: "2a", lesson: nil,
+                           count: 5, seed: 20240101, types: ["homophone"])
+        let got = r.questions.map { q in
+            "\(q.ch)|\(q.prompt)|\(q.answer)|\(q.options.map(\.value).joined(separator: "|"))"
+        }
+        XCTAssertEqual(got, [
+            "袋|口＿|袋|带|袋|戴|代",
+            "龟|＿甲|龟|瑰|龟|归|规",
+            "鼓|重整旗＿|鼓|骨|谷|鼓|股",
+            "极|＿大|极|即|极|吉|及",
+            "溪|＿水|溪|吸|希|锡|溪"
+        ])
+    }
+
     /// 多音字的跨端黄金值：同一 seed、同一批字，三端必须出同一套题。
     /// 期望值由小程序 `utils/quiz.js` 算出。
     func testPolyphoneMatchesCrossPlatformGolden() {

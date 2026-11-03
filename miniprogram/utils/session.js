@@ -67,6 +67,20 @@ function buildSession(mode, opts) {
       count: Math.min(10, Math.max(4, picked.length)),
     };
   }
+  if (mode === 'homophone') {
+    // 同音字：只从本册里挑「有同音伙伴」的字。本册不足 4 个就从全部补
+    const book = o.book || catalog.defaultBook();
+    let pool = catalog.homophoneChars(book);
+    if (pool.length < 4) pool = catalog.getAllChars().filter(catalog.hasHomophones);
+    const picked = sample(pool, Math.min(12, pool.length));
+    return {
+      mode: 'homophone',
+      title: o.title || catalog.getBook(book).name + ' · 同音字',
+      book,
+      chars: picked,
+      count: Math.min(10, Math.max(4, picked.length)),
+    };
+  }
   if (mode === 'words') {
     // 看拼音选词语：题源是课本词语表，不是生字表
     const book = o.book || catalog.defaultBook();

@@ -223,6 +223,110 @@ function polyphoneCases(ch) {
   });
 }
 
+// MARK: - 同音字
+
+/**
+ * 同音字：读音完全相同（含声调）的一组字。
+ *
+ * 这份关系不用新数据——`meta.py` 里就有完整拼音，按它分组即可。
+ * 全库 588 组、2163 个字；一到四年级就有 383 组。
+ *
+ * 为什么值得单独做：同音字是听写最主要的错因。「地弟第递」「坐作做座」
+ * 读音一样、字形不同，孩子记住音不等于会写。多音字练「一个字读哪个音」，
+ * 同音字练「这个音写哪个字」——两者是同一个问题的两个方向。
+ */
+function homophones(ch) {
+  const m = meta[ch];
+  if (!m || !m.py) return [];
+  const out = [];
+  for (const c in meta) {
+    if (c !== ch && meta[c].py === m.py) out.push(c);
+  }
+  // 按 Unicode 码点排序：`for...in` 的枚举顺序依赖 JSON 键的书写顺序，
+  // 三端各自的数据来源不同（iOS 是排序后的键，Android 是 allChars），
+  // 不显式排序的话笔画数相同时干扰项的并列顺序会不一致——
+  // 同一个 seed 三端会出不同的题。这条是跨端黄金值测试抓出来的。
+  out.sort((a, b) => a.codePointAt(0) - b.codePointAt(0));
+  return out;
+}
+
+/** 这个字有没有同音字（没有的话同音字题型无从出题） */
+function hasHomophones(ch) {
+  return homophones(ch).length > 0;
+}
+
+/**
+ * 某一册里的同音字组合（每组 ≥2 个字，组内按教材顺序）。
+ *
+ * 只用本册的字组队：跨册组队会让二年级孩子遇到三年级的字，
+ * 那就不是在练同音字，是在考认字量。
+ */
+function homophoneGroups(bookId) {
+  const chars = bookChars(bookId);
+  const byPy = {};
+  chars.forEach((ch) => {
+    const m = meta[ch];
+    if (!m || !m.py) return;
+    if (!byPy[m.py]) byPy[m.py] = [];
+    byPy[m.py].push(ch);
+  });
+  const out = [];
+  for (const py in byPy) {
+    if (byPy[py].length >= 2) out.push({ py, chars: byPy[py] });
+  }
+  // 组大的、笔画多的排前面：错得更多的先练
+  out.sort((a, b) => {
+    if (b.chars.length !== a.chars.length) return b.chars.length - a.chars.length;
+    return a.py < b.py ? -1 : 1;
+  });
+  return out;
+}
+
+/** 某册里所有参与同音字组的字（按教材顺序去重） */
+function homophoneChars(bookId) {
+  const groups = homophoneGroups(bookId);
+  const set = {};
+  groups.forEach((g) => g.chars.forEach((c) => { set[c] = true; }));
+  return bookChars(bookId).filter((c) => set[c]);
+}
+
+/** 全部册次的同音字组合 */
+function allHomophoneGroups() {
+  const out = [];
+  books.forEach((b) => {
+    homophoneGroups(b.id).forEach((g) => out.push(g));
+  });
+  return out;
+}
+
+/**
+ * 同音字组里「最适合当干扰项」的字。
+ *
+ * 优先同册、笔画数接近的——「地」和「递」都是 dì，但一个 6 画一个 10 画，
+ * 一眼就能排除，当干扰项没意义。笔画差 3 以内才有迷惑性。
+ */
+function homophoneDistractors(ch, bookId, count) {
+  const m = meta[ch];
+  if (!m) return [];
+  const inBook = {};
+  bookChars(bookId || m.b).forEach((c) => { inBook[c] = true; });
+  // meta 里没有 ch 字段，字本身要单独带出来
+  const pool = homophones(ch).map((c) => ({ ch: c, s: meta[c].s }));
+  // 三级排序：同册优先 → 笔画接近 → 码点。
+  // 第三级不能省：笔画差相同的字会有并列，没有确定的 tiebreak
+  // 三端就会各排各的，同一个 seed 出不同的题。
+  pool.sort((a, b) => {
+    const ba = inBook[a.ch] ? 0 : 1;
+    const bb = inBook[b.ch] ? 0 : 1;
+    if (ba !== bb) return ba - bb;
+    const da = Math.abs(a.s - m.s);
+    const db = Math.abs(b.s - m.s);
+    if (da !== db) return da - db;
+    return a.ch.codePointAt(0) - b.ch.codePointAt(0);
+  });
+  return pool.slice(0, count).map((x) => x.ch);
+}
+
 /** 在本课内的下一个 / 上一个字（用于详情页翻页）。 */
 function nextInLesson(lessonId, ch) {
   const list = lessonChars(lessonId);
@@ -282,6 +386,12 @@ module.exports = {
   isPolyphone,
   polyphones,
   allPolyphones,
+  homophones,
+  hasHomophones,
+  homophoneGroups,
+  homophoneChars,
+  allHomophoneGroups,
+  homophoneDistractors,
   wordsUsing,
   bookRank,
   wordRank,

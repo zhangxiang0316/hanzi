@@ -183,6 +183,19 @@ fun PracticePage(app: AppState) {
 
         Spacer(Modifier.height(12.dp))
 
+        // 同音字：一个音有好几个字，练「写哪个」。
+        // 和多音字互补——那个练读对音，这个练写对字。
+        val homoCount = Repo.homophoneChars(app.currentBook).size
+        ActionCard(
+            emoji = "🔤",
+            title = "同音字",
+            desc = if (homoCount > 0) "本册 $homoCount 个字有同音伙伴，练写对" else "换一册就会有多组",
+            badge = 0,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            if (homoCount > 0) app.nav.push(Screen.Quiz("homophone", app.currentBook, null))
+        }
+
         // 看拼音选词语：题源是课本词语表，不是生字表。
         // 孩子要读的是整个词，光认单字读不出来也白搭。
         val wordCount = Words.bookWordCount(app.currentBook)

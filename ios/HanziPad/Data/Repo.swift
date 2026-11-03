@@ -208,6 +208,96 @@ final class Repo {
         charOrder.filter { isPolyphone($0) }
     }
 
+    // MARK: - 同音字
+
+    /// 同音字：读音完全相同（含声调）的一组字。
+    ///
+    /// 这份关系不用新数据——`CharMeta.py` 里就有完整拼音，按它分组即可。
+    /// 全库 588 组、2163 个字；一到四年级就有 383 组。
+    ///
+    /// 为什么值得单独做：同音字是听写最主要的错因。「地弟第递」「坐作做座」
+    /// 读音一样、字形不同，孩子记住音不等于会写。多音字练「一个字读哪个音」，
+    /// 同音字练「这个音写哪个字」——是同一个问题的两个方向。
+    func homophones(_ ch: String) -> [String] {
+        guard let m = metaMap[ch], !m.py.isEmpty else { return [] }
+        // 按 Unicode 码点排序，不依赖 charOrder 的顺序：
+        // 三端的数据来源顺序不同，不显式排序的话笔画数相同时干扰项的
+        // 并列顺序会不一致——同一个 seed 会出不同的题。
+        // 这条是跨端黄金值测试抓出来的。
+        return charOrder
+            .filter { $0 != ch && metaMap[$0]?.py == m.py }
+            .sorted { a, b in
+                (a.unicodeScalars.first?.value ?? 0) < (b.unicodeScalars.first?.value ?? 0)
+            }
+    }
+
+    /// 这个字有没有同音字（没有的话同音字题型无从出题）
+    func hasHomophones(_ ch: String) -> Bool {
+        !homophones(ch).isEmpty
+    }
+
+    /// 某一册里的同音字组合（每组 ≥2 个字，组内按教材顺序）。
+    ///
+    /// 只用本册的字组队：跨册组队会让二年级孩子遇到三年级的字，
+    /// 那就不是在练同音字，是在考认字量。
+    func homophoneGroups(_ bookId: String) -> [(py: String, chars: [String])] {
+        var order: [String] = []
+        var byPy: [String: [String]] = [:]
+        for ch in bookChars(bookId) {
+            guard let m = metaMap[ch], !m.py.isEmpty else { continue }
+            if byPy[m.py] == nil {
+                byPy[m.py] = []
+                order.append(m.py)
+            }
+            byPy[m.py]?.append(ch)
+        }
+        var out: [(py: String, chars: [String])] = []
+        for py in order {
+            guard let list = byPy[py], list.count >= 2 else { continue }
+            out.append((py, list))
+        }
+        // 组大的排前面：错得更多的先练；同规模按拼音稳定排序
+        out.sort {
+            if $0.chars.count != $1.chars.count { return $0.chars.count > $1.chars.count }
+            return $0.py < $1.py
+        }
+        return out
+    }
+
+    /// 某册里所有参与同音字组的字（按教材顺序去重）
+    func homophoneChars(_ bookId: String) -> [String] {
+        var set = Set<String>()
+        for g in homophoneGroups(bookId) {
+            for c in g.chars { set.insert(c) }
+        }
+        return bookChars(bookId).filter { set.contains($0) }
+    }
+
+    /// 同音字组里「最适合当干扰项」的字。
+    ///
+    /// 优先同册、笔画数接近的——「地」和「递」都是 `dì`，但一个 6 画一个 10 画，
+    /// 一眼就能排除，当干扰项没意义。笔画差 3 以内才有迷惑性。
+    func homophoneDistractors(_ ch: String, book: String?, count: Int) -> [String] {
+        guard let m = metaMap[ch] else { return [] }
+        let bookId = book ?? m.b
+        var inBook = Set<String>()
+        for c in bookChars(bookId) { inBook.insert(c) }
+        let pool = homophones(ch).map { (ch: $0, s: metaMap[$0]?.s ?? 0) }
+        // 三级排序：同册优先 → 笔画接近 → 码点。
+        // 第三级不能省：笔画差相同的字会有并列，而 Swift 的 sort **不保证稳定**，
+        // 没有确定的 tiebreak 三端就会各排各的，同一个 seed 出不同的题。
+        let sorted = pool.sorted { a, b in
+            let ba = inBook.contains(a.ch) ? 0 : 1
+            let bb = inBook.contains(b.ch) ? 0 : 1
+            if ba != bb { return ba < bb }
+            let da = abs(a.s - m.s)
+            let db = abs(b.s - m.s)
+            if da != db { return da < db }
+            return (a.ch.unicodeScalars.first?.value ?? 0) < (b.ch.unicodeScalars.first?.value ?? 0)
+        }
+        return sorted.prefix(count).map(\.ch)
+    }
+
     /// 某个读音的用例词。
     ///
     /// 组词数据里每个词都带拼音，而拼音音节与汉字是一一对应的

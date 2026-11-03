@@ -58,6 +58,20 @@ struct PracticePageView: View {
                                                           book: app.currentBook, lesson: nil))
                         }
 
+                        // 同音字：一个音有好几个字，练「写哪个」。
+                        // 和多音字互补——那个练读对音，这个练写对字。
+                        let homoCount = app.repo.homophoneChars(app.currentBook).count
+                        modeCard(
+                            emoji: "🔤", title: "同音字",
+                            desc: homoCount > 0
+                                ? "本册 \(homoCount) 个字有同音伙伴，练写对"
+                                : "换一册就会有多组",
+                            color: Palette.sky, enabled: homoCount > 0
+                        ) {
+                            app.push(AppState.QuizPayload(mode: "homophone",
+                                                          book: app.currentBook, lesson: nil))
+                        }
+
                         // 看拼音选词语：题源是课本词语表，不是生字表。
                         // 孩子要读的是整个词，光认单字读不出来也白搭。
                         let wordCount = app.repo.bookWordCount(app.currentBook)
