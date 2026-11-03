@@ -7,9 +7,9 @@
 
 | 文件 | 版本 | 大小 | 最低系统 |
 | --- | --- | --- | --- |
-| `xiaoxiao-hanzi-1.0.5.apk` | 1.0.5 | 3.9 MB | Android 7.0（API 24） |
+| `xiaoxiao-hanzi-1.0.7.apk` | 1.0.7 | 4.0 MB | Android 7.0（API 24） |
 
-- SHA-256：`2fc35cc6731bbfada1551547d11360a81e66c453ca96e9671507b93f4ba2c542`
+- SHA-256：`0141fed8f15113e541afbc1abfcc638160effc0caeeb54ecbf5a610c96639228`
 
 ## 安装
 
@@ -20,7 +20,7 @@
 **用 adb**：
 
 ```bash
-adb install -r xiaoxiao-hanzi-1.0.5.apk
+adb install -r xiaoxiao-hanzi-1.0.7.apk
 ```
 
 ## 关于签名
