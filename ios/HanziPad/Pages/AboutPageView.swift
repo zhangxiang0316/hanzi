@@ -39,7 +39,7 @@ struct AboutPageView: View {
                     .frame(width: 62, height: 62)
             }
             Text("小小识字家")
-                .font(.system(size: 21, weight: .bold))
+                .font(Fonts.s(21, .bold, .title3))
                 .foregroundStyle(Palette.ink1)
             Text(AppInfo.version)
                 .font(Fonts.caption)

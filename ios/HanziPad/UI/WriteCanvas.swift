@@ -128,7 +128,7 @@ struct WritePadView: View {
 
     private var header: some View {
         HStack(spacing: 14) {
-            Text(session.ch).font(.system(size: 34, weight: .semibold))
+            Text(session.ch).font(Fonts.s(34, .semibold, .largeTitle, maxScale: 2.2))
             if let m = Repo.shared.meta(session.ch) {
                 Text(m.py).font(.title3).foregroundStyle(HanziDraw.accent)
             }

@@ -168,10 +168,10 @@ struct SidebarView: View {
                     .frame(width: 4, height: 24)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("\(BookNaming.gradeName(book.grade))\(BookNaming.termName(book.term))")
-                        .font(.system(size: 13, weight: active ? .semibold : .regular))
+                        .font(Fonts.s(13, active ? .semibold : .regular, .footnote))
                         .foregroundStyle(Palette.ink1)
                     Text("\(bp.learned)/\(bp.total) · \(bp.pct)%")
-                        .font(.system(size: 10))
+                        .font(Fonts.s(10, .regular, .caption2))
                         .foregroundStyle(Palette.ink3)
                 }
                 Spacer()
@@ -185,14 +185,14 @@ struct SidebarView: View {
         let t = app.progress.todayStats
         return VStack(alignment: .leading, spacing: 5) {
             Text("今天")
-                .font(.system(size: 11, weight: .semibold))
+                .font(Fonts.s(11, .semibold, .caption))
                 .foregroundStyle(Palette.ink3)
             Text("学了 \(t.learned) 字 · 答了 \(t.answers) 题")
-                .font(.system(size: 11))
+                .font(Fonts.s(11, .regular, .caption))
                 .foregroundStyle(Palette.ink2)
             if t.answers > 0 {
                 Text("正确率 \(app.progress.accuracyToday)%")
-                    .font(.system(size: 11))
+                    .font(Fonts.s(11, .regular, .caption))
                     .foregroundStyle(Palette.jade)
             }
         }
@@ -203,6 +203,8 @@ struct SidebarView: View {
 /// 课本总览：从侧边栏点「课本」或某个册次进来
 struct CoursesPageView: View {
     @Environment(AppState.self) private var app
+    /// 只在需要按字号收窄网格/控件的地方读它
+    @Environment(\.dynamicTypeSize) private var dt
 
     var body: some View {
         GeometryReader { geo in
@@ -212,7 +214,7 @@ struct CoursesPageView: View {
                         continueCard(next)
                     }
                     SectionHead("全部课本")
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 200), spacing: 12)],
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: LayoutRules.scaled(200, by: dt.layoutScale)), spacing: 12)],
                               spacing: 12) {
                         ForEach(app.repo.books) { book in
                             BookTileView(book: book) {
@@ -235,11 +237,11 @@ struct CoursesPageView: View {
         HanziCard {
             VStack(alignment: .leading, spacing: 10) {
                 Text("接着学")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(Fonts.s(12, .semibold, .caption))
                     .foregroundStyle(Palette.ink3)
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
                     Text(next.title)
-                        .font(.system(size: 19, weight: .bold))
+                        .font(Fonts.s(19, .bold, .title3))
                         .foregroundStyle(Palette.ink1)
                     TinyPill(text: "\(next.learned)/\(next.total) 字", color: Palette.jade)
                     Spacer()

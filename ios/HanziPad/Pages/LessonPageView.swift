@@ -4,6 +4,8 @@ import SwiftUI
 struct LessonPageView: View {
     let lessonId: String
     @Environment(AppState.self) private var app
+    /// 只在需要按字号收窄网格/控件的地方读它
+    @Environment(\.dynamicTypeSize) private var dt
 
     private var lesson: Lesson? { app.repo.lesson(lessonId) }
 
@@ -37,7 +39,7 @@ struct LessonPageView: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
                     Text(lesson.title)
-                        .font(.system(size: 22, weight: .bold))
+                        .font(Fonts.s(22, .bold, .title2))
                         .foregroundStyle(Palette.ink1)
                     TinyPill(text: lesson.kind, color: Palette.bookColor(lesson.book))
                     Spacer()
@@ -66,7 +68,7 @@ struct LessonPageView: View {
         VStack(alignment: .leading, spacing: 12) {
             SectionHead("本课生字")
             LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 108), spacing: 12)],
+                columns: [GridItem(.adaptive(minimum: LayoutRules.scaled(108, by: dt.layoutScale)), spacing: 12)],
                 spacing: 12
             ) {
                 ForEach(lesson.chars, id: \.self) { ch in
@@ -97,6 +99,8 @@ struct CharTileView: View {
     let ch: String
     var lessonId: String?
     @Environment(AppState.self) private var app
+    /// 汉字图标要跟着字号长，不然文字变大后它显得又小又空
+    @Environment(\.dynamicTypeSize) private var dt
 
     var body: some View {
         let meta = app.repo.meta(ch)
@@ -111,11 +115,12 @@ struct CharTileView: View {
                 HanziView(ch: ch, strokes: app.repo.strokes(ch),
                           showGrid: false, showGhost: false,
                           inkColor: learned ? Palette.ink1 : Palette.ink3)
-                    .frame(width: 64, height: 64)
+                    .frame(width: LayoutRules.scaled(64, by: dt.layoutScale),
+                           height: LayoutRules.scaled(64, by: dt.layoutScale))
                     .overlay(alignment: .topTrailing) {
                         if mastered {
                             Text("★")
-                                .font(.system(size: 10))
+                                .font(Fonts.s(10, .regular, .caption2))
                                 .foregroundStyle(Palette.amber)
                         } else if learned {
                             Circle()
@@ -126,7 +131,7 @@ struct CharTileView: View {
                     }
 
                 Text(meta?.py ?? " ")
-                    .font(.system(size: 12))
+                    .font(Fonts.s(12, .regular, .caption))
                     .foregroundStyle(Palette.ink2)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
@@ -135,7 +140,7 @@ struct CharTileView: View {
                     StarsView(count: record.stars, size: 9, animated: false)
                 } else {
                     Text(" ")
-                        .font(.system(size: 9))
+                        .font(Fonts.s(9, .regular, .caption2))
                 }
             }
             .padding(.vertical, 11)

@@ -3,6 +3,8 @@ import SwiftUI
 /// 练习页：几种练习模式的入口 + 最近学习。
 struct PracticePageView: View {
     @Environment(AppState.self) private var app
+    /// 只在需要按字号收窄网格/控件的地方读它
+    @Environment(\.dynamicTypeSize) private var dt
 
     var body: some View {
         GeometryReader { geo in
@@ -16,7 +18,7 @@ struct PracticePageView: View {
                     let wrong = app.progress.wrongCount
 
                     LazyVGrid(
-                        columns: [GridItem(.adaptive(minimum: 220), spacing: 14)],
+                        columns: [GridItem(.adaptive(minimum: LayoutRules.scaled(220, by: dt.layoutScale)), spacing: 14)],
                         spacing: 14
                     ) {
                         modeCard(
@@ -126,14 +128,14 @@ struct PracticePageView: View {
                           action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 9) {
-                Text(emoji).font(.system(size: 28))
+                Text(emoji).font(Fonts.s(28, .regular, .largeTitle, maxScale: 1.4))
                 Text(title)
-                    .font(.system(size: 16, weight: .bold))
+                    .font(Fonts.s(16, .bold, .body))
                     .foregroundStyle(Palette.ink1)
                 Text(desc)
                     .font(Fonts.caption)
                     .foregroundStyle(Palette.ink3)
-                    .lineLimit(2)
+                    .lineLimit(dt.isAccessibility ? nil : 2)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(16)
@@ -168,10 +170,10 @@ struct PracticePageView: View {
                     } label: {
                         VStack(spacing: 6) {
                             Text(level.title)
-                                .font(.system(size: 14, weight: .bold))
+                                .font(Fonts.s(14, .bold, .footnote))
                                 .foregroundStyle(Palette.ink1)
                             Text(level.showsGhost ? "有底字" : "无底字")
-                                .font(.system(size: 10))
+                                .font(Fonts.s(10, .regular, .caption2))
                                 .foregroundStyle(Palette.ink3)
                         }
                         .frame(maxWidth: .infinity)
@@ -205,10 +207,10 @@ struct PracticePageView: View {
                                 .fill(day.learned > 0 ? Palette.jade : Palette.track)
                                 .frame(height: max(4, CGFloat(day.learned) / CGFloat(maxVal) * 70))
                             Text(day.label)
-                                .font(.system(size: 10))
+                                .font(Fonts.s(10, .regular, .caption2))
                                 .foregroundStyle(Palette.ink3)
                             Text("\(day.learned)")
-                                .font(.system(size: 10, weight: .semibold))
+                                .font(Fonts.s(10, .semibold, .caption2))
                                 .foregroundStyle(day.learned > 0 ? Palette.jade : Palette.ink3)
                         }
                         .frame(maxWidth: .infinity)

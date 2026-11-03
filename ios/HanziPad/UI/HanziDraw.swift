@@ -195,7 +195,10 @@ enum HanziDraw {
             let circle = Path(ellipseIn: CGRect(x: x - r, y: y - r, width: r * 2, height: r * 2))
             ctx.fill(circle, with: .color(color))
 
-            // 数字用字号跟随圆点，居中
+            // 数字用字号跟随圆点，居中。
+            // 这里**刻意**不走 Fonts：`r` 是画布坐标（1024×1024）里的长度，
+            // 整块画布会被缩放到实际尺寸，字跟着一起缩。用 Dynamic Type
+            // 反而会让起笔序号和圆点脱节。
             let text = Text("\(i + 1)")
                 .font(.system(size: r * 1.15, weight: .bold))
                 .foregroundStyle(.white)

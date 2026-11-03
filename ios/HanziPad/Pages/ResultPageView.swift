@@ -4,6 +4,8 @@ import SwiftUI
 struct ResultPageView: View {
     let payload: AppState.ResultPayload
     @Environment(AppState.self) private var app
+    /// 只在需要按字号收窄网格/控件的地方读它
+    @Environment(\.dynamicTypeSize) private var dt
     @Environment(\.dismiss) private var dismiss
 
     private var rate: Int {
@@ -39,11 +41,11 @@ struct ResultPageView: View {
 
     private var hero: some View {
         VStack(spacing: 14) {
-            Text(emoji).font(.system(size: 56))
+            Text(emoji).font(Fonts.s(56, .regular, .largeTitle, maxScale: 1.4))
             StarsView(count: stars, size: 26)
 
             Text("答对 \(payload.correct) / \(payload.total) 题")
-                .font(.system(size: 22, weight: .bold))
+                .font(Fonts.s(22, .bold, .title2))
                 .foregroundStyle(Palette.ink1)
 
             Text(praise)
@@ -89,7 +91,7 @@ struct ResultPageView: View {
                         trailing: AnyView(Text("\(payload.wrong.count) 个")
                             .font(Fonts.caption).foregroundStyle(Palette.ink3)))
 
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 100), spacing: 12)], spacing: 12) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: LayoutRules.scaled(100, by: dt.layoutScale)), spacing: 12)], spacing: 12) {
                 ForEach(Array(Set(payload.wrong)).sorted(), id: \.self) { ch in
                     Button {
                         app.push(AppState.CharRoute(ch: ch,
@@ -100,7 +102,7 @@ struct ResultPageView: View {
                                       showGrid: false, showGhost: false)
                                 .frame(width: 54, height: 54)
                             Text(app.repo.meta(ch)?.py ?? "")
-                                .font(.system(size: 11))
+                                .font(Fonts.s(11, .regular, .caption))
                                 .foregroundStyle(Palette.ink3)
                         }
                         .padding(.vertical, 10)

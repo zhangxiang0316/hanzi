@@ -6,6 +6,8 @@ import SwiftUI
 /// 整体按 iPad 的宽屏重排（左栏信息、右栏课本网格）。
 struct HomePageView: View {
     @Environment(AppState.self) private var app
+    /// 只在需要按字号收窄网格/控件的地方读它
+    @Environment(\.dynamicTypeSize) private var dt
 
     var body: some View {
         GeometryReader { geo in
@@ -45,9 +47,9 @@ struct HomePageView: View {
 
     private var streakBadge: some View {
         HStack(spacing: 5) {
-            Text("🔥").font(.system(size: 14))
+            Text("🔥").font(Fonts.s(14, .regular, .footnote))
             Text("\(app.progress.streak) 天")
-                .font(.system(size: 13, weight: .bold))
+                .font(Fonts.s(13, .bold, .footnote))
                 .foregroundStyle(app.progress.streak > 0 ? Palette.amber : Palette.ink3)
         }
         .padding(.horizontal, 11)
@@ -64,12 +66,12 @@ struct HomePageView: View {
         return VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline) {
                 Text(task.title)
-                    .font(.system(size: 19, weight: .bold))
+                    .font(Fonts.s(19, .bold, .title3))
                     .foregroundStyle(.white)
                 Spacer()
                 if task.count > 0 {
                     Text("\(task.count) 个")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(Fonts.s(12, .semibold, .caption))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
@@ -85,7 +87,7 @@ struct HomePageView: View {
                 start(task)
             } label: {
                 Text(task.action)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(Fonts.s(15, .semibold, .body))
                     .foregroundStyle(Palette.jadeDeep)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
@@ -135,14 +137,14 @@ struct HomePageView: View {
                     .overlay(
                         VStack(spacing: 1) {
                             Text("\(Int((pct * 100).rounded()))%")
-                                .font(.system(size: 19, weight: .bold))
+                                .font(Fonts.s(19, .bold, .title3))
                                 .foregroundStyle(Palette.jade)
                         }
                     )
 
                 VStack(alignment: .leading, spacing: 5) {
                     Text("已认识 \(learned) 个字")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(Fonts.s(15, .semibold, .body))
                         .foregroundStyle(Palette.ink1)
                     Text("全库 \(total) 字")
                         .font(Fonts.caption)
@@ -174,18 +176,18 @@ struct HomePageView: View {
                         .frame(width: 104, height: 104)
                         .measureTapTarget("首页-今日一字")
                     Text("今日一字")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(Fonts.s(11, .semibold, .caption))
                         .foregroundStyle(Palette.ink3)
                 }
 
                 VStack(alignment: .leading, spacing: 7) {
                     HStack(spacing: 8) {
                         Text(ch)
-                            .font(.system(size: 28, weight: .semibold))
+                            .font(Fonts.s(28, .semibold, .largeTitle, maxScale: 2.2))
                             .foregroundStyle(Palette.ink1)
                         if let meta {
                             Text(meta.py)
-                                .font(.system(size: 16))
+                                .font(Fonts.s(16, .regular, .body))
                                 .foregroundStyle(Palette.jade)
                         }
                     }
@@ -197,7 +199,7 @@ struct HomePageView: View {
                             Text(meta.words.prefix(3).map(\.word).joined(separator: " · "))
                                 .font(Fonts.bodySmall)
                                 .foregroundStyle(Palette.ink3)
-                                .lineLimit(1)
+                                .lineLimit(dt.isAccessibility ? 3 : 1)
                         }
                     }
                     HStack(spacing: 10) {
@@ -228,7 +230,7 @@ struct HomePageView: View {
         VStack(alignment: .leading, spacing: 12) {
             SectionHead("跟课本学")
             LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 190), spacing: 12)],
+                columns: [GridItem(.adaptive(minimum: LayoutRules.scaled(190, by: dt.layoutScale)), spacing: 12)],
                 spacing: 12
             ) {
                 ForEach(app.repo.books) { book in
@@ -256,17 +258,17 @@ struct BookTileView: View {
             VStack(alignment: .leading, spacing: 9) {
                 HStack(alignment: .firstTextBaseline) {
                     Text(BookNaming.gradeName(book.grade))
-                        .font(.system(size: 15, weight: .bold))
+                        .font(Fonts.s(15, .bold, .body))
                         .foregroundStyle(Palette.ink1)
                     Text(BookNaming.termName(book.term))
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(Fonts.s(11, .semibold, .caption))
                         .foregroundStyle(color)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(Capsule().fill(color.opacity(0.14)))
                     Spacer()
                     Text("\(bp.pct)%")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(Fonts.s(12, .bold, .caption))
                         .foregroundStyle(color)
                 }
 
@@ -274,7 +276,7 @@ struct BookTileView: View {
                             height: 5, color: color)
 
                 Text("\(book.lessons.count) 课 · \(bp.total) 字 · 已学 \(bp.learned)")
-                    .font(.system(size: 11))
+                    .font(Fonts.s(11, .regular, .caption))
                     .foregroundStyle(Palette.ink3)
             }
             .padding(14)

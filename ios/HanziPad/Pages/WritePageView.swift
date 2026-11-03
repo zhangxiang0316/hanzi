@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// 描红页：接进导航后的完整版。
 ///
@@ -72,6 +73,8 @@ private struct WritePageBody: View {
     @Binding var showResult: Bool
 
     @Environment(AppState.self) private var app
+    /// 分栏阈值要随字号放大，否则大字号下侧栏被挤成竖条
+    @Environment(\.dynamicTypeSize) private var dt
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -92,7 +95,7 @@ private struct WritePageBody: View {
     }
 
     private var content: some View {
-        let wide = LayoutRules.writeIsSplit(geo.size.width)
+        let wide = LayoutRules.writeIsSplit(geo.size.width, scale: dt.layoutScale)
 
         return ScrollView {
             VStack(spacing: 18) {
@@ -124,24 +127,24 @@ private struct WritePageBody: View {
     private var header: some View {
         HStack(spacing: 14) {
             Text(session.ch)
-                .font(.system(size: 32, weight: .semibold))
+                .font(Fonts.s(32, .semibold, .largeTitle, maxScale: 2.2))
                 .foregroundStyle(Palette.ink1)
             if let m = app.repo.meta(ch) {
                 Text(app.repo.readingFor(ch, lessonId: m.lesson))
-                    .font(.system(size: 17))
+                    .font(Fonts.s(17, .regular, .headline))
                     .foregroundStyle(Palette.jade)
                 Button {
                     SpareParts.speak(ch, rate: app.progress.settings.speechRate)
                 } label: {
                     Image(systemName: "speaker.wave.2.fill")
-                        .font(.system(size: 14))
+                        .font(Fonts.s(14, .regular, .footnote))
                         .foregroundStyle(Palette.jade)
                 }
                 .buttonStyle(.plain)
             }
             Spacer()
             Text("第 \(min(session.index + 1, max(session.count, 1))) / \(session.count) 笔")
-                .font(.system(size: 14, weight: .semibold).monospacedDigit())
+                .font(Fonts.s(14, .semibold, .footnote).monospacedDigit())
                 .foregroundStyle(Palette.ink2)
         }
     }
@@ -150,7 +153,7 @@ private struct WritePageBody: View {
     /// 否则孩子写不好会以为自己「没学会」——课标本来就不要求会写。
     private var readOnlyNote: some View {
         HStack(alignment: .top, spacing: 8) {
-            Text("💡").font(.system(size: 13))
+            Text("💡").font(Fonts.s(13, .regular, .footnote))
             Text("这个字课本只要求认识，不要求会写。写不好没关系，多写几次手会熟。")
                 .font(Fonts.caption)
                 .foregroundStyle(Palette.ink2)
@@ -170,7 +173,7 @@ private struct WritePageBody: View {
             VStack(alignment: .leading, spacing: 7) {
                 HStack {
                     Text("进度")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(Fonts.s(12, .semibold, .caption))
                         .foregroundStyle(Palette.ink2)
                     Spacer()
                     Text("\(session.scores.count) 笔已写")
@@ -208,12 +211,12 @@ private struct WritePageBody: View {
             if !session.scores.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("每一笔")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(Fonts.s(12, .semibold, .caption))
                         .foregroundStyle(Palette.ink2)
                     FlowRow(spacing: 6) {
                         ForEach(Array(session.scores.enumerated()), id: \.offset) { i, s in
                             Text("\(i + 1):\(s)")
-                                .font(.system(size: 11).monospacedDigit())
+                                .font(Fonts.s(11, .regular, .caption).monospacedDigit())
                                 .foregroundStyle(scoreColor(s))
                                 .padding(.horizontal, 7)
                                 .padding(.vertical, 3)
@@ -230,7 +233,7 @@ private struct WritePageBody: View {
     private func tipRow(_ n: String, _ text: String) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Text(n)
-                .font(.system(size: 10, weight: .bold))
+                .font(Fonts.s(10, .bold, .caption2))
                 .foregroundStyle(Palette.jade)
                 .frame(width: 16, height: 16)
                 .background(Circle().fill(Palette.jadeSoft))
@@ -308,10 +311,10 @@ private struct WriteResultSheet: View {
         VStack(spacing: 20) {
             Spacer()
             Text(session.finalStars == 3 ? "🏆" : session.finalStars > 0 ? "🎉" : "🌱")
-                .font(.system(size: 54))
+                .font(Fonts.s(54, .regular, .largeTitle, maxScale: 1.4))
             StarsView(count: session.finalStars, size: 28)
             Text("\(session.finalScore) 分")
-                .font(.system(size: 32, weight: .bold))
+                .font(Fonts.s(32, .bold, .largeTitle, maxScale: 2.2))
                 .foregroundStyle(Palette.ink1)
             Text(resultText)
                 .font(Fonts.body)

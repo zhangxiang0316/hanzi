@@ -37,7 +37,7 @@ struct HanziButton: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 15, weight: .semibold))
+                .font(Fonts.s(15, .semibold, .body))
                 .frame(maxWidth: fullWidth ? .infinity : nil)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 11)
@@ -151,7 +151,7 @@ struct TinyPill: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 11, weight: .semibold))
+            .font(Fonts.s(11, .semibold, .caption))
             .padding(.horizontal, 9)
             .padding(.vertical, 3)
             .background(filled ? color : color.opacity(0.13))
@@ -189,9 +189,9 @@ struct EmptyState: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            Text(emoji).font(.system(size: 42))
+            Text(emoji).font(Fonts.s(42, .regular, .largeTitle, maxScale: 1.4))
             Text(title)
-                .font(.system(size: 16, weight: .semibold))
+                .font(Fonts.s(16, .semibold, .body))
                 .foregroundStyle(Palette.ink1)
             if let desc {
                 Text(desc)
@@ -217,7 +217,7 @@ struct StarsView: View {
         HStack(spacing: 2) {
             ForEach(0..<3, id: \.self) { i in
                 Text(i < shown ? "★" : "☆")
-                    .font(.system(size: size))
+                    .font(Fonts.s(size, .regular, .body, maxScale: 1.4))
                     .foregroundStyle(i < shown ? Palette.amber : Palette.line)
                     .scaleEffect(animated && i < shown ? 1 : 0.9)
             }

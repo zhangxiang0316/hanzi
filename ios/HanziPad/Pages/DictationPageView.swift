@@ -11,6 +11,8 @@ struct DictationPageView: View {
     let book: String
 
     @Environment(AppState.self) private var app
+    /// 听写页的圆形按钮要跟着字号长
+    @Environment(\.dynamicTypeSize) private var dt
     @Environment(\.dismiss) private var dismiss
 
     @State private var plan: DictationPlan?
@@ -63,7 +65,7 @@ struct DictationPageView: View {
 
     @ViewBuilder
     private func content(plan: DictationPlan, session: WriteSession, geo: GeometryProxy) -> some View {
-        let wide = LayoutRules.writeIsSplit(geo.size.width)
+        let wide = LayoutRules.writeIsSplit(geo.size.width, scale: dt.layoutScale)
 
         ScrollView {
             VStack(spacing: 18) {
@@ -109,12 +111,12 @@ struct DictationPageView: View {
         VStack(spacing: 8) {
             HStack {
                 Text("第 \(min(plan.index + 1, plan.count)) / \(plan.count) 个")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(Fonts.s(13, .semibold, .footnote))
                     .foregroundStyle(Palette.ink2)
                 Spacer()
                 if let avg = plan.averageScore {
                     Text("平均 \(avg) 分")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(Fonts.s(13, .semibold, .footnote))
                         .foregroundStyle(Palette.jade)
                 }
             }
@@ -130,9 +132,11 @@ struct DictationPageView: View {
             speak(item, level: plan.level)
         } label: {
             Image(systemName: "speaker.wave.2.fill")
-                .font(.system(size: 15, weight: .semibold))
+                .font(Fonts.s(15, .semibold, .body))
                 .foregroundStyle(Palette.jade)
-                .frame(width: 40, height: 40)
+                // 圆形按钮跟着字号一起长，否则图标会顶出圆外
+                .frame(width: LayoutRules.scaled(40, by: dt.layoutScale),
+                       height: LayoutRules.scaled(40, by: dt.layoutScale))
                 .background(Circle().fill(Palette.card))
                 .overlay(Circle().strokeBorder(Palette.line, lineWidth: 1))
         }
@@ -145,7 +149,7 @@ struct DictationPageView: View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 6) {
                 Text(plan.level.title)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(Fonts.s(11, .semibold, .caption))
                     .foregroundStyle(Palette.sky)
                 Text(plan.level == .hard ? "听清楚了吗？" : "听到的是——")
                     .font(Fonts.caption)
@@ -153,16 +157,16 @@ struct DictationPageView: View {
                 // 写完之后才显示答案：写之前显示就等于把底字给了
                 if justFinished {
                     Text(item.ch)
-                        .font(.system(size: 40, weight: .medium))
+                        .font(Fonts.s(40, .medium, .largeTitle, maxScale: 2.2))
                         .foregroundStyle(Palette.ink1)
                 } else {
                     Text("＿")
-                        .font(.system(size: 40, weight: .medium))
+                        .font(Fonts.s(40, .medium, .largeTitle, maxScale: 2.2))
                         .foregroundStyle(Palette.ink3.opacity(0.35))
                 }
                 if let w = item.word, plan.level != .hard {
                     Text(w)
-                        .font(.system(size: 13))
+                        .font(Fonts.s(13, .regular, .footnote))
                         .foregroundStyle(Palette.ink3)
                 }
             }
@@ -195,7 +199,7 @@ struct DictationPageView: View {
                     Image(systemName: "speaker.wave.2.fill")
                     Text("再念一遍")
                 }
-                .font(.system(size: 14, weight: .semibold))
+                .font(Fonts.s(14, .semibold, .footnote))
                 .foregroundStyle(Palette.jade)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
@@ -213,7 +217,7 @@ struct DictationPageView: View {
         HStack {
             Text(k).font(Fonts.caption).foregroundStyle(Palette.ink3)
             Spacer()
-            Text(v).font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.ink2)
+            Text(v).font(Fonts.s(13, .semibold, .footnote)).foregroundStyle(Palette.ink2)
         }
     }
 
@@ -282,7 +286,7 @@ private struct DictationResultSheet: View {
     var body: some View {
         VStack(spacing: 20) {
             Text("听写完成")
-                .font(.system(size: 22, weight: .bold))
+                .font(Fonts.s(22, .bold, .title2))
                 .foregroundStyle(Palette.ink1)
 
             StarsView(count: plan.stars, size: 30)
@@ -297,11 +301,11 @@ private struct DictationResultSheet: View {
                 ForEach(plan.items.filter { plan.scores[$0.ch] != nil }, id: \.ch) { item in
                     HStack {
                         Text(item.ch)
-                            .font(.system(size: 20, weight: .medium))
+                            .font(Fonts.s(20, .medium, .title3))
                             .foregroundStyle(Palette.ink1)
                         Spacer()
                         Text("\(plan.scores[item.ch] ?? 0) 分")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(Fonts.s(13, .semibold, .footnote))
                             .foregroundStyle(scoreColor(plan.scores[item.ch] ?? 0))
                     }
                     .padding(.vertical, 9)
@@ -332,7 +336,7 @@ private struct DictationResultSheet: View {
 
     private func stat(_ k: String, _ v: String) -> some View {
         VStack(spacing: 4) {
-            Text(v).font(.system(size: 19, weight: .bold)).foregroundStyle(Palette.ink1)
+            Text(v).font(Fonts.s(19, .bold, .title3)).foregroundStyle(Palette.ink1)
             Text(k).font(Fonts.caption).foregroundStyle(Palette.ink3)
         }
     }

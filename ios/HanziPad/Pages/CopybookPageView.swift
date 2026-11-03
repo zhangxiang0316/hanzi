@@ -11,6 +11,7 @@ import SwiftUI
 /// 按最近写的在前排，孩子翻开看到的是「我最近在练什么」。
 struct CopybookPageView: View {
     @Environment(AppState.self) private var app
+    @Environment(\.dynamicTypeSize) private var dt
     @Environment(\.dismiss) private var dismiss
 
     /// 当前筛选：nil = 全部
@@ -52,9 +53,9 @@ struct CopybookPageView: View {
 
     private var emptyState: some View {
         VStack(spacing: 14) {
-            Text("🖌️").font(.system(size: 44))
+            Text("🖌️").font(Fonts.s(44, .regular, .largeTitle, maxScale: 1.4))
             Text("还没有写过字")
-                .font(.system(size: 17, weight: .bold))
+                .font(Fonts.s(17, .bold, .headline))
                 .foregroundStyle(Palette.ink1)
             Text("去描红或听写几个字，这里就会有一张你自己的字帖")
                 .font(Fonts.caption)
@@ -79,14 +80,14 @@ struct CopybookPageView: View {
         return VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text("\(total)")
-                    .font(.system(size: 34, weight: .bold))
+                    .font(Fonts.s(34, .bold, .largeTitle, maxScale: 2.2))
                     .foregroundStyle(Palette.ink1)
                 Text("个字写过")
-                    .font(.system(size: 13))
+                    .font(Fonts.s(13, .regular, .footnote))
                     .foregroundStyle(Palette.ink3)
                 Spacer()
                 Text("共 \(app.progress.writeStarsTotal) 颗星")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(Fonts.s(13, .semibold, .footnote))
                     .foregroundStyle(Palette.amber)
             }
 
@@ -96,10 +97,10 @@ struct CopybookPageView: View {
                     let n = hist[s] ?? 0
                     VStack(spacing: 3) {
                         Text("\(n)")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(Fonts.s(16, .bold, .body))
                             .foregroundStyle(n > 0 ? starColor(s) : Palette.ink3.opacity(0.4))
                         Text(s == 0 ? "待练" : "\(s) 星")
-                            .font(.system(size: 10))
+                            .font(Fonts.s(10, .regular, .caption2))
                             .foregroundStyle(Palette.ink3)
                     }
                     .frame(maxWidth: .infinity)
@@ -155,9 +156,9 @@ struct CopybookPageView: View {
         } label: {
             HStack(spacing: 5) {
                 Text(title)
-                    .font(.system(size: 13, weight: on ? .semibold : .regular))
+                    .font(Fonts.s(13, on ? .semibold : .regular, .footnote))
                 Text("\(count)")
-                    .font(.system(size: 11))
+                    .font(Fonts.s(11, .regular, .caption))
                     .opacity(0.7)
             }
             .foregroundStyle(on ? Color.white : Palette.ink2)
@@ -185,7 +186,7 @@ struct CopybookPageView: View {
             spacing: 12
         )
         return LazyVGrid(
-            columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: max(2, cols)),
+            columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: max(2, cols)),  // cols 已按字号收窄
             spacing: 12
         ) {
             ForEach(shown, id: \.ch) { item in
@@ -203,16 +204,17 @@ struct CopybookPageView: View {
     private func tile(ch: String, record: Progress.WriteRecord) -> some View {
         VStack(spacing: 5) {
             HanziView(ch: ch, strokes: app.repo.strokes(ch), showGhost: false)
-                .frame(width: 46, height: 46)
+                .frame(width: LayoutRules.scaled(46, by: dt.layoutScale),
+                       height: LayoutRules.scaled(46, by: dt.layoutScale))
             HStack(spacing: 2) {
                 ForEach(0..<3, id: \.self) { i in
                     Text("★")
-                        .font(.system(size: 9))
+                        .font(Fonts.s(9, .regular, .caption2))
                         .foregroundStyle(i < record.stars ? Palette.amber : Palette.track)
                 }
             }
             Text("\(record.best) 分")
-                .font(.system(size: 10, weight: .semibold))
+                .font(Fonts.s(10, .semibold, .caption2))
                 .foregroundStyle(scoreColor(record.best))
         }
         .frame(maxWidth: .infinity)

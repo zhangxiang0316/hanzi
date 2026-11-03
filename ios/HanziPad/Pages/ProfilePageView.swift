@@ -6,6 +6,8 @@ import SwiftUI
 /// 用自适应网格 + 紧凑卡片，iPad 上会铺成 4-6 列，不会每屏只看到四五个。
 struct ProfilePageView: View {
     @Environment(AppState.self) private var app
+    /// 只在需要按字号收窄网格/控件的地方读它
+    @Environment(\.dynamicTypeSize) private var dt
 
     var body: some View {
         GeometryReader { geo in
@@ -38,11 +40,11 @@ struct ProfilePageView: View {
                                        startPoint: .topLeading, endPoint: .bottomTrailing)
                     )
                     .frame(width: 66, height: 66)
-                Text("🌱").font(.system(size: 30))
+                Text("🌱").font(Fonts.s(30, .regular, .largeTitle, maxScale: 1.4))
             }
             VStack(alignment: .leading, spacing: 4) {
                 Text("小小识字家")
-                    .font(.system(size: 19, weight: .bold))
+                    .font(Fonts.s(19, .bold, .title3))
                     .foregroundStyle(Palette.ink1)
                 Text("已连续学习 \(app.progress.streak) 天")
                     .font(Fonts.bodySmall)
@@ -58,7 +60,7 @@ struct ProfilePageView: View {
         let stars = app.progress.writeStarsTotal
         let days = app.progress.activeDays
 
-        return LazyVGrid(columns: [GridItem(.adaptive(minimum: 130), spacing: 12)],
+        return LazyVGrid(columns: [GridItem(.adaptive(minimum: LayoutRules.scaled(130, by: dt.layoutScale)), spacing: 12)],
                          spacing: 12) {
             statCard("认识", "\(learned)", "个字", Palette.jade)
             statCard("掌握", "\(mastered)", "个字", Palette.amber)
@@ -71,14 +73,14 @@ struct ProfilePageView: View {
                           _ unit: String, _ color: Color) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(title)
-                .font(.system(size: 11))
+                .font(Fonts.s(11, .regular, .caption))
                 .foregroundStyle(Palette.ink3)
             HStack(alignment: .firstTextBaseline, spacing: 3) {
                 Text(value)
-                    .font(.system(size: 24, weight: .bold))
+                    .font(Fonts.s(24, .bold, .title2))
                     .foregroundStyle(color)
                 Text(unit)
-                    .font(.system(size: 11))
+                    .font(Fonts.s(11, .regular, .caption))
                     .foregroundStyle(Palette.ink3)
             }
         }
@@ -104,7 +106,7 @@ struct ProfilePageView: View {
                     .font(Fonts.caption).foregroundStyle(Palette.ink3)
             ))
 
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 10)],
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: LayoutRules.scaled(96, by: dt.layoutScale)), spacing: 10)],
                       spacing: 10) {
                 ForEach(badges, id: \.id) { b in
                     badgeCell(b)
@@ -116,20 +118,22 @@ struct ProfilePageView: View {
     private func badgeCell(_ b: Progress.Badge) -> some View {
         VStack(spacing: 5) {
             Text(b.emoji)
-                .font(.system(size: 24))
+                .font(Fonts.s(24, .regular, .title2))
                 .grayscale(b.got ? 0 : 1)
                 .opacity(b.got ? 1 : 0.35)
             Text(b.name)
-                .font(.system(size: 11, weight: .semibold))
+                .font(Fonts.s(11, .semibold, .caption))
                 .foregroundStyle(b.got ? Palette.ink1 : Palette.ink3)
-                .lineLimit(1)
+                .lineLimit(dt.isAccessibility ? 2 : 1)
                 .minimumScaleFactor(0.75)
             Text(b.desc)
-                .font(.system(size: 9))
+                .font(Fonts.s(9, .regular, .caption2))
                 .foregroundStyle(Palette.ink3)
-                .lineLimit(2)
+                .lineLimit(dt.isAccessibility ? 4 : 2)
                 .multilineTextAlignment(.center)
-                .frame(height: 24)
+                // 原来写死 24pt，字号一放大两行字就被裁掉下半截；
+                // 改成 minHeight，默认字号下高度不变，放大时自己长
+                .frame(minHeight: 24)
         }
         .padding(.vertical, 10)
         .padding(.horizontal, 6)
@@ -159,9 +163,9 @@ struct ProfilePageView: View {
             } label: {
                 HStack(spacing: 12) {
                     Image(systemName: "exclamationmark.bubble")
-                        .font(.system(size: 15, weight: .medium))
+                        .font(Fonts.s(15, .medium, .body))
                         .foregroundStyle(n > 0 ? Palette.clay : Palette.ink3)
-                        .frame(width: 22)
+                        .frame(width: LayoutRules.scaled(22, by: dt.layoutScale))
                     Text("错题本")
                         .font(Fonts.body)
                         .foregroundStyle(Palette.ink1)
@@ -170,7 +174,7 @@ struct ProfilePageView: View {
                         .font(Fonts.caption)
                         .foregroundStyle(n > 0 ? Palette.clay : Palette.ink3)
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(Fonts.s(12, .semibold, .caption))
                         .foregroundStyle(Palette.ink3)
                 }
                 .padding(16)
@@ -193,9 +197,9 @@ struct ProfilePageView: View {
             } label: {
                 HStack(spacing: 12) {
                     Image(systemName: "square.grid.2x2")
-                        .font(.system(size: 15, weight: .medium))
+                        .font(Fonts.s(15, .medium, .body))
                         .foregroundStyle(app.progress.writeCount > 0 ? Palette.jade : Palette.ink3)
-                        .frame(width: 22)
+                        .frame(width: LayoutRules.scaled(22, by: dt.layoutScale))
                     Text("我的字帖")
                         .font(Fonts.body)
                         .foregroundStyle(Palette.ink1)
@@ -206,7 +210,7 @@ struct ProfilePageView: View {
                         .font(Fonts.caption)
                         .foregroundStyle(app.progress.writeCount > 0 ? Palette.jade : Palette.ink3)
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(Fonts.s(12, .semibold, .caption))
                         .foregroundStyle(Palette.ink3)
                 }
                 .padding(16)
@@ -247,7 +251,7 @@ struct ProfilePageView: View {
                         ForEach([3, 5, 8, 10], id: \.self) { Text("\($0)").tag($0) }
                     }
                     .pickerStyle(.segmented)
-                    .frame(width: 220)
+                    .frame(width: LayoutRules.scaled(220, by: dt.layoutScale))
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 13)
@@ -361,7 +365,7 @@ struct ProfilePageView: View {
                     .font(Fonts.caption)
                     .foregroundStyle(Palette.ink3)
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(Fonts.s(12, .semibold, .caption))
                     .foregroundStyle(Palette.ink3)
             }
             .padding(16)

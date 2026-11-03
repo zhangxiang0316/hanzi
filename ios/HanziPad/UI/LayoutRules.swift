@@ -20,8 +20,26 @@ enum LayoutRules {
     /// 生字网格的最小卡片宽
     static let charTileMin: CGFloat = 108
 
-    static func detailIsSplit(_ width: CGFloat) -> Bool { width > detailSplitWidth }
-    static func writeIsSplit(_ width: CGFloat) -> Bool { width > writeSplitWidth }
+    /// 分栏阈值也要随字号放大。
+    ///
+    /// 720 是「文字在 15pt 下排得下」的宽度；字号到 3 倍时，同一个侧栏
+    /// 需要两倍多的宽度才不至于每行只剩三四个字。不跟着调的话，
+    /// 大字号用户看到的是一列被挤成窄条的竖排文字。
+    ///
+    /// 封顶 1.8 倍：再大就该直接放弃分栏、回到单列（单列永远能读）。
+    static func detailSplitWidth(scaledBy scale: CGFloat) -> CGFloat {
+        detailSplitWidth * min(max(scale, 1), 1.8)
+    }
+    static func writeSplitWidth(scaledBy scale: CGFloat) -> CGFloat {
+        writeSplitWidth * min(max(scale, 1), 1.8)
+    }
+
+    static func detailIsSplit(_ width: CGFloat, scale: CGFloat = 1) -> Bool {
+        width > detailSplitWidth(scaledBy: scale)
+    }
+    static func writeIsSplit(_ width: CGFloat, scale: CGFloat = 1) -> Bool {
+        width > writeSplitWidth(scaledBy: scale)
+    }
 
     /// 自适应网格在某宽度下能放几列
     static func columns(width: CGFloat, minimum: CGFloat, spacing: CGFloat) -> Int {
@@ -43,9 +61,48 @@ enum LayoutRules {
         width < 700 ? width : 760
     }
 
+    /// 大字号下容器要跟着一起长，否则文字撑破格子。
+    ///
+    /// 只放大、不缩小（缩小时留白不变更稳），并且封顶——辅助字号下
+    /// 卡片宽度会长到 2 倍出头，再多就没有意义了，反而一屏放不下一个字。
+    static func scaled(_ base: CGFloat, by scale: CGFloat, cap: CGFloat = 2.2) -> CGFloat {
+        base * min(max(scale, 1), max(cap, 1))
+    }
+
     /// 侧边栏在各宽度下应不应该常驻。
     ///
     /// 窗口特别窄时 NavigationSplitView 会自动折叠侧边栏，
     /// 这里只是给页面一个「可用宽度是否紧张」的判断依据。
     static func sidebarCollapsed(_ width: CGFloat) -> Bool { width < 560 }
+}
+
+/// Dynamic Type 档位 → 布局放大倍数。
+///
+/// 为什么不直接用 `DynamicTypeSize`：`LayoutRules` 在 `HanziCore` 测试包里，
+/// 那个包刻意不依赖 SwiftUI/UIKit，好在 macOS 上直接跑测试。所以这里只认
+/// 一个整数档位（-3…5，对应 xSmall…accessibility5），由界面层做映射。
+///
+/// 倍数取自 Apple 正文（`.body`）在各档位的实际放大比例：默认档 1.0，
+/// 辅助功能最大档约 3.1 倍。布局用同一套数，文字和容器才一起长。
+enum TypeScale {
+    /// xSmall 起算，共 12 档（standard 7 + accessibility 5）
+    static func factor(forStep step: Int) -> CGFloat {
+        switch step {
+        case ...(-3): return 0.82
+        case -2: return 0.88
+        case -1: return 0.94
+        case 0: return 1.0
+        case 1: return 1.12
+        case 2: return 1.23
+        case 3: return 1.35
+        case 4: return 1.64
+        case 5: return 1.95
+        case 6: return 2.35
+        case 7: return 2.76
+        default: return 3.12
+        }
+    }
+
+    /// 是否属于辅助功能大字号（此时该把多列布局降成单列）
+    static func isAccessibility(_ step: Int) -> Bool { step >= 4 }
 }

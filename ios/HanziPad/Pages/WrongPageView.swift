@@ -3,6 +3,7 @@ import SwiftUI
 /// 错题本：按错误次数排序，可以练一遍或清掉。
 struct WrongPageView: View {
     @Environment(AppState.self) private var app
+    @Environment(\.dynamicTypeSize) private var dt
 
     var body: some View {
         GeometryReader { geo in
@@ -63,12 +64,13 @@ struct WrongPageView: View {
         return HStack(spacing: 14) {
             HanziView(ch: item.ch, strokes: app.repo.strokes(item.ch),
                       showGrid: false, showGhost: false)
-                .frame(width: 56, height: 56)
+                .frame(width: LayoutRules.scaled(56, by: dt.layoutScale),
+                       height: LayoutRules.scaled(56, by: dt.layoutScale))
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 8) {
                     Text(item.ch)
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(Fonts.s(18, .semibold, .headline))
                         .foregroundStyle(Palette.ink1)
                     if let meta {
                         Text(meta.py)
@@ -87,7 +89,7 @@ struct WrongPageView: View {
                 app.push(AppState.CharRoute(ch: item.ch, lesson: item.lesson))
             } label: {
                 Text("看看")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(Fonts.s(13, .semibold, .footnote))
                     .foregroundStyle(Palette.jade)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)

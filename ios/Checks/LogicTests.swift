@@ -1184,3 +1184,126 @@ final class LogicTests: XCTestCase {
     }
 
 }
+
+// MARK: - Dynamic Type
+
+/// 字号缩放规则。
+///
+/// 这些是纯数值函数，放在 `HanziCore` 里就是为了能在这里穷举——
+/// 「系统字号调到最大时卡片会不会撑破」这种问题，靠截图看只能验证一个档位，
+/// 而档位有 12 个。
+final class TypeScaleTests: XCTestCase {
+
+    /// 默认档必须是 1.0，否则默认字号下的界面会和设计稿不一致
+    func testDefaultStepIsExactlyOne() {
+        XCTAssertEqual(TypeScale.factor(forStep: 0), 1.0)
+    }
+
+    /// 12 个档位，倍数严格递增
+    func testFactorsAreMonotonicallyIncreasing() {
+        let steps = Array(-3...8)
+        let factors = steps.map { TypeScale.factor(forStep: $0) }
+        for i in 1..<factors.count {
+            XCTAssertGreaterThan(factors[i], factors[i - 1],
+                                 "档位 \(steps[i]) 的倍数应大于 \(steps[i - 1])")
+        }
+    }
+
+    /// 两端夹紧：比最小档还小仍取下限，比最大档还大取上限
+    func testFactorsClampAtBothEnds() {
+        XCTAssertEqual(TypeScale.factor(forStep: -99), TypeScale.factor(forStep: -3))
+        XCTAssertEqual(TypeScale.factor(forStep: 99), TypeScale.factor(forStep: 8))
+    }
+
+    /// 辅助功能档的倍数要明显大：最大档约 3 倍，这是 Apple 正文的实际比例
+    func testAccessibilityRangeIsLarge() {
+        XCTAssertEqual(TypeScale.factor(forStep: 8), 3.12, accuracy: 0.03)
+        XCTAssertGreaterThanOrEqual(TypeScale.factor(forStep: 4), 1.5)
+    }
+
+    /// 辅助功能档的判定：前 7 档（xSmall…xxxLarge）都不算
+    func testAccessibilityThreshold() {
+        for step in -3...3 {
+            XCTAssertFalse(TypeScale.isAccessibility(step), "档位 \(step) 不该算辅助功能字号")
+        }
+        for step in 4...8 {
+            XCTAssertTrue(TypeScale.isAccessibility(step), "档位 \(step) 应算辅助功能字号")
+        }
+    }
+
+    /// `scaled` 只放大不缩小，且封顶
+    func testScaledOnlyGrowsAndCaps() {
+        // 小字号不缩容器，保持留白
+        XCTAssertEqual(LayoutRules.scaled(108, by: 0.82), 108)
+        XCTAssertEqual(LayoutRules.scaled(108, by: 1.0), 108)
+        // 放大
+        XCTAssertEqual(LayoutRules.scaled(100, by: 1.5), 150, accuracy: 0.01)
+        // 封顶（默认 2.2）
+        XCTAssertEqual(LayoutRules.scaled(100, by: 3.12), 220, accuracy: 0.01)
+        // 自定义封顶
+        XCTAssertEqual(LayoutRules.scaled(100, by: 3.12, cap: 1.5), 150, accuracy: 0.01)
+        // 封顶值小于 1 时当作 1，避免算出比原值还小
+        XCTAssertEqual(LayoutRules.scaled(100, by: 2, cap: 0.5), 100, accuracy: 0.01)
+    }
+
+    /// 分栏阈值随字号抬高：字号越大，越早退回单列。
+    ///
+    /// 720pt 是「15pt 正文排得下」的宽度。字号到 3 倍时同一个侧栏需要
+    /// 两倍多宽度，不调阈值的话用户看到的是一列被挤成窄条的竖排文字。
+    func testSplitThresholdGrowsWithFontSize() {
+        // 默认字号：阈值不变，老行为完全保留
+        XCTAssertEqual(LayoutRules.detailSplitWidth(scaledBy: 1.0), 720)
+        XCTAssertEqual(LayoutRules.writeSplitWidth(scaledBy: 1.0), 820)
+
+        // 小字号不缩小阈值（否则窗口偏窄时反而分栏）
+        XCTAssertEqual(LayoutRules.detailSplitWidth(scaledBy: 0.82), 720)
+
+        // 放大：阈值变高 → 同一宽度更早退回单列
+        XCTAssertEqual(LayoutRules.detailSplitWidth(scaledBy: 1.5), 1080, accuracy: 0.01)
+        XCTAssertGreaterThan(LayoutRules.detailSplitWidth(scaledBy: 2.0),
+                             LayoutRules.detailSplitWidth(scaledBy: 1.0))
+
+        // 封顶 1.8 倍
+        XCTAssertEqual(LayoutRules.detailSplitWidth(scaledBy: 3.12), 720 * 1.8, accuracy: 0.01)
+    }
+
+    /// 具体到「1024pt 宽的 iPad」：默认字号分栏，最大字号不分栏
+    func testSplitDecisionFlipsAtLargeFontSize() {
+        let width: CGFloat = 900
+        XCTAssertTrue(LayoutRules.detailIsSplit(width, scale: 1.0))
+        XCTAssertFalse(LayoutRules.detailIsSplit(width, scale: 3.12),
+                       "900pt 窗口在最大字号下应退回单列")
+        // 不传 scale 时的默认值等价于 1.0，老调用点行为不变
+        XCTAssertEqual(LayoutRules.detailIsSplit(width),
+                       LayoutRules.detailIsSplit(width, scale: 1.0))
+    }
+
+    /// 实测宽度：iPad 13 寸 + 侧边栏后内容区只有 787pt。
+    ///
+    /// 这个数字是量出来的（调试输出 geo.size.width），不是估的。
+    /// 787 在默认字号下详情页分栏（787 > 720），最大字号下退回单列
+    /// （787 < 720×1.8=1296）——这正是我们想要的行为。
+    func testMeasuredIPadContentWidth() {
+        let measured: CGFloat = 787
+        XCTAssertTrue(LayoutRules.detailIsSplit(measured, scale: 1.0),
+                      "默认字号下详情页应分栏")
+        XCTAssertFalse(LayoutRules.detailIsSplit(measured, scale: 3.12),
+                       "最大字号下详情页应退回单列")
+        // 写描红阈值更高（820），787 在任何字号下都是单列
+        XCTAssertFalse(LayoutRules.writeIsSplit(measured, scale: 1.0))
+        XCTAssertFalse(LayoutRules.writeIsSplit(measured, scale: 3.12))
+    }
+
+    /// 最大字号下网格会自然降到更少的列：同一宽度能放下的卡片变少
+    func testLargerTilesYieldFewerColumns() {
+        let width: CGFloat = 1024
+        let normal = LayoutRules.columns(width: width,
+                                        minimum: LayoutRules.scaled(108, by: 1.0),
+                                        spacing: 12)
+        let huge = LayoutRules.columns(width: width,
+                                       minimum: LayoutRules.scaled(108, by: 3.12),
+                                       spacing: 12)
+        XCTAssertGreaterThan(normal, huge, "字号变大后同一宽度应放更少的格子")
+        XCTAssertGreaterThanOrEqual(huge, 1)
+    }
+}

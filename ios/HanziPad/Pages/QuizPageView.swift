@@ -7,6 +7,8 @@ import SwiftUI
 struct QuizPageView: View {
     let payload: AppState.QuizPayload
     @Environment(AppState.self) private var app
+    /// 辅助功能字号下选项一律单列：两列时汉字的字号被挤到看不清
+    @Environment(\.dynamicTypeSize) private var dt
     @Environment(\.dismiss) private var dismiss
 
     @State private var questions: [Quiz.Question] = []
@@ -120,11 +122,11 @@ struct QuizPageView: View {
         VStack(spacing: 8) {
             HStack {
                 Text("第 \(min(index + 1, questions.count)) / \(questions.count) 题")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(Fonts.s(13, .semibold, .footnote))
                     .foregroundStyle(Palette.ink2)
                 Spacer()
                 Text("答对 \(correct)")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(Fonts.s(13, .semibold, .footnote))
                     .foregroundStyle(Palette.jade)
             }
             ProgressBar(
@@ -141,13 +143,13 @@ struct QuizPageView: View {
 
     private func questionBody(_ geo: GeometryProxy) -> some View {
         let q = questions[index]
-        let wide = LayoutRules.detailIsSplit(geo.size.width)
+        let wide = LayoutRules.detailIsSplit(geo.size.width, scale: dt.layoutScale)
 
         return ScrollView {
             VStack(spacing: 22) {
                 VStack(spacing: 10) {
                     Text(q.title)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(Fonts.s(15, .semibold, .body))
                         .foregroundStyle(Palette.ink2)
 
                     promptView(q)
@@ -159,7 +161,9 @@ struct QuizPageView: View {
                 .padding(.top, 10)
 
                 LazyVGrid(
-                    columns: wide
+                    // 辅助功能字号下一律单列。两列时每个选项只剩一半宽度，
+                    // 系统字号能到 3 倍，汉字会被压到看不出结构——这题就废了。
+                    columns: wide && !dt.isAccessibility
                         ? [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
                         : [GridItem(.flexible())],
                     spacing: 12
@@ -185,17 +189,19 @@ struct QuizPageView: View {
         switch q.promptKind {
         case "pinyin":
             Text(q.prompt)
-                .font(.system(size: 46, weight: .medium))
+                .font(Fonts.s(46, .medium, .largeTitle, maxScale: 2.2))
                 .foregroundStyle(Palette.jadeDeep)
                 .padding(.vertical, 6)
         case "char":
             // 题干是汉字时用笔画轮廓画，字重和笔形跟其他页面一致
             HanziView(ch: q.prompt, strokes: app.repo.strokes(q.prompt),
                       showGrid: false, showGhost: false)
-                .frame(width: 130, height: 130)
+                // 汉字是笔画画出来的，不跟字号走，得手动跟着长
+                .frame(width: LayoutRules.scaled(130, by: dt.layoutScale, cap: 1.8),
+                       height: LayoutRules.scaled(130, by: dt.layoutScale, cap: 1.8))
         default:
             Text(q.prompt)
-                .font(.system(size: 40, weight: .medium))
+                .font(Fonts.s(40, .medium, .largeTitle, maxScale: 2.2))
                 .foregroundStyle(Palette.ink1)
                 .padding(.vertical, 6)
         }
@@ -225,19 +231,20 @@ struct QuizPageView: View {
             HStack {
                 if q.type == "strokeCount" {
                     Text(opt.label)
-                        .font(.system(size: 17, weight: .medium))
+                        .font(Fonts.s(17, .medium, .headline))
                         .foregroundStyle(Palette.ink1)
                 } else if opt.value.count == 1, isHanzi(opt.value) {
                     HanziView(ch: opt.value, strokes: app.repo.strokes(opt.value),
                               showGrid: false, showGhost: false,
                               inkColor: Palette.ink1)
-                        .frame(width: 42, height: 42)
+                        .frame(width: LayoutRules.scaled(42, by: dt.layoutScale),
+                               height: LayoutRules.scaled(42, by: dt.layoutScale))
                     Text(opt.label)
-                        .font(.system(size: 17, weight: .medium))
+                        .font(Fonts.s(17, .medium, .headline))
                         .foregroundStyle(Palette.ink1)
                 } else {
                     Text(opt.label)
-                        .font(.system(size: 17, weight: .medium))
+                        .font(Fonts.s(17, .medium, .headline))
                         .foregroundStyle(Palette.ink1)
                 }
                 Spacer()
@@ -280,7 +287,7 @@ struct QuizPageView: View {
                 Image(systemName: picked == q.answer ? "checkmark.seal.fill" : "info.circle.fill")
                     .foregroundStyle(picked == q.answer ? Palette.jade : Palette.amber)
                 Text(picked == q.answer ? "答对了！" : "答案是「\(q.answer)」")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(Fonts.s(15, .semibold, .body))
                     .foregroundStyle(Palette.ink1)
                 Spacer()
             }

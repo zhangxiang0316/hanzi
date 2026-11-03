@@ -41,12 +41,12 @@ struct UnitPageView: View {
                              color: color, size: 72)
                     .overlay(
                         Text("\(bp.pct)%")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(Fonts.s(16, .bold, .body))
                             .foregroundStyle(color)
                     )
                 VStack(alignment: .leading, spacing: 5) {
                     Text("\(bp.learned) / \(bp.total) 字")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(Fonts.s(16, .semibold, .body))
                         .foregroundStyle(Palette.ink1)
                     Text("已掌握 \(bp.mastered) 字" + (bp.due > 0 ? " · 待复习 \(bp.due) 字" : ""))
                         .font(Fonts.bodySmall)
@@ -66,7 +66,7 @@ struct UnitPageView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text("第 \(unit.no) 单元")
-                    .font(.system(size: 13, weight: .bold))
+                    .font(Fonts.s(13, .bold, .footnote))
                     .foregroundStyle(Palette.ink2)
                 if !unit.theme.isEmpty {
                     Text(unit.theme)
@@ -108,21 +108,21 @@ struct UnitPageView: View {
                         .frame(width: 32, height: 32)
                     if done {
                         Image(systemName: "checkmark")
-                            .font(.system(size: 13, weight: .bold))
+                            .font(Fonts.s(13, .bold, .footnote))
                             .foregroundStyle(Palette.jade)
                     } else {
                         Text("\(lesson?.no ?? 0)")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(Fonts.s(12, .semibold, .caption))
                             .foregroundStyle(Palette.ink2)
                     }
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(lesson?.title ?? lessonId)
-                        .font(.system(size: 15, weight: .medium))
+                        .font(Fonts.s(15, .medium, .body))
                         .foregroundStyle(Palette.ink1)
                     Text("\(c.total) 字 · 已学 \(c.learned)")
-                        .font(.system(size: 11))
+                        .font(Fonts.s(11, .regular, .caption))
                         .foregroundStyle(Palette.ink3)
                 }
 
@@ -132,7 +132,7 @@ struct UnitPageView: View {
                     TinyPill(text: "\(c.learned)/\(c.total)", color: Palette.amber)
                 }
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(Fonts.s(12, .semibold, .caption))
                     .foregroundStyle(Palette.ink3)
             }
             .padding(.horizontal, 14)

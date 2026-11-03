@@ -8,6 +8,8 @@ struct DetailPageView: View {
     let ch: String
     var lessonId: String?
     @Environment(AppState.self) private var app
+    /// 只在需要按字号收窄网格/控件的地方读它
+    @Environment(\.dynamicTypeSize) private var dt
     @Environment(\.dismiss) private var dismiss
 
     @State private var highlight = -1
@@ -21,7 +23,7 @@ struct DetailPageView: View {
 
     var body: some View {
         GeometryReader { geo in
-            let wide = LayoutRules.detailIsSplit(geo.size.width)
+            let wide = LayoutRules.detailIsSplit(geo.size.width, scale: dt.layoutScale)
             ScrollView {
                 if wide {
                     HStack(alignment: .top, spacing: 24) {
@@ -142,16 +144,16 @@ struct DetailPageView: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
                     Text(ch)
-                        .font(.system(size: 40, weight: .semibold))
+                        .font(Fonts.s(40, .semibold, .largeTitle, maxScale: 2.2))
                         .foregroundStyle(Palette.ink1)
                     Text(reading)
-                        .font(.system(size: 20))
+                        .font(Fonts.s(20, .regular, .title3))
                         .foregroundStyle(Palette.jade)
                     Button {
                         SpareParts.speak(ch, rate: app.progress.settings.speechRate)
                     } label: {
                         Image(systemName: "speaker.wave.2.fill")
-                            .font(.system(size: 15))
+                            .font(Fonts.s(15, .regular, .body))
                             .foregroundStyle(Palette.jade)
                     }
                     .buttonStyle(.plain)
@@ -170,7 +172,7 @@ struct DetailPageView: View {
                     if readings.count > 1 {
                         HStack(spacing: 6) {
                             Text("多音字")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(Fonts.s(11, .semibold, .caption))
                                 .foregroundStyle(Palette.amber)
                             Text(readings.map { "\($0.p)（\($0.l)）" }.joined(separator: "  "))
                                 .font(Fonts.caption)
@@ -190,10 +192,10 @@ struct DetailPageView: View {
     private func infoItem(_ label: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label)
-                .font(.system(size: 10))
+                .font(Fonts.s(10, .regular, .caption2))
                 .foregroundStyle(Palette.ink3)
             Text(value)
-                .font(.system(size: 14, weight: .semibold))
+                .font(Fonts.s(14, .semibold, .footnote))
                 .foregroundStyle(Palette.ink1)
         }
     }
@@ -207,7 +209,7 @@ struct DetailPageView: View {
             ))
 
             if let strokes, strokes.count > 0 {
-                let cols = [GridItem(.adaptive(minimum: 44), spacing: 8)]
+                let cols = [GridItem(.adaptive(minimum: LayoutRules.scaled(44, by: dt.layoutScale)), spacing: 8)]
                 LazyVGrid(columns: cols, spacing: 8) {
                     ForEach(0..<strokes.count, id: \.self) { i in
                         Button {
@@ -266,7 +268,7 @@ struct DetailPageView: View {
                         } label: {
                             HStack(spacing: 5) {
                                 Text(w.word)
-                                    .font(.system(size: 14, weight: .medium))
+                                    .font(Fonts.s(14, .medium, .footnote))
                                     .foregroundStyle(Palette.ink1)
                                 // 「显示拼音」控制的是组词上方的注音，不是本字读音。
                                 // 目的是让孩子先自己认词——直接给拼音就变成念拼音了。
@@ -274,7 +276,7 @@ struct DetailPageView: View {
                                 // 的 showPinyin 语义一致。
                                 if showPinyin && !w.p.isEmpty {
                                     Text(w.p)
-                                        .font(.system(size: 10))
+                                        .font(Fonts.s(10, .regular, .caption2))
                                         .foregroundStyle(Palette.ink3)
                                 }
                             }
