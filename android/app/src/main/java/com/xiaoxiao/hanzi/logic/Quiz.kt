@@ -226,6 +226,50 @@ object Quiz {
         )
     }
 
+    /**
+     * 部首：给一个字，选出它的部首。
+     *
+     * 部首查字法是二年级语文园地的正式内容。与「数笔画」是一对——
+     * 查字典要同时知道部首和笔画。
+     *
+     * 独体字的部首就是它自己（龟→龟、鼓→鼓），答案直接印在题干上，
+     * 孩子只要挑那个看得见的字就行，考不到任何东西，所以直接不出题。
+     */
+    private fun radicalQ(
+        ch: String,
+        lessonId: String?,
+        pool: List<String>,
+        rand: () -> Double
+    ): Question? {
+        val m = Repo.meta(ch) ?: return null
+        if (m.radical.isEmpty()) return null
+        if (m.radical == ch) return null
+        // 干扰项排除字形包含关系（木/林），那种是有争议的
+        val ds = Repo.radicalDistractors(m.radical, m.book, 3)
+        if (ds.size < 3) return null
+
+        val raw = ArrayList<Option>()
+        raw.add(Option(m.radical, m.radical))
+        ds.forEach { raw.add(Option(it, it)) }
+        val options = uniqueOptions(shuffle(raw, rand))
+        if (options.size != 4) return null
+
+        return Question(
+            type = "radical",
+            ch = ch,
+            lesson = lessonId,
+            title = "部首",
+            prompt = ch,
+            promptKind = "char",
+            sub = "这个字的部首是哪个？",
+            options = options,
+            answer = m.radical,
+            explain = "「$ch」的部首是「${m.radical}」，共 ${m.strokes} 笔。",
+            index = 0,
+            total = 0
+        )
+    }
+
     private fun strokeCountQ(ch: String, lessonId: String?, pool: List<String>, rand: () -> Double): Question? {
         val m = Repo.meta(ch) ?: return null
         val correct = m.strokes
@@ -353,6 +397,7 @@ object Quiz {
             "fillWord" -> fillWord(ch, lessonId, pool, rand)
             "strokeCount" -> strokeCountQ(ch, lessonId, pool, rand)
             "homophone" -> homophoneQ(ch, lessonId, pool, rand)
+            "radical" -> radicalQ(ch, lessonId, pool, rand)
             "char2word" -> charToWord(ch, lessonId, pool, rand)
             "polyphone" -> polyphone(ch, lessonId, pool, rand)
             else -> null
@@ -469,7 +514,10 @@ object Quiz {
         val questions = ArrayList<Question>()
         var guard = 0
         while (questions.size < count && guard < count * 6) {
-            val ch = targets[questions.size % targets.size]
+            // 用**尝试次数**推进取字，不能用 questions.size。
+            // 某个字出不了题时 questions.size 不增长，就会一直重试同一个字
+            // 直到 guard 耗尽——整套题变成 0 道。
+            val ch = targets[guard % targets.size]
             val lessonId = lesson ?: Repo.meta(ch)?.lesson
             val start = (rand() * order.size).toInt().coerceIn(0, order.size - 1)
             for (k in order.indices) {

@@ -356,6 +356,71 @@ object Repo {
         return sorted.take(count).map { it.first }
     }
 
+    // MARK: - 部首
+
+    /**
+     * 部首查字法是二年级语文园地的正式内容，但 `CharMeta.radical` 一直只在
+     * 解析文案里出现过，从没当成学习维度用过。237 个部首、全部 2596 个字都有。
+     *
+     * 注意：237 个部首里只有 144 个是字库里的生字（能画笔顺），
+     * 另外 93 个是偏旁变形（亻 艹 扌 讠 纟 宀 攵）——它们不是独立汉字，
+     * 没有笔顺数据。所以部首只以**文字**形式出现（当选项、当分组标签），
+     * 不参与描红判分。
+     */
+
+    /** 这个字的部首 */
+    fun radicalOf(ch: String): String = metaMap[ch]?.radical ?: ""
+
+    /** 字库里所有部首（按使用频次从高到低） */
+    fun allRadicals(): List<Triple<String, Int, Boolean>> {
+        val count = HashMap<String, Int>()
+        for (ch in allChars) {
+            val r = metaMap[ch]?.radical ?: continue
+            if (r.isEmpty()) continue
+            count[r] = (count[r] ?: 0) + 1
+        }
+        return count.keys
+            .map { Triple(it, count[it] ?: 0, metaMap[it] != null) }
+            .sortedWith(compareByDescending<Triple<String, Int, Boolean>> { it.second }
+                // 频次相同按码点，保证三端顺序一致
+                .thenBy { it.first.codePointAt(0) })
+    }
+
+    /** 某一册里出现过的部首（按频次从高到低） */
+    fun bookRadicals(book: String): List<Triple<String, Int, Boolean>> {
+        val count = HashMap<String, Int>()
+        for (ch in bookChars(book)) {
+            val r = metaMap[ch]?.radical ?: continue
+            if (r.isEmpty()) continue
+            count[r] = (count[r] ?: 0) + 1
+        }
+        return count.keys
+            .map { Triple(it, count[it] ?: 0, metaMap[it] != null) }
+            .sortedWith(compareByDescending<Triple<String, Int, Boolean>> { it.second }
+                .thenBy { it.first.codePointAt(0) })
+    }
+
+    /** 某一册里某个部首下的所有字（按教材顺序） */
+    fun charsWithRadical(book: String, radical: String): List<String> =
+        bookChars(book).filter { metaMap[it]?.radical == radical }
+
+    /** 全部册次里某个部首下的所有字 */
+    fun allCharsWithRadical(radical: String): List<String> =
+        allChars.filter { metaMap[it]?.radical == radical }
+
+    /**
+     * 部首题的干扰项。
+     *
+     * 取本册里最常见的几个部首，但排除跟正确答案有**字形包含关系**的——
+     * 「木」和「林」这种，孩子会争议「林」的部首是不是「木」，
+     * 当干扰项是制造歧义而不是考知识。
+     */
+    fun radicalDistractors(radical: String, book: String?, count: Int): List<String> =
+        bookRadicals(book ?: defaultBook())
+            .map { it.first }
+            .filter { it != radical && !it.contains(radical) && !radical.contains(it) }
+            .take(count)
+
     /** 所有带笔顺数据的字（教材顺序优先，再补额外字） */
     fun allCharsWithStrokes(): List<String> {
         val seen = HashSet<String>()

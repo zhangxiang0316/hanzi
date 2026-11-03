@@ -82,13 +82,16 @@ struct QuizPageView: View {
             session = Plan.buildSession(mode: "polyphone", prog: app.progress, book: payload.book)
         case "homophone":
             session = Plan.buildSession(mode: "homophone", prog: app.progress, book: payload.book)
+        case "radical":
+            session = Plan.buildSession(mode: "radical", prog: app.progress, book: payload.book)
         default:
             session = Plan.buildSession(mode: "free", prog: app.progress, book: payload.book)
         }
 
         // 多音字模式只出多音字题；其余模式用默认题型轮转
         let types: [String]? = session.mode == "polyphone" ? ["polyphone"]
-            : session.mode == "homophone" ? ["homophone"] : nil
+            : session.mode == "homophone" ? ["homophone"]
+            : session.mode == "radical" ? ["radical"] : nil
         let r = Quiz.build(chars: session.chars, book: payload.book,
                            lesson: payload.lesson, count: session.count, types: types)
         questions = r.questions

@@ -985,6 +985,135 @@ final class LogicTests: XCTestCase {
         }
     }
 
+    // MARK: - 部首
+
+    /// 部首查字法是二年级语文园地的正式内容，但 `CharMeta.r` 一直只在
+    /// 解析文案里出现过，从没当成学习维度用过。
+    @MainActor
+    func testRadicalCountsAndOrder() {
+        let repo = TestRepo.make()
+        let all = repo.allRadicals()
+        XCTAssertEqual(all.count, 237)
+        // 口144 扌138 氵132
+        XCTAssertEqual(Array(all.prefix(3).map(\.radical)), ["口", "扌", "氵"])
+        XCTAssertEqual(Array(all.prefix(3).map(\.count)), [144, 138, 132])
+        // 频次单调不增
+        for i in 1..<all.count {
+            XCTAssertGreaterThanOrEqual(all[i - 1].count, all[i].count, "应按频次降序")
+        }
+    }
+
+    @MainActor
+    func testEveryCharHasRadical() {
+        let repo = TestRepo.make()
+        let missing = repo.allChars.filter { repo.radicalOf($0).isEmpty }
+        XCTAssertTrue(missing.isEmpty, "缺部首的字：\(missing.prefix(10))")
+        XCTAssertEqual(repo.radicalOf("地"), "土")
+        XCTAssertEqual(repo.radicalOf("顶"), "页")
+    }
+
+    @MainActor
+    func testBookRadicalsStayInsideBook() {
+        let repo = TestRepo.make()
+        let rads = repo.bookRadicals("2a")
+        XCTAssertGreaterThan(rads.count, 50)
+        let bookChars = Set(repo.bookChars("2a"))
+        for ch in repo.charsWithRadical("2a", "氵") {
+            XCTAssertTrue(bookChars.contains(ch), "\(ch) 不属于 2a")
+            XCTAssertEqual(repo.radicalOf(ch), "氵")
+        }
+    }
+
+    @MainActor
+    func testRadicalDistractorsAvoidGlyphOverlap() {
+        let repo = TestRepo.make()
+        let ds = repo.radicalDistractors("木", book: "2a", count: 3)
+        XCTAssertEqual(ds.count, 3)
+        for d in ds {
+            XCTAssertNotEqual(d, "木")
+            // 「木」和「林」这种有争议，不该当干扰项
+            XCTAssertFalse(d.contains("木"), "\(d) 与「木」有字形包含关系，有歧义")
+            XCTAssertFalse("木".contains(d))
+        }
+    }
+
+    @MainActor
+    func testRadicalQuizHasFourDistinctOptions() {
+        let repo = TestRepo.make()
+        let chars = Array(repo.bookChars("2a").dropFirst(10).prefix(10))
+        let r = Quiz.build(chars: chars, book: "2a", lesson: nil,
+                           count: 5, seed: 20240101, types: ["radical"])
+        XCTAssertEqual(r.questions.count, 5)
+
+        for q in r.questions {
+            XCTAssertEqual(q.type, "radical")
+            XCTAssertEqual(q.options.count, 4)
+            XCTAssertEqual(Set(q.options.map(\.value)).count, 4, "选项不能重复")
+            XCTAssertTrue(q.options.contains { $0.value == q.answer })
+            XCTAssertEqual(q.answer, repo.radicalOf(q.ch))
+        }
+    }
+
+    /// 回归测试：某个字出不了题时，不能卡死在它身上。
+    ///
+    /// `Quiz.build` 原来用 `questions.count` 决定取哪个字。如果某个字出不了题
+    /// （独体字的部首就是它自己，答案印在题干上），questions.count 不增长，
+    /// 就会**永远重试同一个字**，直到 guardCount 耗尽——整套题变成 0 道。
+    ///
+    /// 修复：改用尝试次数推进取字。
+    @MainActor
+    func testUnproducibleCharDoesNotStallWholeQuiz() {
+        let repo = TestRepo.make()
+        // 龟、鼓 的部首就是它们自己，radical 题型会返回 nil
+        let r = Quiz.build(chars: ["龟", "顶", "鼓", "披"], book: "2a", lesson: nil,
+                           count: 2, seed: 1, types: ["radical"])
+        XCTAssertEqual(r.questions.count, 2, "应跳过独体字继续出题，而不是 0 道")
+        for q in r.questions {
+            XCTAssertNotEqual(q.answer, q.ch, "独体字不该出部首题（答案就是题干）")
+            XCTAssertNotEqual(repo.radicalOf(q.ch), q.ch)
+        }
+    }
+
+    @MainActor
+    func testRadicalQuizSkipsSelfRadicalChars() {
+        let repo = TestRepo.make()
+        let r = Quiz.build(chars: ["龟", "鼓"], book: "2a", lesson: nil,
+                           count: 2, seed: 1, types: ["radical"])
+        XCTAssertTrue(r.questions.isEmpty, "全是独体字时出 0 道是对的")
+    }
+
+    @MainActor
+    func testRadicalSessionExcludesSelfRadicals() {
+        let repo = TestRepo.make()
+        let prog = Progress(store: MemoryStore())
+        let s = Plan.buildSession(mode: "radical", prog: prog, book: "2a")
+        XCTAssertEqual(s.mode, "radical")
+        XCTAssertGreaterThanOrEqual(s.chars.count, 4)
+        for ch in s.chars {
+            XCTAssertNotEqual(repo.radicalOf(ch), ch, "\(ch) 是独体字，不该进部首会话")
+        }
+    }
+
+    /// 部首的跨端黄金值：同一 seed、同一批字，三端必须出同一套题。
+    /// 期望值由小程序 `utils/quiz.js` 算出。
+    @MainActor
+    func testRadicalQuizMatchesCrossPlatformGolden() {
+        let repo = TestRepo.make()
+        let chars = Array(repo.bookChars("2a").dropFirst(10).prefix(10))
+        let r = Quiz.build(chars: chars, book: "2a", lesson: nil,
+                           count: 5, seed: 20240101, types: ["radical"])
+        let got = r.questions.map { q in
+            "\(q.ch)|\(q.answer)|\(q.options.map(\.value).joined(separator: "|"))"
+        }
+        XCTAssertEqual(got, [
+            "顶|页|扌|页|木|氵",
+            "披|扌|木|扌|氵|亻",
+            "晒|日|氵|日|木|扌",
+            "极|木|扌|木|氵|亻",
+            "傍|亻|木|扌|氵|亻",
+        ])
+    }
+
     /// 同音字的跨端黄金值：同一 seed、同一批字，三端必须出同一套题。
     /// 期望值由小程序 `utils/quiz.js` 算出。
     @MainActor

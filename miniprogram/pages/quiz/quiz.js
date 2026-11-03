@@ -41,6 +41,7 @@ Page({
           // 多音字模式只出多音字题；其余模式用默认题型轮转
           types: session.mode === 'polyphone' ? ['polyphone']
             : session.mode === 'homophone' ? ['homophone']
+            : session.mode === 'radical' ? ['radical']
             : undefined,
         });
     this.questions = built.questions;

@@ -56,6 +56,15 @@
     <view class="poly-arrow">→</view>
   </view>
 
+  <view class="poly-card tap" bindtap="onRadical">
+    <view class="poly-icon">🧩</view>
+    <view class="poly-body">
+      <view class="card-title">部首</view>
+      <view class="card-desc">本册 {{radicalCount}} 个部首，练查字法</view>
+    </view>
+    <view class="poly-arrow">→</view>
+  </view>
+
   <view class="poly-card tap {{homoCount ? '' : 'is-off'}}" bindtap="onHomophone">
     <view class="poly-icon">🔤</view>
     <view class="poly-body">

@@ -206,6 +206,42 @@ function homophone(ch, lessonId, pool, rand) {
   };
 }
 
+/**
+ * 部首：给一个字，选出它的部首。
+ *
+ * 部首查字法是二年级语文园地的正式内容。与「数笔画」是一对——
+ * 查字典要同时知道部首和笔画。
+ *
+ * 干扰项取本册常见的部首，但排除有字形包含关系的（「木」/「林」），
+ * 那种是有争议的，不该拿来考孩子。
+ */
+function radical(ch, lessonId, pool, rand) {
+  const m = catalog.getMeta(ch);
+  if (!m || !m.r) return null;
+  // 独体字的部首就是它自己（龟→龟、鼓→鼓）：答案直接印在题干上，
+  // 孩子只要挑那个看得见的字就行，考不到任何东西
+  if (m.r === ch) return null;
+  const book = m.b;
+  const ds = catalog.radicalDistractors(m.r, book, 3);
+  if (ds.length < 3) return null;
+  const options = uniqueOptions(
+    shuffle([option(m.r, m.r)].concat(ds.map((r) => option(r, r))), rand)
+  );
+  if (options.length < 4) return null;
+  return {
+    type: 'radical',
+    ch,
+    lesson: lessonId,
+    title: '部首',
+    prompt: ch,
+    promptKind: 'char',
+    sub: '这个字的部首是哪个？',
+    options,
+    answer: m.r,
+    explain: '「' + ch + '」的部首是「' + m.r + '」，共 ' + m.s + ' 笔。',
+  };
+}
+
 function strokeCount(ch, lessonId, pool, rand) {
   const m = catalog.getMeta(ch);
   if (!m) return null;
@@ -272,6 +308,7 @@ const MAKERS = {
   char2word,
   polyphone,
   homophone,
+  radical,
 };
 
 /**
@@ -450,8 +487,10 @@ function buildQuiz(opts) {
   const questions = [];
   let guard = 0;
   while (questions.length < count && guard < count * 6) {
-    const idx = questions.length;
-    const ch = targets[idx % targets.length];
+    // 用**尝试次数**推进取字，不能用 questions.length。
+    // 某个字出不了题时（比如独体字的部首题）questions.length 不增长，
+    // 就会一直重试同一个字直到 guard 耗尽——整套题变成 0 道。
+    const ch = targets[guard % targets.length];
     const lessonId = opts.lesson || catalog.getMeta(ch).l;
     const start = Math.floor(rand() * order.length);
     for (let k = 0; k < order.length; k++) {

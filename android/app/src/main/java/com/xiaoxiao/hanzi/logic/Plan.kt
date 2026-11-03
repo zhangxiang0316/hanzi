@@ -206,6 +206,25 @@ object Plan {
                     book, picked, minOf(10, maxOf(4, picked.size))
                 )
             }
+            "radical" -> {
+                // 部首：排除「部首就是自己」的独体字，否则答案是题干
+                var pool = Repo.bookChars(book).filter {
+                    val m = Repo.meta(it)
+                    m != null && m.radical.isNotEmpty() && m.radical != it
+                }
+                if (pool.size < 4) {
+                    pool = Repo.allChars.filter {
+                        val m = Repo.meta(it)
+                        m != null && m.radical.isNotEmpty() && m.radical != it
+                    }
+                }
+                val picked = Quiz.shuffle(pool, Quiz.mulberry32(System.currentTimeMillis().toInt()))
+                    .take(minOf(12, pool.size))
+                Session(
+                    "radical", title ?: "${Repo.book(book)?.name} · 部首",
+                    book, picked, minOf(10, maxOf(4, picked.size))
+                )
+            }
             else -> {
                 val learned = Repo.bookChars(book).filter { prog.hasLearned(it) }
                 val pool = if (learned.size >= 8) learned else Repo.bookChars(book)

@@ -207,6 +207,34 @@ enum Quiz {
         )
     }
 
+    /// 部首：给一个字，选出它的部首。
+    ///
+    /// 部首查字法是二年级语文园地的正式内容。与「数笔画」是一对——
+    /// 查字典要同时知道部首和笔画。
+    ///
+    /// 独体字的部首就是它自己（龟→龟、鼓→鼓），答案直接印在题干上，
+    /// 孩子只要挑那个看得见的字就行，考不到任何东西，所以直接不出题。
+    private static func radicalQ(
+        _ ch: String, _ lessonId: String?, _ pool: [String], _ rand: () -> Double
+    ) -> Question? {
+        guard let m = Repo.shared.meta(ch), !m.r.isEmpty else { return nil }
+        if m.r == ch { return nil }
+        // 干扰项排除字形包含关系（木/林），那种是有争议的
+        let ds = Repo.shared.radicalDistractors(m.r, book: m.b, count: 3)
+        if ds.count < 3 { return nil }
+        let options = uniqueOptions(
+            shuffle([Option(value: m.r, label: m.r)] + ds.map { Option(value: $0, label: $0) }, rand))
+        if options.count != 4 { return nil }
+        return Question(
+            type: "radical", ch: ch, lesson: lessonId,
+            title: "部首", prompt: ch, promptKind: "char",
+            sub: "这个字的部首是哪个？",
+            options: options, answer: m.r,
+            explain: "「\(ch)」的部首是「\(m.r)」，共 \(m.s) 笔。",
+            index: 0, total: 0
+        )
+    }
+
     private static func strokeCountQ(
         _ ch: String, _ lessonId: String?, _ pool: [String], _ rand: () -> Double
     ) -> Question? {
@@ -336,6 +364,7 @@ enum Quiz {
         case "fillWord": return fillWord(ch, lessonId, pool, rand)
         case "strokeCount": return strokeCountQ(ch, lessonId, pool, rand)
         case "homophone": return homophoneQ(ch, lessonId, pool, rand)
+        case "radical": return radicalQ(ch, lessonId, pool, rand)
         case "char2word": return charToWord(ch, lessonId, pool, rand)
         case "polyphone": return polyphone(ch, lessonId, pool, rand)
         default: return nil
@@ -452,7 +481,10 @@ enum Quiz {
         var questions: [Question] = []
         var guardCount = 0
         while questions.count < count && guardCount < count * 6 {
-            let ch = targets[questions.count % targets.count]
+            // 用**尝试次数**推进取字，不能用 questions.count。
+            // 某个字出不了题时 questions.count 不增长，就会一直重试同一个字
+            // 直到 guardCount 耗尽——整套题变成 0 道。
+            let ch = targets[guardCount % targets.count]
             let lessonId = lesson ?? Repo.shared.meta(ch)?.lesson
             let start = min(max(Int(rand() * Double(order.count)), 0), order.count - 1)
             for k in 0..<order.count {

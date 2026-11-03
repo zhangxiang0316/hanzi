@@ -91,6 +91,7 @@ fun QuizPage(app: AppState, mode: String, bookId: String, lessonId: String?) {
         val types = when (s.mode) {
             "polyphone" -> listOf("polyphone")
             "homophone" -> listOf("homophone")
+            "radical" -> listOf("radical")
             else -> null
         }
         val result = Quiz.build(s.chars, bookId, lessonId, s.count, types = types)

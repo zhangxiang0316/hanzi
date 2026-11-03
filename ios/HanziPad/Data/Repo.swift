@@ -298,6 +298,78 @@ final class Repo {
         return sorted.prefix(count).map(\.ch)
     }
 
+    // MARK: - 部首
+
+    /// 部首查字法是二年级语文园地的正式内容，但 `CharMeta.r` 一直只在
+    /// 解析文案里出现过，从没当成学习维度用过。237 个部首、全部 2596 个字都有。
+    ///
+    /// 注意：237 个部首里只有 144 个是字库里的生字（能画笔顺），
+    /// 另外 93 个是偏旁变形（亻 艹 扌 讠 纟 宀 攵）——它们不是独立汉字，
+    /// 没有笔顺数据。所以部首只以**文字**形式出现（当选项、当分组标签），
+    /// 不参与描红判分。
+
+    /// 这个字的部首
+    func radicalOf(_ ch: String) -> String {
+        metaMap[ch]?.r ?? ""
+    }
+
+    /// 字库里所有部首（按使用频次从高到低）
+    func allRadicals() -> [(radical: String, count: Int, inLib: Bool)] {
+        var count: [String: Int] = [:]
+        for ch in charOrder {
+            guard let r = metaMap[ch]?.r, !r.isEmpty else { continue }
+            count[r, default: 0] += 1
+        }
+        return count.keys
+            .map { (radical: $0, count: count[$0] ?? 0, inLib: metaMap[$0] != nil) }
+            .sorted {
+                if $0.count != $1.count { return $0.count > $1.count }
+                // 频次相同按码点，保证三端顺序一致
+                return ($0.radical.unicodeScalars.first?.value ?? 0)
+                    < ($1.radical.unicodeScalars.first?.value ?? 0)
+            }
+    }
+
+    /// 某一册里出现过的部首（按频次从高到低）
+    func bookRadicals(_ bookId: String) -> [(radical: String, count: Int, inLib: Bool)] {
+        var count: [String: Int] = [:]
+        for ch in bookChars(bookId) {
+            guard let r = metaMap[ch]?.r, !r.isEmpty else { continue }
+            count[r, default: 0] += 1
+        }
+        return count.keys
+            .map { (radical: $0, count: count[$0] ?? 0, inLib: metaMap[$0] != nil) }
+            .sorted {
+                if $0.count != $1.count { return $0.count > $1.count }
+                return ($0.radical.unicodeScalars.first?.value ?? 0)
+                    < ($1.radical.unicodeScalars.first?.value ?? 0)
+            }
+    }
+
+    /// 某一册里某个部首下的所有字（按教材顺序）
+    func charsWithRadical(_ bookId: String, _ radical: String) -> [String] {
+        bookChars(bookId).filter { metaMap[$0]?.r == radical }
+    }
+
+    /// 全部册次里某个部首下的所有字
+    func allCharsWithRadical(_ radical: String) -> [String] {
+        charOrder.filter { metaMap[$0]?.r == radical }
+    }
+
+    /// 部首题的干扰项。
+    ///
+    /// 取本册里最常见的几个部首，但排除跟正确答案有**字形包含关系**的——
+    /// 「木」和「林」这种，孩子会争议「林」的部首是不是「木」，
+    /// 当干扰项是制造歧义而不是考知识。
+    func radicalDistractors(_ radical: String, book: String?, count: Int) -> [String] {
+        let bookId = book ?? defaultBook()
+        return bookRadicals(bookId)
+            .map(\.radical)
+            .filter { $0 != radical && !$0.contains(radical) && !radical.contains($0) }
+            .prefix(count)
+            .map { $0 }
+    }
+
     /// 某个读音的用例词。
     ///
     /// 组词数据里每个词都带拼音，而拼音音节与汉字是一一对应的

@@ -224,6 +224,25 @@ enum Plan {
                 mode: "homophone", title: title ?? (bookName + " · 同音字"),
                 book: bookId, chars: picked, count: min(10, max(4, picked.count))
             )
+        case "radical":
+            // 部首：排除「部首就是自己」的独体字，否则答案是题干
+            var pool = Repo.shared.bookChars(bookId).filter {
+                let m = Repo.shared.meta($0)
+                return m != nil && !m!.r.isEmpty && m!.r != $0
+            }
+            if pool.count < 4 {
+                pool = Repo.shared.charOrder.filter {
+                    let m = Repo.shared.meta($0)
+                    return m != nil && !m!.r.isEmpty && m!.r != $0
+                }
+            }
+            let rand = Quiz.mulberry32(UInt32(truncatingIfNeeded: Int(Date().timeIntervalSince1970 * 1000)))
+            let picked = Array(Quiz.shuffle(pool, rand).prefix(min(12, pool.count)))
+            let bookName = Repo.shared.book(bookId)?.name ?? ""
+            return Session(
+                mode: "radical", title: title ?? (bookName + " · 部首"),
+                book: bookId, chars: picked, count: min(10, max(4, picked.count))
+            )
         default:
             let learned = Repo.shared.bookChars(bookId).filter { prog.hasLearned($0) }
             let pool = learned.count >= 8 ? learned : Repo.shared.bookChars(bookId)

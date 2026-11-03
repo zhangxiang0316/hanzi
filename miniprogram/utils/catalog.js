@@ -327,6 +327,84 @@ function homophoneDistractors(ch, bookId, count) {
   return pool.slice(0, count).map((x) => x.ch);
 }
 
+// MARK: - 部首
+
+/**
+ * 部首查字法是二年级语文园地的正式内容，但 `meta.r` 一直只在
+ * 解析文案里出现过，从没当成学习维度用过。237 个部首、全部 2596 个字都有。
+ *
+ * 注意：237 个部首里只有 144 个是字库里的生字（能画笔顺），
+ * 另外 93 个是偏旁变形（亻 艹 扌 讠 纟 宀 攵）——它们不是独立汉字，
+ * 没有笔顺数据。所以部首只以**文字**形式出现（当选项、当分组标签），
+ * 不参与描红判分，也就不需要破坏「汉字一律用笔画轮廓渲染」这条原则。
+ */
+
+/** 这个字的部首 */
+function radicalOf(ch) {
+  const m = meta[ch];
+  return m ? m.r : '';
+}
+
+/** 字库里所有部首（按使用频次从高到低） */
+function allRadicals() {
+  const count = {};
+  for (const ch in meta) {
+    const r = meta[ch].r;
+    if (!r) continue;
+    count[r] = (count[r] || 0) + 1;
+  }
+  return Object.keys(count)
+    .map((r) => ({ radical: r, count: count[r], inLib: !!meta[r] }))
+    .sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      // 频次相同按码点，保证三端顺序一致
+      return a.radical.codePointAt(0) - b.radical.codePointAt(0);
+    });
+}
+
+/** 某一册里出现过的部首（按频次从高到低） */
+function bookRadicals(bookId) {
+  const chars = bookChars(bookId);
+  const count = {};
+  const order = [];
+  chars.forEach((ch) => {
+    const r = meta[ch] && meta[ch].r;
+    if (!r) return;
+    if (count[r] == null) { count[r] = 0; order.push(r); }
+    count[r] += 1;
+  });
+  return order
+    .map((r) => ({ radical: r, count: count[r], inLib: !!meta[r] }))
+    .sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      return a.radical.codePointAt(0) - b.radical.codePointAt(0);
+    });
+}
+
+/** 某一册里某个部首下的所有字（按教材顺序） */
+function charsWithRadical(bookId, radical) {
+  return bookChars(bookId).filter((ch) => meta[ch] && meta[ch].r === radical);
+}
+
+/** 全部册次里某个部首下的所有字 */
+function allCharsWithRadical(radical) {
+  return getAllChars().filter((ch) => meta[ch] && meta[ch].r === radical);
+}
+
+/**
+ * 部首题的干扰项。
+ *
+ * 取本册里最常见的几个部首，但排除跟正确答案有**字形包含关系**的——
+ * 「木」和「林」这种，孩子会争议「林」的部首是不是「木」，
+ * 当干扰项是制造歧义而不是考知识。
+ */
+function radicalDistractors(radical, bookId, count) {
+  const pool = bookRadicals(bookId || defaultBook())
+    .map((x) => x.radical)
+    .filter((r) => r !== radical && r.indexOf(radical) < 0 && radical.indexOf(r) < 0);
+  return pool.slice(0, count);
+}
+
 /** 在本课内的下一个 / 上一个字（用于详情页翻页）。 */
 function nextInLesson(lessonId, ch) {
   const list = lessonChars(lessonId);
@@ -392,6 +470,12 @@ module.exports = {
   homophoneChars,
   allHomophoneGroups,
   homophoneDistractors,
+  radicalOf,
+  allRadicals,
+  bookRadicals,
+  charsWithRadical,
+  allCharsWithRadical,
+  radicalDistractors,
   wordsUsing,
   bookRank,
   wordRank,

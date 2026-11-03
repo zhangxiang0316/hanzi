@@ -58,6 +58,17 @@ struct PracticePageView: View {
                                                           book: app.currentBook, lesson: nil))
                         }
 
+                        // 部首：查字法是低年级语文园地的正式内容
+                        let radicalCount = app.repo.bookRadicals(app.currentBook).count
+                        modeCard(
+                            emoji: "🧩", title: "部首",
+                            desc: "本册 \(radicalCount) 个部首，练查字法",
+                            color: Palette.clay, enabled: radicalCount > 0
+                        ) {
+                            app.push(AppState.QuizPayload(mode: "radical",
+                                                          book: app.currentBook, lesson: nil))
+                        }
+
                         // 同音字：一个音有好几个字，练「写哪个」。
                         // 和多音字互补——那个练读对音，这个练写对字。
                         let homoCount = app.repo.homophoneChars(app.currentBook).count

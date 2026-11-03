@@ -16,6 +16,7 @@ Page({
     dictLevels: dictation.LEVELS,
     wordCount: 0,
     homoCount: 0,
+    radicalCount: 0,
     heroChar: '字',
     books: [],
     bookName: '',
@@ -62,6 +63,7 @@ Page({
       polyCount: catalog.polyphones(book ? book.id : catalog.defaultBook()).length,
       wordCount: words.bookWordCount(book ? book.id : catalog.defaultBook()),
       homoCount: catalog.homophoneChars(book ? book.id : catalog.defaultBook()).length,
+      radicalCount: catalog.bookRadicals(book ? book.id : catalog.defaultBook()).length,
       heroChar: due.length ? due[0] : writeChar,
       books,
       bookName: book ? book.name : '',
@@ -93,6 +95,13 @@ Page({
     const app = getApp();
     app.globalData.session = sessionUtil.buildSession('free', {});
     wx.navigateTo({ url: '/pages/quiz/quiz?from=practice' });
+  },
+
+  /** 部首：查字法是低年级语文园地的正式内容 */
+  onRadical() {
+    const app = getApp();
+    app.globalData.session = sessionUtil.buildSession('radical', {});
+    wx.navigateTo({ url: '/pages/quiz/quiz?mode=radical' });
   },
 
   /** 同音字：一个音有好几个字，练「写哪个」 */

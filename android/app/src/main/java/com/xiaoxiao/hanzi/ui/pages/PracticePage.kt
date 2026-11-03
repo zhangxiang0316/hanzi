@@ -183,6 +183,18 @@ fun PracticePage(app: AppState) {
 
         Spacer(Modifier.height(12.dp))
 
+        // 部首：查字法是低年级语文园地的正式内容
+        val radicalCount = Repo.bookRadicals(app.currentBook).size
+        ActionCard(
+            emoji = "🧩",
+            title = "部首",
+            desc = "本册 $radicalCount 个部首，练查字法",
+            badge = 0,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            if (radicalCount > 0) app.nav.push(Screen.Quiz("radical", app.currentBook, null))
+        }
+
         // 同音字：一个音有好几个字，练「写哪个」。
         // 和多音字互补——那个练读对音，这个练写对字。
         val homoCount = Repo.homophoneChars(app.currentBook).size

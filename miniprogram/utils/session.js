@@ -81,6 +81,28 @@ function buildSession(mode, opts) {
       count: Math.min(10, Math.max(4, picked.length)),
     };
   }
+  if (mode === 'radical') {
+    // 部首：只挑「部首不是自己」的字（独体字答案就在题干里，等于送分）
+    const book = o.book || catalog.defaultBook();
+    let pool = catalog.bookChars(book).filter((ch) => {
+      const m = catalog.getMeta(ch);
+      return m && m.r && m.r !== ch;
+    });
+    if (pool.length < 4) {
+      pool = catalog.getAllChars().filter((ch) => {
+        const m = catalog.getMeta(ch);
+        return m && m.r && m.r !== ch;
+      });
+    }
+    const picked = sample(pool, Math.min(12, pool.length));
+    return {
+      mode: 'radical',
+      title: o.title || catalog.getBook(book).name + ' · 部首',
+      book,
+      chars: picked,
+      count: Math.min(10, Math.max(4, picked.length)),
+    };
+  }
   if (mode === 'words') {
     // 看拼音选词语：题源是课本词语表，不是生字表
     const book = o.book || catalog.defaultBook();
