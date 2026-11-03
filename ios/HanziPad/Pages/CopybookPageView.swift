@@ -34,6 +34,7 @@ struct CopybookPageView: View {
                         emptyState
                     } else {
                         summaryCard
+                        exportCard
                         filterRow
                         grid(geo: geo)
                     }
@@ -47,6 +48,103 @@ struct CopybookPageView: View {
         }
         .navigationTitle("我的字帖")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    // MARK: - 导出
+
+    @State private var shareURL: URL?
+    @State private var exporting = false
+    @State private var exportError: String?
+
+    /// 导出 PDF：打印出来才是真的字帖，孩子拿铅笔在上面描比划屏幕有用
+    private var exportCard: some View {
+        Button {
+            exportPdf()
+        } label: {
+            HStack(spacing: 12) {
+                Text("🖨").font(Fonts.s(22, .regular, .title3, maxScale: 1.4))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(exporting ? "正在排版…" : "导出 PDF 字帖")
+                        .font(Fonts.s(15, .bold, .body))
+                        .foregroundStyle(Palette.jadeDeep)
+                    Text("打印出来，A4 一页六个字，可以反复描")
+                        .font(Fonts.caption)
+                        .foregroundStyle(Palette.ink3)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(Fonts.s(12, .semibold, .caption))
+                    .foregroundStyle(Palette.ink3)
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
+                    .fill(Palette.card)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
+                    .strokeBorder(Palette.jade.opacity(0.35), lineWidth: 1)
+            )
+            .measureTapTarget("字帖-导出")
+        }
+        .buttonStyle(PressableStyle())
+        .disabled(exporting)
+        .sheet(item: Binding(
+            get: { shareURL.map(ShareItem.init) },
+            set: { if $0 == nil { shareURL = nil } }
+        )) { item in
+            ShareSheet(url: item.url)
+        }
+        .alert("导出失败", isPresented: Binding(
+            get: { exportError != nil },
+            set: { if !$0 { exportError = nil } }
+        )) {
+            Button("好", role: .cancel) { exportError = nil }
+        } message: {
+            Text(exportError ?? "")
+        }
+    }
+
+    private func exportPdf() {
+        let chars = shown.map(\.ch)
+        guard !chars.isEmpty else { return }
+        exporting = true
+        // 笔画数据在 MainActor 上，必须先在主线程取出来，
+        // 再拿纯数据结构去后台画（遍历轮廓几百个字会到上百毫秒）
+        let strokes: [String: StrokeCodec.CharStrokes] = Dictionary(
+            uniqueKeysWithValues: chars.compactMap { ch in
+                Repo.shared.strokes(ch).map { (ch, $0) }
+            }
+        )
+        let label = CopybookPDF.dateLabel()
+        DispatchQueue.global(qos: .userInitiated).async {
+            let result = CopybookPDF.build(
+                chars,
+                strokeFor: { strokes[$0] },
+                dateLabel: label
+            )
+            guard !result.data.isEmpty else {
+                DispatchQueue.main.async {
+                    exporting = false
+                    exportError = "生成字帖时出错了，再试一次。"
+                }
+                return
+            }
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent(CopybookPDF.fileName())
+            do {
+                try result.data.write(to: url)
+                DispatchQueue.main.async {
+                    exporting = false
+                    shareURL = url
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    exporting = false
+                    exportError = "保存文件失败：\(error.localizedDescription)"
+                }
+            }
+        }
     }
 
     // MARK: - 空状态
@@ -234,4 +332,27 @@ struct CopybookPageView: View {
         if s >= 65 { return Palette.amber }
         return Palette.clay
     }
+}
+
+/// 分享用的包装。`sheet(item:)` 需要一个 Identifiable。
+private struct ShareItem: Identifiable {
+    let url: URL
+    var id: String { url.absoluteString }
+
+    init(_ url: URL) { self.url = url }
+}
+
+/// 系统分享面板。
+///
+/// 不直接用 `ShareLink`：它要求 iOS 16+，而我们的部署目标是 17——本来够用，
+/// 但 `ShareLink` 没法在「文件刚写完」这个时机弹出，只能作为常驻按钮。
+/// 用 UIActivityViewController 可以在导出完成后立刻弹，交互更顺。
+struct ShareSheet: UIViewControllerRepresentable {
+    let url: URL
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: [url], applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ vc: UIActivityViewController, context: Context) {}
 }

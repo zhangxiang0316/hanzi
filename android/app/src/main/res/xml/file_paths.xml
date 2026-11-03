@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    FileProvider 的可见范围。
+
+    导出的字帖 PDF 写在 cache/copybook 下：用完就可以被系统回收，
+    不占用户的存储。只需要暴露这一个子目录，别把整个 cache 开出去。
+-->
+<paths>
+    <cache-path name="copybook" path="copybook/" />
+</paths>

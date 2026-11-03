@@ -1,5 +1,6 @@
 package com.xiaoxiao.hanzi.ui.pages
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -30,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -38,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import com.xiaoxiao.hanzi.data.Repo
 import com.xiaoxiao.hanzi.ui.AppState
 import com.xiaoxiao.hanzi.ui.Dimens
+import com.xiaoxiao.hanzi.logic.CopybookPDF
 import com.xiaoxiao.hanzi.ui.HanziButton
 import com.xiaoxiao.hanzi.ui.HanziGlyph
 import com.xiaoxiao.hanzi.ui.LocalPalette
@@ -78,6 +82,14 @@ fun CopybookPage(app: AppState) {
             total = app.progress.writeCount(),
             stars = app.progress.writeStarsTotal(),
             hist = app.progress.writeStarsHistogram()
+        )
+
+        Spacer(Modifier.height(14.dp))
+
+        // 导出：打印出来才是真的字帖，孩子拿铅笔在上面描比划屏幕有用
+        ExportCard(
+            names = shown.map { it.first },
+            enabled = shown.isNotEmpty()
         )
 
         Spacer(Modifier.height(14.dp))
@@ -257,6 +269,94 @@ private fun CopybookTile(ch: String, best: Int, stars: Int, onClick: () -> Unit)
                 else -> p.clay
             }
         )
+    }
+}
+
+/**
+ * 导出 PDF 字帖。
+ *
+ * 屏幕上这页只能看；打印出来才是真的字帖，孩子拿铅笔在上面描，
+ * 比对着屏幕用手指划有用得多。
+ *
+ * 生成走 [CopybookPDF]（自己拼 PDF 字节，不依赖 PdfDocument），
+ * 写完塞进 cache/copybook，再通过 FileProvider 交给系统的打印/分享界面。
+ */
+@Composable
+private fun ExportCard(names: List<String>, enabled: Boolean) {
+    val p = LocalPalette.current
+    val ctx = LocalContext.current
+    var busy by remember { mutableStateOf(false) }
+
+    Surface(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Dimens.radiusCard.dp))
+            .clickable(enabled = enabled && !busy) {
+                busy = true
+                // 生成 PDF 要遍历每个字的笔画轮廓，几百个字时能到上百毫秒，
+                // 放主线程会卡一下；放到 IO 线程再回主线程弹分享
+                Thread {
+                    val result = try {
+                        CopybookPDF.build(names, dateLabel = CopybookPDF.dateLabel())
+                    } catch (e: Exception) {
+                        null
+                    }
+                    val uri = result?.let { r ->
+                        try {
+                            val dir = java.io.File(ctx.cacheDir, "copybook").apply { mkdirs() }
+                            val f = java.io.File(dir, CopybookPDF.fileName())
+                            f.writeBytes(r.bytes)
+                            androidx.core.content.FileProvider.getUriForFile(
+                                ctx, "${ctx.packageName}.fileprovider", f
+                            )
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+                    (ctx as? android.app.Activity)?.runOnUiThread {
+                        busy = false
+                        if (uri == null) {
+                            android.widget.Toast.makeText(
+                                ctx, "导出失败了，再试一次", android.widget.Toast.LENGTH_SHORT
+                            ).show()
+                        } else {
+                            // 用 chooser 而不是直接 ACTION_VIEW：
+                            // 家长可能想打印、想发到电脑、想存到网盘，让系统去列应用
+                            val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                type = "application/pdf"
+                                putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            ctx.startActivity(
+                                android.content.Intent.createChooser(send, "字帖已生成")
+                            )
+                        }
+                    }
+                }.start()
+            },
+        shape = RoundedCornerShape(Dimens.radiusCard.dp),
+        color = p.card,
+        border = BorderStroke(1.dp, if (enabled) p.jade.copy(alpha = 0.35f) else p.line)
+    ) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("🖨", fontSize = 22.sp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    if (busy) "正在排版…" else "导出 PDF 字帖",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (enabled) p.jadeDeep else p.ink3
+                )
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    "打印出来，A4 一页六个字，可以反复描",
+                    fontSize = 11.sp,
+                    color = p.ink3
+                )
+            }
+            Text("›", fontSize = 16.sp, color = p.ink3)
+        }
     }
 }
 

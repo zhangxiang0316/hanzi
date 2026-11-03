@@ -196,3 +196,46 @@
 .cb-tile-score.good { color: var(--jade); }
 .cb-tile-score.mid { color: var(--gold); }
 .cb-tile-score.low { color: var(--cinnabar); }
+
+/* ---------- 导出 PDF ---------- */
+
+.cb-export {
+  display: flex;
+  align-items: center;
+  margin: 0 32rpx 24rpx;
+  padding: 24rpx 28rpx;
+  border-radius: 24rpx;
+  background: #ffffff;
+  border: 2rpx solid rgba(62, 142, 126, 0.35);
+}
+
+.cb-export-icon {
+  margin-right: 20rpx;
+  font-size: 40rpx;
+  line-height: 1;
+}
+
+.cb-export-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cb-export-title {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: var(--jade-deep);
+}
+
+.cb-export-sub {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: var(--ink-3);
+}
+
+.cb-export-arrow {
+  margin-left: 12rpx;
+  font-size: 32rpx;
+  color: var(--ink-3);
+}

@@ -35,6 +35,16 @@
       </view>
     </view>
 
+    <!-- 导出：打印出来才是真的字帖 -->
+    <view class="cb-export tap" bindtap="onExport">
+      <text class="cb-export-icon">🖨</text>
+      <view class="cb-export-main">
+        <text class="cb-export-title">导出 PDF 字帖</text>
+        <text class="cb-export-sub">打印出来，A4 一页六个字，可以反复描</text>
+      </view>
+      <text class="cb-export-arrow">›</text>
+    </view>
+
     <!-- 筛选 -->
     <scroll-view class="cb-chips" scroll-x="{{true}}" show-scrollbar="{{false}}">
       <view

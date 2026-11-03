@@ -99,6 +99,34 @@ final class AppState {
         applyDebugLaunchArgs()
     }
 
+    /// 自检：把字帖 PDF 写到 Documents 目录，供命令行取出核对版式。
+    ///
+    /// 沙箱里没有点按钮的办法（simctl 没有 tap 命令），而「导出 PDF 会不
+    /// 会真的吐出文件、画出来对不对」是最需要验证的一环——它不像其他页面
+    /// 截个图就能看。所以给一个启动参数直接跑同一条代码路径。
+    private func exportCopybookForCheck() {
+        let chars = progress.allWriteRecords().map(\.ch)
+        guard !chars.isEmpty else {
+            print("[自检] 字帖是空的，先加 -seedDemo")
+            return
+        }
+        let strokes: [String: StrokeCodec.CharStrokes] = Dictionary(
+            uniqueKeysWithValues: chars.compactMap { ch in
+                repo.strokes(ch).map { (ch, $0) }
+            }
+        )
+        let r = CopybookPDF.build(chars, strokeFor: { strokes[$0] },
+                                  dateLabel: CopybookPDF.dateLabel())
+        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let url = dir.appendingPathComponent("copybook-selftest.pdf")
+        do {
+            try r.data.write(to: url)
+            print("[自检] 字帖已写 \(url.path)（\(r.pages) 页，画出 \(r.drawn.count) 字，跳过 \(r.skipped.count)）")
+        } catch {
+            print("[自检] 写文件失败：\(error)")
+        }
+    }
+
     /// 调试用启动参数，让命令行能给每个页面单独截图。
     ///
     /// 沙箱里没有注入点击事件的办法（simctl 没有 tap 命令），
@@ -192,6 +220,9 @@ final class AppState {
                 push(WrongRoute())
             case "vocab":
                 push(VocabRoute())
+            case "exportcopybook":
+                // 自检用：直接把字帖 PDF 写到 Documents，命令行取出核对
+                exportCopybookForCheck()
             case "about":
                 push(AboutRoute())
             case "result":

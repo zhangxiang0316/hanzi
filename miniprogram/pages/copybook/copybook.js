@@ -11,6 +11,8 @@
 const progress = require('../../utils/progress');
 const catalog = require('../../utils/catalog');
 const routes = require('../../utils/routes');
+const strokeStore = require('../../utils/stroke-store');
+const copybookPdf = require('../../utils/copybook-pdf');
 
 Page({
   data: {
@@ -64,6 +66,89 @@ Page({
   onFilter(e) {
     const key = Number(e.currentTarget.dataset.key);
     this.setData({ filter: key }, () => this.refresh());
+  },
+
+  /**
+   * 导出 PDF 字帖。
+   *
+   * 屏幕上「我的字帖」只能看；打印出来才是真的字帖，孩子拿铅笔在上面描
+   * 比对着屏幕用手指划有用得多。
+   *
+   * 笔画数据分布在分包里，主包的 copybook 页面本来取不到。但字帖里的每个字
+   * 用户都亲手描过——意味着那个字所在的分包页面一定加载过、也一定注册过
+   * 自己的笔画加载器。所以这里能拿到的字，刚好就是字帖里的字。
+   *
+   * 拿不到的字会被 `buildPdf` 跳过并报回来，不会静默少字。
+   */
+  onExport() {
+    const chars = this.data.shown.map((x) => x.ch);
+    if (!chars.length) {
+      wx.showToast({ title: '没有可以导出的字', icon: 'none' });
+      return;
+    }
+    wx.showLoading({ title: '正在排版', mask: true });
+
+    const strokeFor = (ch) => {
+      try {
+        return strokeStore.get(ch);
+      } catch (e) {
+        return null;
+      }
+    };
+
+    let out;
+    try {
+      out = copybookPdf.buildPdf(chars, strokeFor, {
+        dateLabel: copybookPdf.dateLabel(),
+      });
+    } catch (e) {
+      wx.hideLoading();
+      wx.showModal({ title: '导出失败', content: '生成字帖时出错了：' + e.message, showCancel: false });
+      return;
+    }
+
+    if (!out.drawn.length) {
+      wx.hideLoading();
+      wx.showModal({
+        title: '还没有笔画数据',
+        content: '先去描几个字，字帖才画得出来。',
+        showCancel: false,
+      });
+      return;
+    }
+
+    const path = `${wx.env.USER_DATA_PATH}/${copybookPdf.fileName('字帖')}`;
+    wx.getFileSystemManager().writeFile({
+      filePath: path,
+      data: out.bytes.buffer,
+      encoding: 'binary',
+      success: () => {
+        wx.hideLoading();
+        wx.openDocument({
+          filePath: path,
+          fileType: 'pdf',
+          showMenu: true,
+          fail: () => {
+            wx.showModal({
+              title: '打不开预览',
+              content: '文件已经存到本地，但没能打开预览。可以试试从聊天里发送到电脑再打印。',
+              showCancel: false,
+            });
+          },
+        });
+        if (out.skipped.length) {
+          console.warn('[copybook] 这些字没有笔画数据，已跳过：', out.skipped.join(''));
+        }
+      },
+      fail: (err) => {
+        wx.hideLoading();
+        wx.showModal({
+          title: '保存失败',
+          content: (err && err.errMsg) || '写文件失败',
+          showCancel: false,
+        });
+      },
+    });
   },
 
   onChar(e) {
