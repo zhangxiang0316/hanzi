@@ -247,83 +247,119 @@ final class RepoTests: XCTestCase {
 
     // MARK: - 词语表浏览
     //
-    // 1276 条词语此前只在「看拼音选词语」的题目和课时页里露过脸，
-    // 没有任何地方能从头翻一遍。对应小程序 `tests/data.test.mjs` 末尾那组。
+    // 词语此前只在「看拼音选词语」的题目和课时页里露过脸，没有任何地方能
+    // 从头翻一遍。对应小程序 `tests/words.test.mjs` 末尾那组。
+    //
+    // 这里钉死两个数：按册拼接 2492 条、全局去重 1967 个词。它们和小程序
+    // 完全一致——去重粒度一旦写错（比如全局只留一份去分组），这两个数就会漂。
 
-    func testAllWordsAreDedupedAndInTextbookOrder() {
-        let all = repo.allWords()
-        XCTAssertGreaterThan(all.count, 1200, "词语太少：\(all.count)")
-        XCTAssertLessThanOrEqual(all.count, 1276, "去重后不该多于原始条数")
-
-        let words = all.map(\.word)
-        XCTAssertEqual(Set(words).count, words.count, "不能有重复的词")
-        XCTAssertTrue(all.allSatisfy { !$0.lesson.isEmpty && !$0.book.isEmpty })
+    func testBookWordEntriesAreDedupedWithinBook() {
+        // 册内不能重复，否则一册里同一个词会出现两次
+        for b in repo.books {
+            let entries = repo.bookWordEntries(b.id)
+            let words = entries.map(\.word)
+            XCTAssertEqual(Set(words).count, words.count, "\(b.id) 册内词语重复")
+            // 词本身必须属于这一册的课时
+            XCTAssertTrue(entries.allSatisfy { repo.lesson($0.lesson)?.book == b.id })
+        }
     }
 
-    /// 保留的是**最早**出现的那一课，不是最后一课，也不是任取一课
-    func testDuplicateWordKeepsFirstLesson() {
-        var firstLesson: [String: String] = [:]
+    func testAllWordEntriesCountIs2492AndUniqueIs1967() {
+        let all = repo.allWordEntries()
+        let uniq = repo.uniqueWords()
+        XCTAssertEqual(all.count, 2492, "按册拼接的条目数")
+        XCTAssertEqual(uniq.count, 1967, "全局去重后的词数")
+        XCTAssertLessThan(uniq.count, all.count, "跨册重复的词必须真的存在")
+        let words = uniq.map(\.word)
+        XCTAssertEqual(Set(words).count, words.count, "全局去重后不能有重复")
+    }
+
+    func testEveryBookHasWordsIncludingGrade1() {
+        // 一年级课本没有词语表，但有生字组词兜底——页面不能对一年级显示空白
         for b in repo.books {
-            for lid in b.lessons {
-                guard let lesson = repo.lesson(lid) else { continue }
-                for w in lesson.words where firstLesson[w] == nil {
-                    firstLesson[w] = lid
-                }
+            XCTAssertGreaterThan(repo.bookWordEntries(b.id).count, 100,
+                                 "\(b.id) 应该有一百个以上的词")
+        }
+    }
+
+    func testGrade1WordsAreAllDerived() {
+        // 一年级**全部**是派生词（课本没有词语表）
+        let g1 = repo.bookWordEntries("1a")
+        XCTAssertTrue(g1.allSatisfy(\.derived), "1a 应该全是生字组词")
+
+        // 2a 是混合册：有的课文有词语表，有的没有
+        let g2 = repo.bookWordEntries("2a")
+        XCTAssertTrue(g2.contains { !$0.derived }, "2a 应该有真课本词")
+        XCTAssertTrue(g2.contains(where: \.derived), "2a 也有派生词——混合册")
+    }
+
+    func testDerivedWordComesFromLessonChars() {
+        // 兜底词取自本课生字的组词，所以每个派生词必须含本课某个生字
+        for w in repo.bookWordEntries("1a") {
+            let lesson = repo.lesson(w.lesson)!
+            XCTAssertTrue(w.derived, "\(w.lesson) 的「\(w.word)」应该是派生词")
+            XCTAssertTrue(w.chars.contains { lesson.chars.contains($0) },
+                          "「\(w.word)」应含 \(w.lesson) 的某个生字")
+        }
+    }
+
+    /// 保留的是**最早**出现的那一册/课，不是最后一课，也不是任取一课
+    func testUniqueWordKeepsFirstBookAndLesson() {
+        var first: [String: String] = [:]
+        for b in repo.books {
+            for w in repo.bookWordEntries(b.id) where first[w.word] == nil {
+                first[w.word] = w.lesson
             }
         }
-        var checked = 0
-        for entry in repo.allWords() {
-            XCTAssertEqual(entry.lesson, firstLesson[entry.word],
-                           "「\(entry.word)」应记在最早出现的课时")
-            checked += 1
+        for w in repo.uniqueWords() {
+            XCTAssertEqual(w.lesson, first[w.word], "「\(w.word)」应记在最早出现的课时")
         }
-        XCTAssertGreaterThan(checked, 1200)
-        // 至少得有一个词真的在教材里重复出现，否则这条测试是空转
-        let duplicated = firstLesson.count
-        XCTAssertGreaterThan(duplicated, 0)
-        var rawCount = 0
-        for b in repo.books {
-            for lid in b.lessons {
-                rawCount += repo.lesson(lid)?.words.count ?? 0
-            }
-        }
-        XCTAssertLessThan(repo.allWords().count, rawCount,
-                          "教材里本来就有重复词，去重必须真的发生")
     }
 
-    func testWordsOnlyFromGrade2To4() {
-        // 一年级课本本身没有词语表。页面要据此给出提示，不能显示一片空白。
-        let books = Set(repo.allWords().map(\.book))
-        for b in ["2a", "2b", "3a", "3b", "4a", "4b"] {
-            XCTAssertTrue(books.contains(b), "\(b) 应该有词语")
-        }
-        XCTAssertTrue(repo.bookWordEntries("1a").isEmpty, "一年级没有词语表")
-        XCTAssertTrue(repo.bookWordEntries("1b").isEmpty, "一年级没有词语表")
-    }
-
-    func testEveryWordCharExistsInMeta() {
-        // 有字库外的字，孩子点进去查不到读音
-        let bad = repo.allWords().filter { $0.missing > 0 }
-        XCTAssertTrue(bad.isEmpty, "这些词含字库外的字：\(bad.prefix(5).map(\.word))")
+    func testCrossBookWordRecordsAllBooks() {
+        // 「旅行」在 1b 和 3a 都出现，是教材事实
+        let travel = repo.uniqueWords().first { $0.word == "旅行" }
+        XCTAssertNotNil(travel)
+        XCTAssertGreaterThanOrEqual(travel!.books.count, 2,
+                                    "「旅行」应跨册，实际 \(travel!.books)")
+        // 去重后原册次顺序保留，主册仍是第一个
+        XCTAssertEqual(travel!.book, travel!.books.first)
     }
 
     func testWordEntryCarriesBookAndLessonContext() {
-        let entry = repo.allWords().first { $0.book == "2a" }
-        XCTAssertNotNil(entry)
-        let lesson = repo.lesson(entry!.lesson)
-        XCTAssertEqual(entry?.unit, lesson?.unit)
-        XCTAssertEqual(entry?.lessonNo, lesson?.no)
-        XCTAssertEqual(entry?.book, lesson?.book)
-        XCTAssertEqual(entry?.chars.joined(), entry?.word)
-        XCTAssertEqual(entry?.missing, 0)
+        let entry = repo.bookWordEntries("2a").first!
+        let lesson = repo.lesson(entry.lesson)
+        XCTAssertEqual(entry.unit, lesson?.unit)
+        XCTAssertEqual(entry.lessonNo, lesson?.no)
+        XCTAssertEqual(entry.book, lesson?.book)
+        XCTAssertEqual(entry.chars.joined(), entry.word)
     }
 
-    func testWordsWithCharFindsCrossBookWords() {
+    /// 派生词里有少数撞上字库外的字（弓弩的弩、镜匣的匣），页面据此置灰。
+    /// 这类词占比必须很低，且每个词至少有一个字能点。
+    func testSomeDerivedWordsContainCharsOutsideLibrary() {
+        let derived = repo.uniqueWords().filter(\.derived)
+        let outsider = derived.filter { $0.missing > 0 }
+        XCTAssertGreaterThan(outsider.count, 0, "数据里确实有这类词，断言要贴着现实")
+        let ratio = Double(outsider.count) / Double(derived.count)
+        XCTAssertLessThan(ratio, 0.05,
+                          "含字库外字的派生词占比 \(ratio * 100)% 太高了")
+        for w in outsider {
+            XCTAssertTrue(w.chars.contains { repo.hasChar($0) },
+                          "「\(w.word)」一个字都点不了")
+        }
+        XCTAssertEqual(outsider.count, 19, "和小程序数出来的一致")
+    }
+
+    func testWordsWithCharFindsCrossBookWordsWithoutDuplicates() {
         let found = repo.wordsWithChar("行")
         XCTAssertGreaterThanOrEqual(found.count, 3, "含「行」的词太少：\(found.count)")
         // 「银行」和「行走」的「行」读音不同，搜字应该都列出来
         XCTAssertTrue(found.allSatisfy { $0.chars.contains("行") })
-        XCTAssertGreaterThan(Set(found.map(\.book)).count, 1, "「行」应该跨册出现")
+        // 搜索结果若不去重，「旅行」会出现两次
+        let words = found.map(\.word)
+        XCTAssertEqual(Set(words).count, words.count, "搜索结果不能有重复")
+        XCTAssertTrue(found.contains { $0.books.count > 1 }, "「行」应该跨册出现")
     }
 
     func testUnknownOrEmptyWordQueryReturnsEmpty() {
@@ -331,12 +367,8 @@ final class RepoTests: XCTestCase {
         XCTAssertTrue(repo.wordsWithChar("龘").isEmpty)
     }
 
-    func testBookWordEntriesStayInsideBook() {
-        for b in repo.books {
-            let entries = repo.bookWordEntries(b.id)
-            XCTAssertTrue(entries.allSatisfy { $0.book == b.id })
-            // 词语里的字可能来自更早的册次，但词本身必须属于这一册的课时
-            XCTAssertTrue(entries.allSatisfy { repo.lesson($0.lesson)?.book == b.id })
-        }
+    func testEveryWordHasPinyin() {
+        let bad = repo.uniqueWords().filter { $0.pinyin.isEmpty }
+        XCTAssertTrue(bad.isEmpty, "这些词缺拼音：\(bad.prefix(5).map(\.word))")
     }
 }

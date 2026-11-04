@@ -346,6 +346,11 @@ fun ProfilePage(app: AppState) {
             border = BorderStroke(1.dp, p.line)
         ) {
             Column {
+                // 周报：首页只看得到「今天」，家长关心的是「这一周」
+                LinkRow("学习周报", "最近 7 天 ›") {
+                    app.nav.push(Screen.Report)
+                }
+                Box(Modifier.fillMaxWidth().height(1.dp).background(p.lineSoft))
                 // 识字量测试：「学过多少字」是点过多少个字，不是认识多少，
                 // 家长真正想知道的是后者，所以按抽测单独给一个入口。
                 LinkRow(
@@ -367,6 +372,21 @@ fun ProfilePage(app: AppState) {
                     if (app.progress.writeCount() > 0) "${app.progress.writeCount()} 个字 ›" else "还没写过 ›"
                 ) {
                     app.nav.push(Screen.Copybook)
+                }
+                Box(Modifier.fillMaxWidth().height(1.dp).background(p.lineSoft))
+                // 选字做字帖：「我的字帖」只能导写过的字，而家长想打的是
+                // 「这课的生字」「错题」——那是「需要练的」，不是「写过的」
+                LinkRow("选字做字帖", "按课时 / 错题挑字 ›") {
+                    app.nav.push(Screen.CopybookPick)
+                }
+                Box(Modifier.fillMaxWidth().height(1.dp).background(p.lineSoft))
+                // 部首与词语：两种「换个角度看字」的浏览方式
+                LinkRow("部首归类", "按部首看字 ›") {
+                    app.nav.push(Screen.Radical)
+                }
+                Box(Modifier.fillMaxWidth().height(1.dp).background(p.lineSoft))
+                LinkRow("词语表", "按册翻词语 ›") {
+                    app.nav.push(Screen.Words)
                 }
                 Box(Modifier.fillMaxWidth().height(1.dp).background(p.lineSoft))
                 LinkRow("关于与数据来源", "›") { app.nav.push(Screen.About) }

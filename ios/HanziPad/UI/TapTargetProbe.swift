@@ -30,10 +30,16 @@ final class TapTargetProbe: ObservableObject {
         }
     }
 
-    /// 布局稳定后落盘
+    /// 布局稳定后落盘。
+    ///
+    /// **可以多次调用，每次覆盖写**。早先是用一个 `flushed` 闩只写一次，
+    /// 由启动后固定 1.2 秒触发——页面稍慢一点没布局完，探针就只记到
+    /// 首页控件，而文件照样生成，看起来像"这个页面没有需要量的控件"。
+    /// 我拿词语表页实测过：等 4 秒只探到「首页-今日一字」，等 6 秒就
+    /// 三个控件全在了。这种"静默漏数据"的取证工具比没有更危险，
+    /// 所以改成可以重复 flush，由调用方多调几次。
     func flush() {
-        guard !flushed, !rows.isEmpty else { return }
-        flushed = true
+        guard !rows.isEmpty else { return }
 
         let lines = rows.map { r -> String in
             let w = Int(r.size.width.rounded())

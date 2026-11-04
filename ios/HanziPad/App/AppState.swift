@@ -157,6 +157,10 @@ final class AppState {
 
         // 预置一些学习记录，否则练习/错题/徽章等页面全是空状态，看不出真实样子
         if args.contains("-seedDemo") { seedDemoData() }
+        #if DEBUG
+        // 让周报页有非空数据可看；-seedDemo 只记当天
+        if args.contains("-seedWeek") { progress.seedWeekForDebug() }
+        #endif
 
         if let v = value("-setPinyin") {
             var st = progress.settings
@@ -165,8 +169,13 @@ final class AppState {
         }
 
         if args.contains("-probeTapTargets") {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                TapTargetProbe.shared.flush()
+            // 隔一段时间多写几次：页面加载快慢差别很大（词语表要解析
+            // 八册词的拼音），只在固定 1.2 秒写一次会漏掉后布局的控件。
+            // 每次都覆盖写，所以最后留下的是最完整的那一份。
+            for t in [0.8, 1.6, 2.5, 4.0, 6.0] {
+                DispatchQueue.main.asyncAfter(deadline: .now() + t) {
+                    TapTargetProbe.shared.flush()
+                }
             }
         }
 
@@ -223,6 +232,14 @@ final class AppState {
                 if parts.count > 1 { push(WriteRoute(ch: parts[1])) }
             case "copybook":
                 push(CopybookRoute())
+            case "copybookpick":
+                push(CopybookPickRoute())
+            case "report":
+                push(ReportRoute())
+            case "radical":
+                push(RadicalRoute())
+            case "words":
+                push(WordsRoute())
             case "wrong":
                 push(WrongRoute())
             case "vocab":
@@ -320,6 +337,15 @@ final class AppState {
     struct WrongRoute: Hashable {}
     /// 我的字帖：写过的字汇总成一张字帖。
     struct CopybookRoute: Hashable {}
+    /// 学习周报：最近 7 天的趋势，给家长看。
+    struct ReportRoute: Hashable {}
+    /// 选字做字帖：按课时 / 错题 / 弱笔 / 低星挑字导出，
+    /// 补「我的字帖只能导写过的字」的缺口。
+    struct CopybookPickRoute: Hashable {}
+    /// 部首归类浏览：按部首横向看一遍字。
+    struct RadicalRoute: Hashable {}
+    /// 词语表浏览：按册翻课本词语。
+    struct WordsRoute: Hashable {}
     /// 识字量测试：一次性流程，开始/答题/结果都在同一个页面里切
     struct VocabRoute: Hashable {}
     /// 听写。带上难度和册次，因为同一个入口能进三档。
@@ -382,6 +408,18 @@ struct AppRoutes: ViewModifier {
             .navigationDestination(for: CopybookRoute.self) { _ in
                 CopybookPageView().pushedScreen()
             }
+            .navigationDestination(for: CopybookPickRoute.self) { _ in
+                CopybookPickPageView().pushedScreen()
+            }
+            .navigationDestination(for: ReportRoute.self) { _ in
+                ReportPageView().pushedScreen()
+            }
+            .navigationDestination(for: RadicalRoute.self) { _ in
+                RadicalPageView().pushedScreen()
+            }
+            .navigationDestination(for: WordsRoute.self) { _ in
+                WordsPageView().pushedScreen()
+            }
             .navigationDestination(for: DictationRoute.self) { r in
                 DictationPageView(
                     level: DictationLevel(rawValue: r.level) ?? .normal,
@@ -404,6 +442,10 @@ typealias CharRoute = AppState.CharRoute
 typealias WriteRoute = AppState.WriteRoute
 typealias DictationRoute = AppState.DictationRoute
 typealias CopybookRoute = AppState.CopybookRoute
+typealias CopybookPickRoute = AppState.CopybookPickRoute
+typealias ReportRoute = AppState.ReportRoute
+typealias RadicalRoute = AppState.RadicalRoute
+typealias WordsRoute = AppState.WordsRoute
 typealias AboutRoute = AppState.AboutRoute
 typealias WrongRoute = AppState.WrongRoute
 typealias VocabRoute = AppState.VocabRoute

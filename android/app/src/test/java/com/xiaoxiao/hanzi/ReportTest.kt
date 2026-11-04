@@ -308,6 +308,48 @@ class ReportTest {
         assertEquals(1.0, r.week[6].ratio, 0.001)
     }
 
+    /**
+     * 结论的**逐字**黄金值。
+     *
+     * 这四条字符串是从小程序 `pages/report/report.js` 的 `verdictOf` 直接跑
+     * 出来的原文。Android 把 verdict 挪进了纯逻辑层（好测），但输出必须一字
+     * 不差——家长在两个端看到的同一周周报，措辞不一样就是不专业。
+     */
+    @Test
+    fun `结论的文案与小程序逐字一致`() {
+        // a) 空周
+        val empty = Report.summarize(Report.recentDays(null, now))
+        assertEquals("这周还没有学习记录", Report.verdict(empty))
+
+        // b) 只学了字、一题没答（activeDays 由学习量推出）
+        val b = Report.summarize(
+            Report.recentDays(days(day(0, 3, 0, 0), day(-1, 2, 0, 0)), now)
+        )
+        assertEquals("这周认识 5 个字，来了 2 天", Report.verdict(b))
+        assertNull("这里本来就没答题", b.accuracy)
+
+        // c) 学了，也答题了
+        val c = Report.summarize(
+            Report.recentDays(days(day(0, 3, 10, 8), day(-1, 2, 0, 0)), now)
+        )
+        assertEquals("这周认识 5 个字，答题 10 道，来了 2 天", Report.verdict(c))
+
+        // d) 三项都有值
+        val d = Report.summarize(
+            Report.recentDays(
+                days(
+                    day(0, 9, 20, 18),
+                    day(-1, 6, 10, 9),
+                    day(-2, 4, 6, 5),
+                    day(-3, 2, 3, 3),
+                    day(-4, 2, 2, 1)
+                ),
+                now
+            )
+        )
+        assertEquals("这周认识 23 个字，答题 41 道，来了 5 天", Report.verdict(d))
+    }
+
     @Test
     fun `结论描述做了什么，不评价孩子`() {
         val week = Report.recentDays(days(day(0, 3, 10, 8), day(-1, 2, 0, 0)), now)

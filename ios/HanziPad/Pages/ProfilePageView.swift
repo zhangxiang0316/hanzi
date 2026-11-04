@@ -19,7 +19,6 @@ struct ProfilePageView: View {
                     studyLinks
                     badgeSection
                     settingsSection
-                    aboutRow
                 }
                 .padding(.horizontal, Dimens.pagePad(geo.size.width))
                 .padding(.vertical, 24)
@@ -279,107 +278,126 @@ struct ProfilePageView: View {
         )
     }
 
-    /// 学习入口：错题本。
+    /// 学习入口。
     ///
-    /// iPad 上错题本在侧边栏里单独一栏，手机上没有侧边栏，
-    /// 所以收进「我的」——和 Android `ProfilePage.kt:272` 的 LinkRow 一致。
-    /// 不带红色角标会让孩子忽略它，所以把待复习字数直接写在右侧。
+    /// iPad 上错题本在侧边栏里单独一栏，手机上没有侧边栏，所以收进「我的」——
+    /// 和 Android `ProfilePage.kt:272` 的 LinkRow 一致。
+    ///
+    /// 这几行的顺序是照「家长一天里会想做的事」排的：先看这一周怎么样，
+    /// 再查认识多少字，然后是错题、字帖、按部首/按册翻字。关于和清空收在
+    /// 最后——它们不是日常动作，混在前面只会让人误触。
     private var studyLinks: some View {
-        let n = app.progress.wrongCount
-        return VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 12) {
             SectionHead("学习")
+
+            // 周报：首页只看得到「今天」，家长关心的是「这一周」
+            linkRow(icon: "chart.bar.doc.horizontal",
+                    tint: Palette.jade,
+                    title: "学习周报",
+                    subtitle: nil,
+                    trailing: "最近 7 天",
+                    trailingColor: Palette.ink3,
+                    tapName: "我的-周报入口") {
+                app.push(AppState.ReportRoute())
+            }
 
             // 识字量测试：「学过多少字」是点过多少个字，不是认识多少，
             // 家长真正想知道的是后者，所以按抽测单独给一个入口。
-            Button {
+            linkRow(icon: "ruler",
+                    tint: Palette.jade,
+                    title: "识字量测试",
+                    subtitle: "从八册各抽几个字，估算认字量",
+                    trailing: app.progress.vocabSize > 0
+                        ? "上次 \(Vocab.sizeLabel(app.progress.vocabSize)) 字"
+                        : "测一测",
+                    trailingColor: Palette.ink3,
+                    tapName: "我的-识字量入口") {
                 app.push(AppState.VocabRoute())
-            } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: "ruler")
-                        .font(Fonts.s(15, .medium, .body))
-                        .foregroundStyle(Palette.jade)
-                        .frame(width: 26)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("识字量测试").font(Fonts.body).foregroundStyle(Palette.ink1)
-                        Text("从八册各抽几个字，估算认字量")
-                            .font(Fonts.caption).foregroundStyle(Palette.ink3)
-                    }
-                    Spacer()
-                    Text(app.progress.vocabSize > 0
-                         ? "上次 \(Vocab.sizeLabel(app.progress.vocabSize)) 字"
-                         : "测一测")
-                        .font(Fonts.caption)
-                        .foregroundStyle(Palette.ink3)
-                    Image(systemName: "chevron.right")
-                        .font(Fonts.s(12, .semibold, .caption))
-                        .foregroundStyle(Palette.ink3)
-                }
-                // 和错题本、字帖两行保持同一套内边距和外框，
-                // 漏了 padding(16) 只有 34pt 高，不到 44pt 的触达线
-                .padding(16)
-                .background(
-                    RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
-                        .fill(Palette.card)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
-                        .strokeBorder(Palette.line, lineWidth: 1)
-                )
-                .measureTapTarget("我的-识字量入口")
             }
-            .buttonStyle(PressableStyle())
 
-            Button {
+            linkRow(icon: "exclamationmark.bubble",
+                    tint: app.progress.wrongCount > 0 ? Palette.clay : Palette.ink3,
+                    title: "错题本",
+                    subtitle: nil,
+                    trailing: app.progress.wrongCount > 0
+                        ? "\(app.progress.wrongCount) 个字"
+                        : "还没有错字",
+                    trailingColor: app.progress.wrongCount > 0 ? Palette.clay : Palette.ink3,
+                    tapName: "我的-错题本入口") {
                 app.push(AppState.WrongRoute())
-            } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: "exclamationmark.bubble")
-                        .font(Fonts.s(15, .medium, .body))
-                        .foregroundStyle(n > 0 ? Palette.clay : Palette.ink3)
-                        .frame(width: LayoutRules.scaled(22, by: dt.layoutScale))
-                    Text("错题本")
-                        .font(Fonts.body)
-                        .foregroundStyle(Palette.ink1)
-                    Spacer()
-                    Text(n > 0 ? "\(n) 个字" : "还没有错字")
-                        .font(Fonts.caption)
-                        .foregroundStyle(n > 0 ? Palette.clay : Palette.ink3)
-                    Image(systemName: "chevron.right")
-                        .font(Fonts.s(12, .semibold, .caption))
-                        .foregroundStyle(Palette.ink3)
-                }
-                .padding(16)
-                .background(
-                    RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
-                        .fill(Palette.card)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
-                        .strokeBorder(Palette.line, lineWidth: 1)
-                )
-                .measureTapTarget("我的-错题本入口")
             }
-            .buttonStyle(PressableStyle())
 
             // 字帖：写出来的字和认得的字是两种能力，值得单独有一个入口。
             // 徽章体系几乎全是「认识 N 个字」，写字这个维度此前只有单字详情页里的三颗星。
-            Button {
+            linkRow(icon: "square.grid.2x2",
+                    tint: app.progress.writeCount > 0 ? Palette.jade : Palette.ink3,
+                    title: "我的字帖",
+                    subtitle: nil,
+                    trailing: app.progress.writeCount > 0
+                        ? "\(app.progress.writeCount) 个字"
+                        : "还没写过",
+                    trailingColor: app.progress.writeCount > 0 ? Palette.jade : Palette.ink3,
+                    tapName: "我的-字帖入口") {
                 app.push(AppState.CopybookRoute())
+            }
+
+            // 选字做字帖：「我的字帖」只能导写过的字，而家长想打的是
+            // 「这课的生字」「错题」，那是两种不同的集合。
+            linkRow(icon: "square.and.pencil",
+                    tint: Palette.jade,
+                    title: "选字做字帖",
+                    subtitle: "按课时 / 错题挑字",
+                    trailing: nil,
+                    trailingColor: Palette.ink3,
+                    tapName: "我的-选字字帖入口") {
+                app.push(AppState.CopybookPickRoute())
+            }
+
+            // 部首与词语：两种「换个角度看字」的浏览方式
+            linkRow(icon: "square.grid.3x3",
+                    tint: Palette.clay,
+                    title: "部首归类",
+                    subtitle: "按部首看字",
+                    trailing: nil,
+                    trailingColor: Palette.ink3,
+                    tapName: "我的-部首入口") {
+                app.push(AppState.RadicalRoute())
+            }
+
+            linkRow(icon: "text.book.closed",
+                    tint: Palette.sky,
+                    title: "词语表",
+                    subtitle: "按册翻词语",
+                    trailing: nil,
+                    trailingColor: Palette.ink3,
+                    tapName: "我的-词语表入口") {
+                app.push(AppState.WordsRoute())
+            }
+
+            linkRow(icon: "info.circle",
+                    tint: Palette.ink3,
+                    title: "关于与数据来源",
+                    subtitle: nil,
+                    trailing: AppInfo.version,
+                    trailingColor: Palette.ink3,
+                    tapName: "我的-关于入口") {
+                app.push(AppState.AboutRoute())
+            }
+
+            // 清空：破坏性操作放最后，且要二次确认——孩子误触一下就把
+            // 整学期的进度没了，这种代价不该靠「反正能重学」来兜
+            Button {
+                showReset = true
             } label: {
                 HStack(spacing: 12) {
-                    Image(systemName: "square.grid.2x2")
+                    Image(systemName: "trash")
                         .font(Fonts.s(15, .medium, .body))
-                        .foregroundStyle(app.progress.writeCount > 0 ? Palette.jade : Palette.ink3)
+                        .foregroundStyle(Palette.clay)
                         .frame(width: LayoutRules.scaled(22, by: dt.layoutScale))
-                    Text("我的字帖")
+                    Text("清空学习记录")
                         .font(Fonts.body)
-                        .foregroundStyle(Palette.ink1)
+                        .foregroundStyle(Palette.clay)
                     Spacer()
-                    Text(app.progress.writeCount > 0
-                         ? "\(app.progress.writeCount) 个字"
-                         : "还没写过")
-                        .font(Fonts.caption)
-                        .foregroundStyle(app.progress.writeCount > 0 ? Palette.jade : Palette.ink3)
                     Image(systemName: "chevron.right")
                         .font(Fonts.s(12, .semibold, .caption))
                         .foregroundStyle(Palette.ink3)
@@ -393,10 +411,64 @@ struct ProfilePageView: View {
                     RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
                         .strokeBorder(Palette.line, lineWidth: 1)
                 )
-                .measureTapTarget("我的-字帖入口")
+                .measureTapTarget("我的-清空记录")
             }
             .buttonStyle(PressableStyle())
         }
+        .alert("清空学习记录？", isPresented: $showReset) {
+            Button("取消", role: .cancel) { }
+            Button("确定清空", role: .destructive) { app.progress.resetAll() }
+        } message: {
+            Text("所有学习进度、错题和描红记录都会被删除，且无法恢复。")
+        }
+    }
+
+    @State private var showReset = false
+
+    /// 一行入口。
+    ///
+    /// 抽成一个函数而不是复制九遍：这九行的内边距、边框、chevron 必须完全一致，
+    /// 复制粘贴的下一步必然是某一行的 padding 少两格，触达高度掉到 44 以下。
+    private func linkRow(icon: String, tint: Color, title: String, subtitle: String?,
+                         trailing: String?, trailingColor: Color, tapName: String,
+                         action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(Fonts.s(15, .medium, .body))
+                    .foregroundStyle(tint)
+                    .frame(width: LayoutRules.scaled(22, by: dt.layoutScale))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(Fonts.body).foregroundStyle(Palette.ink1)
+                    if let subtitle {
+                        Text(subtitle).font(Fonts.caption).foregroundStyle(Palette.ink3)
+                    }
+                }
+                Spacer()
+                if let trailing {
+                    Text(trailing)
+                        .font(Fonts.caption)
+                        .foregroundStyle(trailingColor)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+                Image(systemName: "chevron.right")
+                    .font(Fonts.s(12, .semibold, .caption))
+                    .foregroundStyle(Palette.ink3)
+            }
+            // 16pt 内边距让每行稳定在 44pt 以上（Apple HIG 的最小触达尺寸）
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
+                    .fill(Palette.card)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
+                    .strokeBorder(Palette.line, lineWidth: 1)
+            )
+            .measureTapTarget(tapName)
+        }
+        .buttonStyle(PressableStyle())
     }
 
     private var settingsSection: some View {
@@ -515,41 +587,7 @@ struct ProfilePageView: View {
                     .strokeBorder(Palette.line, lineWidth: 1)
             )
 
-            Button("重置全部学习记录", role: .destructive) {
-                app.progress.resetAll()
-            }
-            .font(Fonts.bodySmall)
-            .padding(.top, 4)
         }
-    }
-
-    private var aboutRow: some View {
-        Button {
-            app.push(AppState.AboutRoute())
-        } label: {
-            HStack {
-                Text("关于小小识字家")
-                    .font(Fonts.body)
-                    .foregroundStyle(Palette.ink1)
-                Spacer()
-                Text(AppInfo.version)
-                    .font(Fonts.caption)
-                    .foregroundStyle(Palette.ink3)
-                Image(systemName: "chevron.right")
-                    .font(Fonts.s(12, .semibold, .caption))
-                    .foregroundStyle(Palette.ink3)
-            }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
-                    .fill(Palette.card)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
-                    .strokeBorder(Palette.line, lineWidth: 1)
-            )
-        }
-        .buttonStyle(PressableStyle())
     }
 }
 

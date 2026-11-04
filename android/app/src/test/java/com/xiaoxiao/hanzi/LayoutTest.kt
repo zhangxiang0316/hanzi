@@ -3,11 +3,14 @@ package com.xiaoxiao.hanzi
 import android.app.Application
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import com.xiaoxiao.hanzi.data.Repo
@@ -360,6 +363,165 @@ class LayoutTest {
         )) {
             compose.onNodeWithText(name).assertExists()
             compose.onNodeWithText(desc).assertExists()
+        }
+    }
+
+    // ---------- 新增页面 ----------
+
+    /**
+     * 周报柱状图：有活动的日子必须有柱子，没活动的日子只有底边。
+     *
+     * 这条挡的是两种真实会出的错：把「没学」画成 0 高度柱子（看起来像页面
+     * 缺了一块），以及最小高度没兜住导致 1 个字的柱子看不见。
+     */
+    @Test
+    fun `周报柱状图活跃日有柱子、空白日只有底边`() {
+        val app = state()
+        // 今天学 1 个字、6 天前学 100 个字：前者就是「最小高度」那一档
+        app.progress.learn(Repo.bookChars("1a").first())
+        compose.setContent { HanziTheme { Root(app) } }
+        app.nav.push(Screen.Report)
+        compose.waitForIdle()
+
+        val today = compose.onNodeWithTag("report-bar-0").getBoundsInRoot()
+        assertTrue(
+            "有活动的日子必须有可见高度，实际 ${(today.bottom - today.top).value}dp",
+            (today.bottom - today.top).value >= 3f
+        )
+    }
+
+    @Test
+    fun `选字做字帖的字格可点且不小于 44dp`() {
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+        app.nav.push(Screen.CopybookPick)
+        compose.waitForIdle()
+
+        val first = Repo.lessonChars(Repo.book("1a")!!.lessons.first()).first()
+        val b = compose.onNodeWithTag("pick-cell-$first").getBoundsInRoot()
+        assertTrue("字格宽应 >= 44dp，实际 ${(b.right - b.left).value}", (b.right - b.left).value >= 44f)
+        assertTrue("字格高应 >= 44dp，实际 ${(b.bottom - b.top).value}", (b.bottom - b.top).value >= 44f)
+    }
+
+    @Test
+    fun `词语表的字不超出屏幕宽度`() {
+        val app = state()
+        app.setBook("2a")
+        compose.setContent { HanziTheme { Root(app) } }
+        app.nav.push(Screen.Words)
+        compose.waitForIdle()
+
+        // 最长的课本词（四个字）加上「生字组词」标记也不能撑出屏幕：
+        // 2a 是混合册，派生词会多带一个「生字组词」小标
+        val w = com.xiaoxiao.hanzi.logic.Words.bookWords("2a").maxByOrNull { it.word.length }!!
+        // 列表是懒加载的，长词在屏幕下方，先滚到它再量
+        compose.onNodeWithTag("words-list")
+            .performScrollToNode(hasTestTag("word-row-${w.word}"))
+        compose.waitForIdle()
+        val b = compose.onNodeWithTag("word-row-${w.word}").getBoundsInRoot()
+        assertTrue("行左边界应 >= 0，实际 ${b.left.value}", b.left.value >= 0f)
+        assertTrue(
+            "行右边界应在屏宽 ${screenWidthDp()}dp 内，实际 ${b.right.value}",
+            b.right.value <= screenWidthDp() + 1f
+        )
+    }
+
+    // ---------- 四个新页面的点击区 ----------
+
+    /**
+     * 部首页：本册/全部 切换和部首格子都必须 >= 44dp。
+     *
+     * 微信版这两处原来只有 60rpx / 96rpx 的内容高度，手指点不准，
+     * 后来统一补到 88rpx（≈44dp）。Android 侧自己量一遍，别靠「应该够」。
+     */
+    @Test
+    fun `部首页切换按钮与部首格子不小于 44dp`() {
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+        app.nav.push(Screen.Radical)
+        compose.waitForIdle()
+
+        listOf("radical-scope-book", "radical-scope-all").forEach { tag ->
+            val b = compose.onNodeWithTag(tag).getBoundsInRoot()
+            assertTrue(
+                "$tag 高度应 >= 44dp，实际 ${(b.bottom - b.top).value}dp",
+                (b.bottom - b.top).value >= 44f
+            )
+        }
+
+        val top = Repo.bookRadicals(app.currentBook).first().first
+        val cell = compose.onNodeWithTag("radical-cell-$top").getBoundsInRoot()
+        assertTrue("部首格子高应 >= 44dp", (cell.bottom - cell.top).value >= 44f)
+        assertTrue("部首格子宽应 >= 44dp", (cell.right - cell.left).value >= 44f)
+
+        // 部首下的字也要能点准
+        val ch = Repo.charsWithRadical(app.currentBook, top).first()
+        val cb = compose.onNodeWithTag("radical-char-$ch").getBoundsInRoot()
+        assertTrue("字格高应 >= 44dp，实际 ${(cb.bottom - cb.top).value}dp", (cb.bottom - cb.top).value >= 44f)
+        assertTrue("字格宽应 >= 44dp，实际 ${(cb.right - cb.left).value}dp", (cb.right - cb.left).value >= 44f)
+    }
+
+    /**
+     * 词语表：搜索框和词里的每个字都要能点准。
+     *
+     * 字本身的 20sp 行高只有 24dp——如果只让 Text 可点，手指必然点不准。
+     * 微信版为此给 `.row-ch` 加了 `min-height: 88rpx`；这里断言同样的口径。
+     */
+    @Test
+    fun `词语表的搜索框与词字不小于 44dp`() {
+        val app = state()
+        app.setBook("1a")
+        compose.setContent { HanziTheme { Root(app) } }
+        app.nav.push(Screen.Words)
+        compose.waitForIdle()
+
+        val box = compose.onNodeWithTag("words-search").getBoundsInRoot()
+        assertTrue(
+            "搜索框高度应 >= 44dp，实际 ${(box.bottom - box.top).value}dp",
+            (box.bottom - box.top).value >= 44f
+        )
+
+        val w = com.xiaoxiao.hanzi.logic.Words.bookWords("1a").first()
+        val b = compose.onNodeWithTag("word-char-${w.word}-0").getBoundsInRoot()
+        assertTrue(
+            "词字高度应 >= 44dp，实际 ${(b.bottom - b.top).value}dp（「${w.word}」）",
+            (b.bottom - b.top).value >= 44f
+        )
+        assertTrue("词字宽度应 >= 30dp，实际 ${(b.right - b.left).value}dp", (b.right - b.left).value >= 30f)
+    }
+
+    /**
+     * 选字做字帖：来源芯片、星档芯片、全选/清空、字格，一个都不能低于 44dp。
+     */
+    @Test
+    fun `选字做字帖的所有点击元素不小于 44dp`() {
+        val app = state()
+        app.progress.learn(Repo.lessonChars(Repo.book("1a")!!.lessons.first()).first())
+        compose.setContent { HanziTheme { Root(app) } }
+        app.nav.push(Screen.CopybookPick)
+        compose.waitForIdle()
+
+        val tags = listOf(
+            "pick-src-wrong", "pick-src-weak", "pick-src-lesson", "pick-src-stars",
+            "pick-select-all", "pick-select-none"
+        )
+        tags.forEach { tag ->
+            val b = compose.onNodeWithTag(tag).getBoundsInRoot()
+            assertTrue(
+                "$tag 高度应 >= 44dp，实际 ${(b.bottom - b.top).value}dp",
+                (b.bottom - b.top).value >= 44f
+            )
+        }
+
+        // 星档芯片是展开后才出现的：先点「低分字」
+        compose.onNodeWithTag("pick-src-stars").performClick()
+        compose.waitForIdle()
+        listOf("pick-star-0", "pick-star-1", "pick-star-2").forEach { tag ->
+            val b = compose.onNodeWithTag(tag).getBoundsInRoot()
+            assertTrue(
+                "$tag 高度应 >= 44dp，实际 ${(b.bottom - b.top).value}dp",
+                (b.bottom - b.top).value >= 44f
+            )
         }
     }
 

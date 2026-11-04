@@ -2,54 +2,65 @@ import SwiftUI
 
 /// 词语表浏览，对应小程序 `pages/words`、Android `WordsPage`。
 ///
-/// 1276 条词语此前只在「看拼音选词语」的题目里出现——答对答错，但家长想
-/// 帮孩子把这一学期的词过一遍时，没有地方能从头翻。
+/// 词语此前只在「看拼音选词语」的题目里出现——答对答错，但家长想帮孩子把
+/// 这一学期的词过一遍时，没有地方能从头翻。
 ///
-/// ## 只有 2~4 年级有词语
+/// ## 复用 `Logic/Words.swift`，不另写一套遍历
 ///
-/// 一年级课本没有词语表（教材本身就没有），所以选了 1a/1b 时这一册是空的。
-/// 这时候不能显示一片空白让人以为坏了，要明确说「这一册课本没有词语表」。
+/// 那边已经处理了一件容易漏的事：**一年级课本没有词语表**，它用每课生字的
+/// 第一组词补上（`derived == true`）。另写一份遍历必然把这个兜底漏掉，
+/// 结果就是一年级点进词语表看到一片空白——而一年级正是这个 App 最大的用户群。
 ///
-/// ## 按册分组而不是一个大长列表
+/// 所以这里直接用 `bookWordEntries` / `uniqueWords`，页面只负责分组和排版。
+/// 派生词要标出来，不能让家长以为那是课本上的词。
 ///
-/// 一次列 1200 多条，手机要滑很久，而且孩子找不到「我们学到哪了」。
-/// 按册分组 + 每册显示进度，家长能直接定位到当前学期。
+/// ## 两个去重粒度
+///
+/// 按册浏览按**册内**去重（「旅行」在 1b 和 3a 各显示一次，是教材事实）；
+/// 搜索和总数按**全局**去重（否则搜「行」会列出两条「旅行」）。
 struct WordsPageView: View {
     @Environment(AppState.self) private var app
     @Environment(\.dynamicTypeSize) private var dt
 
     @State private var query = ""
-    @FocusState private var searchFocused: Bool
 
     /// 搜索结果上限。搜「一」这种常用字会命中几百条，全铺出来既卡又没法看。
     private let resultLimit = 120
 
-    private var all: [WordEntry] { app.repo.allWords() }
-
-    private var searching: Bool { !query.trimmingCharacters(in: .whitespaces).isEmpty }
-
-    private var results: [WordEntry] {
-        let q = query.trimmingCharacters(in: .whitespaces)
-        guard !q.isEmpty else { return [] }
-        return Array(all.filter { $0.word.contains(q) }.prefix(resultLimit))
+    private var trimmedQuery: String {
+        query.trimmingCharacters(in: .whitespaces)
     }
+
+    private var searching: Bool { !trimmedQuery.isEmpty }
+
+    private var found: [WordEntry] {
+        app.repo.wordsWithChar(trimmedQuery)
+    }
+
+    private var results: [WordEntry] { Array(found.prefix(resultLimit)) }
 
     /// 按册分组，只保留有词语的册。顺序跟着 `repo.books` 走（教材顺序）。
     private var groups: [(book: Book, words: [WordEntry])] {
-        var byBook: [String: [WordEntry]] = [:]
-        for w in all { byBook[w.book, default: []].append(w) }
-        return app.repo.books.compactMap { b in
-            guard let ws = byBook[b.id], !ws.isEmpty else { return nil }
-            return (b, ws)
+        app.repo.books.compactMap { b in
+            let ws = app.repo.bookWordEntries(b.id)
+            return ws.isEmpty ? nil : (b, ws)
         }
     }
 
-    private var totalLearned: Int {
-        all.filter { wordLearned($0) }.count
+    private var learnedTotal: Int {
+        app.repo.uniqueWords().filter { wordLearned($0) }.count
     }
 
     private func wordLearned(_ w: WordEntry) -> Bool {
         w.isLearned { app.progress.hasLearned($0) }
+    }
+
+    private func bookNames(_ ids: [String]) -> String {
+        ids.map { app.repo.book($0)?.name ?? $0 }.joined(separator: " / ")
+    }
+
+    private func lessonNo(_ w: WordEntry) -> Int {
+        app.repo.lesson(w.lesson)?.no ?? 0
     }
 
     var body: some View {
@@ -64,11 +75,8 @@ struct WordsPageView: View {
                         ForEach(groups, id: \.book.id) { g in
                             group(g.book, g.words)
                         }
-                        // 一年级没有词语表：要说明白，不能留一片空白
                         if groups.isEmpty {
                             EmptyState(emoji: "📖", title: "还没有任何词语")
-                        } else if !groups.contains(where: { $0.book.id == app.currentBook }) {
-                            noWordsNotice
                         }
                     }
                 }
@@ -94,7 +102,6 @@ struct WordsPageView: View {
             TextField("搜词语，或搜一个字（如「行」）", text: $query)
                 .font(Fonts.body)
                 .foregroundStyle(Palette.ink1)
-                .focused($searchFocused)
                 .submitLabel(.search)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
@@ -115,21 +122,24 @@ struct WordsPageView: View {
         .padding(.vertical, 11)
         .background(Capsule().fill(Palette.card))
         .overlay(Capsule().strokeBorder(Palette.line, lineWidth: 1))
+        .measureTapTarget("词语表-搜索框")
     }
 
     private var searchResults: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("找到 \(results.count) 个词" + (results.count >= resultLimit ? "（只显示前 \(resultLimit) 个）" : ""))
+            Text(found.count > results.count
+                 ? "找到 \(found.count) 个词，先显示前 \(results.count) 个"
+                 : "找到 \(found.count) 个词")
                 .font(Fonts.caption)
                 .foregroundStyle(Palette.ink3)
                 .padding(.leading, 4)
 
             if results.isEmpty {
-                EmptyState(emoji: "🔍", title: "没找到含「\(query.trimmingCharacters(in: .whitespaces))」的词语")
+                EmptyState(emoji: "🔍", title: "没找到含「\(trimmedQuery)」的词语")
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(results.enumerated()), id: \.element.id) { i, w in
-                        row(w, showBook: true)
+                        row(w, meta: bookNames(w.books))
                         if i < results.count - 1 { HairLine().padding(.leading, 16) }
                     }
                 }
@@ -148,12 +158,13 @@ struct WordsPageView: View {
     // MARK: - 汇总
 
     private var summary: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        let unique = app.repo.uniqueWords().count
+        return VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text("\(totalLearned)")
+                Text("\(learnedTotal)")
                     .font(Fonts.s(30, .bold, .largeTitle).monospacedDigit())
                     .foregroundStyle(Palette.jade)
-                Text("/ \(all.count) 个词")
+                Text("/ \(unique) 个词")
                     .font(Fonts.s(13, .regular, .footnote))
                     .foregroundStyle(Palette.ink3)
                 Spacer()
@@ -175,6 +186,7 @@ struct WordsPageView: View {
 
     private func group(_ book: Book, _ words: [WordEntry]) -> some View {
         let learned = words.filter { wordLearned($0) }.count
+        let derivedCount = words.filter(\.derived).count
         let current = book.id == app.currentBook
         return VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
@@ -196,9 +208,18 @@ struct WordsPageView: View {
             }
             .padding(.horizontal, 4)
 
+            // 有的课文课本没给词语表，就用生字的组词补上。一册里可能**混合**
+            // （2a 就是），所以不能只看 every 就下「这一册没有词语表」的结论，
+            // 要报出数量。
+            if derivedCount > 0 {
+                groupNote(derivedCount == words.count
+                          ? "这一册课本没有词语表，下面是每课生字的组词"
+                          : "其中 \(derivedCount) 个是生字组词（课本这几课没有词语表）")
+            }
+
             VStack(spacing: 0) {
                 ForEach(Array(words.enumerated()), id: \.element.id) { i, w in
-                    row(w, showBook: false)
+                    row(w, meta: "第 \(lessonNo(w)) 课")
                     if i < words.count - 1 { HairLine().padding(.leading, 16) }
                 }
             }
@@ -213,43 +234,50 @@ struct WordsPageView: View {
         }
     }
 
-    private func row(_ w: WordEntry, showBook: Bool) -> some View {
+    private func groupNote(_ text: String) -> some View {
+        HStack(alignment: .top, spacing: 7) {
+            Image(systemName: "info.circle")
+                .font(Fonts.s(11, .regular, .caption))
+                .foregroundStyle(Palette.amber)
+            Text(text)
+                .font(Fonts.s(11, .regular, .caption))
+                .foregroundStyle(Palette.ink3)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 4)
+        .padding(.bottom, 2)
+    }
+
+    // MARK: - 一行一个词
+
+    private func row(_ w: WordEntry, meta: String) -> some View {
         let learned = wordLearned(w)
-        return HStack(spacing: 10) {
+        return HStack(spacing: 8) {
             // 每个字单独可点（查读音、看笔顺），但视觉上要像一个词——
-            // 间距压紧、字号放大，不是四个互不相干的按钮
+            // 间距压紧、字号放大，不是几个互不相干的按钮
             HStack(spacing: 0) {
                 ForEach(Array(w.chars.enumerated()), id: \.offset) { _, c in
-                    Button {
-                        guard app.repo.hasChar(c) else { return }
-                        app.push(AppState.CharRoute(ch: c, lesson: w.lesson))
-                    } label: {
-                        Text(c)
-                            .font(Fonts.s(21, .regular, .title3))
-                            .foregroundStyle(Palette.ink1)
-                            .padding(.horizontal, 3)
-                            .padding(.vertical, 3)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(PressableStyle())
-                    .accessibilityLabel("\(c)")
+                    charButton(c, lesson: w.lesson)
                 }
             }
 
-            Spacer(minLength: 6)
+            Spacer(minLength: 4)
 
-            Text(showBook
-                 ? "\(app.repo.book(w.book)?.short ?? w.book) 第 \(w.lessonNo) 课"
-                 : "第 \(w.lessonNo) 课")
+            if w.derived {
+                // 派生词不是课本上的词，必须标出来
+                Text("生字组词")
+                    .font(Fonts.s(9, .regular, .caption2))
+                    .foregroundStyle(Palette.ink3)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(Capsule().fill(Palette.track))
+            }
+
+            Text(meta)
                 .font(Fonts.s(10, .regular, .caption2).monospacedDigit())
                 .foregroundStyle(Palette.ink3)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-
-            if w.missing > 0 {
-                // 词里有字库外的字：孩子点进去查不到读音，得说明白
-                TinyPill(text: "\(w.missing) 字未收录", color: Palette.clay)
-            }
 
             if learned {
                 Circle()
@@ -258,26 +286,43 @@ struct WordsPageView: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.vertical, 7)
         .frame(minHeight: 44)
+        .measureTapTarget("词语表-词行")
     }
 
-    private var noWordsNotice: some View {
-        HStack(alignment: .top, spacing: 9) {
-            Image(systemName: "info.circle")
-                .font(Fonts.s(13, .regular, .footnote))
-                .foregroundStyle(Palette.amber)
-            Text("\(app.repo.book(app.currentBook)?.name ?? "这一册")课本没有单独的词语表，从二年级上册开始才有。现在可以先看上面其它册的词语。")
-                .font(Fonts.s(12, .regular, .caption))
-                .foregroundStyle(Palette.ink2)
-                .lineSpacing(3)
-                .fixedSize(horizontal: false, vertical: true)
+    /// 一个可点的字。
+    ///
+    /// 派生词里有少数用到字库外的字（「弓弩」的弩、「镜匣」的匣），
+    /// 那些字没有详情页。必须置灰且**不可点**——留着 44pt 的点击区却点不出
+    /// 东西，比看起来不能点更糟。
+    @ViewBuilder
+    private func charButton(_ c: String, lesson: String) -> some View {
+        let tappable = app.repo.hasChar(c)
+        if tappable {
+            Button {
+                app.push(AppState.CharRoute(ch: c, lesson: lesson))
+            } label: {
+                Text(c)
+                    .font(Fonts.s(21, .regular, .title3))
+                    .foregroundStyle(Palette.ink1)
+                    .padding(.horizontal, 3)
+                    .padding(.vertical, 3)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(PressableStyle())
+            // 21pt 的字加 3pt 内边距只有 ~33x27，远不到 44。逐字点击是这个页面
+            // 的主交互（点字查读音/笔顺），必须撑到触达线
+            .minTapTarget()
+            .measureTapTarget("词语表-单字")
+            .accessibilityLabel(c)
+        } else {
+            Text(c)
+                .font(Fonts.s(21, .regular, .title3))
+                .foregroundStyle(Palette.ink3.opacity(0.45))
+                .padding(.horizontal, 3)
+                .padding(.vertical, 3)
+                .accessibilityLabel("\(c)，未收录")
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
-                .fill(Palette.amberSoft)
-        )
     }
 }

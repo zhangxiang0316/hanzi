@@ -35,6 +35,14 @@ sealed class Screen {
     object Wrong : Screen()
     /** 识字量测试：一次性流程，起始页/答题/结果都在同一个 Screen 里切 */
     object Vocab : Screen()
+    /** 学习周报：家长看的最近 7 天 */
+    object Report : Screen()
+    /** 选字做字帖：按课时 / 错题 / 薄弱笔画挑字导出 */
+    object CopybookPick : Screen()
+    /** 部首归类：按部首看字 */
+    object Radical : Screen()
+    /** 词语表：按册翻课本词语 */
+    object Words : Screen()
     object About : Screen()
 }
 

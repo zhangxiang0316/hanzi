@@ -46,6 +46,7 @@ import com.xiaoxiao.hanzi.ui.HanziButton
 import com.xiaoxiao.hanzi.ui.HanziGlyph
 import com.xiaoxiao.hanzi.ui.LocalPalette
 import com.xiaoxiao.hanzi.ui.Screen
+import com.xiaoxiao.hanzi.ui.exportCopybook
 
 /**
  * 我的字帖：把写过的字排成一张字帖。
@@ -293,46 +294,15 @@ private fun ExportCard(names: List<String>, enabled: Boolean) {
             .clip(RoundedCornerShape(Dimens.radiusCard.dp))
             .clickable(enabled = enabled && !busy) {
                 busy = true
-                // 生成 PDF 要遍历每个字的笔画轮廓，几百个字时能到上百毫秒，
-                // 放主线程会卡一下；放到 IO 线程再回主线程弹分享
-                Thread {
-                    val result = try {
-                        CopybookPDF.build(names, dateLabel = CopybookPDF.dateLabel())
-                    } catch (e: Exception) {
-                        null
+                // 生成、落盘、分享三步都在 exportCopybook 里，选字做字帖页复用同一份
+                exportCopybook(ctx, names) { ok ->
+                    busy = false
+                    if (!ok) {
+                        android.widget.Toast.makeText(
+                            ctx, "导出失败了，再试一次", android.widget.Toast.LENGTH_SHORT
+                        ).show()
                     }
-                    val uri = result?.let { r ->
-                        try {
-                            val dir = java.io.File(ctx.cacheDir, "copybook").apply { mkdirs() }
-                            val f = java.io.File(dir, CopybookPDF.fileName())
-                            f.writeBytes(r.bytes)
-                            androidx.core.content.FileProvider.getUriForFile(
-                                ctx, "${ctx.packageName}.fileprovider", f
-                            )
-                        } catch (e: Exception) {
-                            null
-                        }
-                    }
-                    (ctx as? android.app.Activity)?.runOnUiThread {
-                        busy = false
-                        if (uri == null) {
-                            android.widget.Toast.makeText(
-                                ctx, "导出失败了，再试一次", android.widget.Toast.LENGTH_SHORT
-                            ).show()
-                        } else {
-                            // 用 chooser 而不是直接 ACTION_VIEW：
-                            // 家长可能想打印、想发到电脑、想存到网盘，让系统去列应用
-                            val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                type = "application/pdf"
-                                putExtra(android.content.Intent.EXTRA_STREAM, uri)
-                                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            }
-                            ctx.startActivity(
-                                android.content.Intent.createChooser(send, "字帖已生成")
-                            )
-                        }
-                    }
-                }.start()
+                }
             },
         shape = RoundedCornerShape(Dimens.radiusCard.dp),
         color = p.card,

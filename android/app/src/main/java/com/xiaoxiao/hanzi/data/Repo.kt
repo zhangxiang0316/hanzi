@@ -25,9 +25,6 @@ object Repo {
     private val decodeCache = HashMap<String, StrokeCodec.CharStrokes>()
     private val bookCharsCache = HashMap<String, List<String>>()
 
-    /** 全库词语表（按教材顺序去重后的结果，见 [allWords]） */
-    private var allWordsCache: List<WordEntry>? = null
-
     /** 形近字表（自动生成，见 scripts/build-similar.mjs） */
     private var similarMap: HashMap<String, List<String>> = HashMap()
 
@@ -203,9 +200,6 @@ object Repo {
         rawStrokes = sm
 
         if (similarJson != null) similarMap = parseSimilar(similarJson)
-
-        // 重新加载数据时把派生缓存清掉，否则会拿着上一份数据算出来的词语表
-        allWordsCache = null
         loaded = true
     }
 
@@ -547,70 +541,6 @@ object Repo {
             if (syl[idx] == reading) out.add(w.word)
         }
         return out
-    }
-
-    // MARK: - 词语表
-
-    /**
-     * 全库词语表，按教材顺序。
-     *
-     * 1276 条词语此前只在「看拼音选词语」的题目和课时页里露过脸，没有任何
-     * 地方能从头翻一遍。家长想帮孩子过一遍这学期的词，只能靠一课一课点进去。
-     *
-     * 同一个词可能在多课重复出现（教材就是这样），这里按词去重，保留**最早
-     * 出现的那一课**——复习时按学习顺序过更顺。
-     *
-     * 遍历顺序刻意走 `book.lessons`、不用 `lessonMap` 的键：`lessonMap` 是
-     * HashMap，迭代顺序没有保证，「保留最早出现的一课」就会变成一个
-     * 每次运行都可能不同的答案。
-     */
-    fun allWords(): List<WordEntry> {
-        allWordsCache?.let { return it }
-        val seen = HashSet<String>()
-        val out = ArrayList<WordEntry>()
-        for (book in bookList) {
-            for (lid in book.lessons) {
-                val l = lessonMap[lid] ?: continue
-                for (word in l.words) {
-                    if (word.isEmpty()) continue
-                    if (!seen.add(word)) continue
-                    val chars = word.map { it.toString() }
-                    out.add(
-                        WordEntry(
-                            word = word,
-                            lesson = lid,
-                            book = l.book,
-                            unit = l.unit,
-                            lessonNo = l.no,
-                            chars = chars,
-                            // missing 是词里不在字库中的字，页面上要标一下：
-                            // 有这种字，孩子点进去查不到读音
-                            missing = chars.count { metaMap[it] == null }
-                        )
-                    )
-                }
-            }
-        }
-        allWordsCache = out
-        return out
-    }
-
-    /** 某一册的词语（按教材顺序，跨课去重） */
-    fun bookWords(bookId: String): List<WordEntry> = allWords().filter { it.book == bookId }
-
-    /** 某一课的词语（教材顺序，不做去重） */
-    fun lessonWords(lessonId: String?): List<String> =
-        if (lessonId == null) emptyList() else (lessonMap[lessonId]?.words ?: emptyList())
-
-    /**
-     * 按字搜词。
-     *
-     * 只看词里是否含这个字，不看读音——搜「行」应该把「行走」「银行」都列出来，
-     * 孩子要的是「哪些词里有这个字」。
-     */
-    fun wordsWithChar(ch: String?): List<WordEntry> {
-        if (ch.isNullOrEmpty()) return emptyList()
-        return allWords().filter { it.chars.contains(ch) }
     }
 
     /** 册次在教材里的先后序号（越小越早） */

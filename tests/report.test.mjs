@@ -169,3 +169,67 @@ test('build 一次给齐页面要的东西', () => {
   assert.equal(typeof r.headline, 'string');
   assert.ok(Array.isArray(r.advice));
 });
+
+/**
+ * 三端黄金值。
+ *
+ * 这一组数字是拿同一份输入在三个平台的实现里各跑一遍、逐字比对后钉下来的
+ * （小程序 / Android / iOS 输出完全一致）。改任何一端的周报口径，这里会红。
+ *
+ * 输入故意留了一天（前天）没有数据，把「缺数据 ≠ 0 分」这条也钉进去。
+ */
+const GOLDEN_DAYS = (() => {
+  const now = new Date(2026, 10, 3);
+  const pad = (n) => String(n).padStart(2, '0');
+  const key = (off) => {
+    const d = new Date(now.getTime());
+    d.setDate(d.getDate() - off);
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  };
+  const out = {};
+  [[0, 5, 12, 10], [1, 4, 10, 9], [3, 6, 14, 12],
+   [4, 3, 6, 6], [5, 2, 4, 3], [6, 4, 8, 7]].forEach(([o, l, a, c]) => {
+    out[key(o)] = { learned: l, answers: a, correct: c };
+  });
+  return out;
+})();
+
+test('三端黄金值：headline', () => {
+  assert.equal(report.build(GOLDEN_DAYS, { now: NOW }).headline, '这周来了 6 天，很稳');
+});
+
+test('三端黄金值：汇总数字', () => {
+  const { sum } = report.build(GOLDEN_DAYS, { now: NOW });
+  assert.equal(sum.learned, 24);
+  assert.equal(sum.answers, 54);
+  assert.equal(sum.correct, 47);
+  assert.equal(sum.accuracy, 87);
+  assert.equal(sum.activeDays, 6);
+  assert.equal(sum.empty, false);
+});
+
+test('三端黄金值：逐日学习量与柱高', () => {
+  const { week } = report.build(GOLDEN_DAYS, { now: NOW });
+  assert.deepEqual(week.map((d) => d.learned), [4, 2, 3, 6, 0, 4, 5]);
+  // 前天（索引 4）缺数据 → 没有柱子。这一条就是「缺数据 ≠ 0 分」的可见形式
+  assert.deepEqual(week.map((d) => d.ratio), [0.67, 0.33, 0.5, 1, 0, 0.67, 0.83]);
+});
+
+test('三端黄金值：三条建议逐字一致', () => {
+  const { advice } = report.build(GOLDEN_DAYS, { now: NOW });
+  assert.deepEqual(advice.map((a) => a.tone + ':' + a.text), [
+    'good:这周认识了 24 个字，平均每天 4 个。',
+    'good:答题正确率 87%，很扎实。',
+    'plain:有 1 天没有学习记录。每天固定一个时间学，比一次学很久有用。',
+  ]);
+});
+
+test('三端黄金值：结论文案', () => {
+  // 小程序放在页面里、Android/iOS 收进纯逻辑层，但输出必须逐字一致
+  const { sum } = report.build(GOLDEN_DAYS, { now: NOW });
+  const parts = [];
+  if (sum.learned > 0) parts.push(`认识 ${sum.learned} 个字`);
+  if (sum.answers > 0) parts.push(`答题 ${sum.answers} 道`);
+  if (sum.activeDays > 0) parts.push(`来了 ${sum.activeDays} 天`);
+  assert.equal('这周' + parts.join('，'), '这周认识 24 个字，答题 54 道，来了 6 天');
+});

@@ -49,21 +49,3 @@ class Book(
     val stat: BookStat
 )
 
-/**
- * 词语表里的一条（对应小程序 `catalog.allWords()` 的一项）。
- *
- * [lesson] 是这个词**最早**出现的那一课：同一个词常在多课重复出现，
- * 复习时按学习顺序过更顺。
- *
- * [missing] 是词里不在字库中的字数——页面上要标一下，
- * 有这种字孩子点进去查不到读音。
- */
-class WordEntry(
-    val word: String,
-    val lesson: String,
-    val book: String,
-    val unit: Int,
-    val lessonNo: Int,
-    val chars: List<String>,
-    val missing: Int
-)

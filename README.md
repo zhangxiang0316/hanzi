@@ -266,20 +266,42 @@ hanzi/
 
 | 套件 | 数量 | 覆盖 |
 | --- | --- | --- |
-| 小程序 `npm test` | 123 | 数据完整性、路由与分包映射、评分、出题、SRS、图标、听写、词语表、同音字、部首、跨端一致性 |
+| 小程序 `npm test` | 263 | 数据完整性、路由与分包映射、评分、出题、SRS、图标、听写、词语表、同音字、部首、跨端一致性 |
 | 小程序 `npm run render:check` | — | 真实 Canvas 渲染：笔画像素递增、终态一致 |
 | 小程序 `npm run preview:shots` | 28 条断言 | 完整交互流程 + 视觉回归（34 张截图） |
-| iOS `swift test` | 240 | 数据完整性、SRS、描红评分、出题（三端黄金值）、Dynamic Type 缩放规则 |
+| iOS `swift test` | 368 | 数据完整性、SRS、描红评分、出题（三端黄金值）、Dynamic Type 缩放规则 |
 | Android `RepoTest` | 13 | 教材数据完整性、笔画数、多音字、跨册重复 |
 | Android `LogicTest` | 24 | SRS、描红评分、出题器（与小程序同种子等价） |
-| Android `AppUiTest` | 22 | 11 个页面渲染、按钮可点、文案正确 |
+| Android `AppUiTest` | 27 | 15 个页面渲染、按钮可点、文案正确 |
 | Android `LayoutTest` | 15 | 几何断言：按钮满宽居中、册次与徽章网格、tab 均分与底栏高度 |
 | Android `CanvasRenderTest` | 5 | 像素级：汉字真画出来了、没有上下倒置、配色正确 |
 | Android `E2ETest` | 5 | 真实手势走完描红评分与存档 |
 | Android `WritePageTest` | 7 | 描红状态机：最后一笔实心、抖动也能过、写错有原因 |
 | Android `ScreenshotTest` + `FullPageShotTest` | 19 | 页面截图（含超长视口整页） |
 
+| Android `ReportTest` | 24 | 周报口径：滚动 7 天、缺数据 ≠ 0%、柱高归一、建议阈值 |
+| Android `CopybookPickTest` | 11 | 选字合并去重、来源优先级、顺序与标签一致 |
+| Android `WordsTest` | 20 | 词语 API：2492 条 / 1967 去重 / 一年级派生兜底 / 19 个含字库外字 |
+| Android `NarrowLayoutTest` | 5 | 320dp 窄屏不溢出、点击区不缩水 |
+
 Android 测试全部跑在 JVM 上（Robolectric + Compose UI Test），**不需要模拟器**。
+
+### 三端黄金值
+
+周报的数字是给家长看的，算错了比不显示更糟。所以同一份输入（六天有数据、
+前天故意留空）在三个实现里各跑一遍，输出逐字比对后钉进测试：
+
+| | 输出 |
+| --- | --- |
+| headline | `这周来了 6 天，很稳` |
+| 汇总 | learned 24 / answers 54 / correct 47 / accuracy 87 / activeDays 6 |
+| 逐日学习量 | `4,2,3,6,0,4,5` |
+| 柱高 | `0.67,0.33,0.5,1,0,0.67,0.83` |
+| 结论 | `这周认识 24 个字，答题 54 道，来了 6 天` |
+| 建议 | 三条，逐字一致（见 `tests/report.test.mjs`） |
+
+三端现在的数字**完全相同**。改任何一端的口径，`tests/report.test.mjs`
+里的黄金值断言会红。
 
 ---
 

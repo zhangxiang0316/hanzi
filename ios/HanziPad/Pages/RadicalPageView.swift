@@ -162,6 +162,7 @@ struct RadicalPageView: View {
             )
         }
         .buttonStyle(PressableStyle())
+        .measureTapTarget("部首-部首格")
         .accessibilityLabel("\(r.radical) 部，\(r.count) 个字")
         .accessibilityAddTraits(on ? .isSelected : [])
     }

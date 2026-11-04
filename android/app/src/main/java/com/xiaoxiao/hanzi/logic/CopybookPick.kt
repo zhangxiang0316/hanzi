@@ -11,7 +11,12 @@ package com.xiaoxiao.hanzi.logic
  * ## 优先级
  *
  * 一个字的来源可能同时命中多条（既是错题、星级又低），去重时按
- * 「错题 > 弱笔 > 课时 > 低分」排——错题最该练。
+ * 「错题 → 弱笔 → 课时 → 低分」排——错题最该练。
+ *
+ * 字的先后和标签的先后**是同一套**（[FROM_ORDER]），别拆成两套：
+ * 曾经条目按「错题>弱笔>低分>课时」排、标签按「错题>弱笔>课时>低分」排，
+ * 结果界面上标着「课时 · 低分」的字排在了纯课时字前面——这个顺序没法向
+ * 用户解释。顺序只有一套才讲得通。
  *
  * ## 与小程序版的差别（有意为之）
  *
@@ -112,16 +117,17 @@ object CopybookPick {
     /**
      * 一次算好整个选字界面要的字，已去重、已按来源优先级排好。
      *
-     * 顺序：错题 → 弱笔 → 低星 → 课时。错题优先，因为它最该练；
-     * 课时放最后，因为「本课生字」是一整批，排前面会把错题挤到屏幕下面。
+     * push 顺序必须和 [FROM_ORDER] 一致：错题 → 弱笔 → 课时 → 低分。
+     * 课时虽然是一整批，仍排在低分之前——这样每个字的**首个**来源
+     * 在列表里严格单调，扫一眼就能看出「越靠前越该练」。
      */
     fun build(src: Source): List<Item> {
         val raw = ArrayList<Candidate>()
         raw.addAll(fromWrong(src.wrongChars))
         raw.addAll(fromWeak(src.weakChars))
+        raw.addAll(fromLesson(src.lessonChars))
         val stars = src.stars
         if (stars != null) raw.addAll(fromStars(src.records, stars))
-        raw.addAll(fromLesson(src.lessonChars))
         return decorate(merge(raw))
     }
 }

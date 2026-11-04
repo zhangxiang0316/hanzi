@@ -32,7 +32,7 @@ class CopybookPickTest {
     }
 
     @Test
-    fun `来源标签按「错题 > 弱笔 > 课时 > 低分」排`() {
+    fun `来源标签按错题、弱笔、课时、低分的先后排`() {
         val d = CopybookPick.decorate(
             CopybookPick.merge(
                 listOf(candidate("天", "stars"), candidate("天", "lesson"), candidate("天", "wrong"))
@@ -85,8 +85,62 @@ class CopybookPickTest {
             )
         )
         assertEquals(listOf("他", "你", "天", "地", "我").sorted(), out.map { it.ch }.sorted())
-        // 顺序也要对：错题 → 弱笔 → 低星 → 课时
-        assertEquals(listOf("你", "我", "他", "天", "地"), out.map { it.ch })
+        // 顺序也要对：错题 → 弱笔 → 课时 → 低分
+        assertEquals(listOf("你", "我", "天", "地", "他"), out.map { it.ch })
+    }
+
+    /**
+     * 条目顺序与标签顺序必须是同一套。
+     *
+     * 这两处曾经反着：条目是 错题>弱笔>低分>课时，标签是 错题>弱笔>课时>低分。
+     * 结果界面上标着「课时 · 低分」的字排在了纯课时字前面，用户没法解释
+     * 这个顺序。顺序只有一套才讲得通。
+     */
+    @Test
+    fun `条目顺序与标签顺序一致`() {
+        val out = CopybookPick.build(
+            CopybookPick.Source(
+                lessonChars = listOf("天", "地"),
+                wrongChars = listOf("你"),
+                weakChars = listOf("我"),
+                records = listOf("他" to record(1)),
+                stars = 1
+            )
+        )
+        assertEquals(listOf("你", "我", "天", "地", "他"), out.map { it.ch })
+
+        // 每个字的**首个**来源，按优先级必须单调不增
+        val rank = mapOf("wrong" to 0, "weak" to 1, "lesson" to 2, "stars" to 3)
+        val ranks = out.map { rank.getValue(it.froms.first()) }
+        for (i in 1 until ranks.size) {
+            assertTrue(
+                "第 $i 个字的来源优先级倒退了：${out[i].ch}",
+                ranks[i] >= ranks[i - 1]
+            )
+        }
+    }
+
+    /**
+     * 防止有人改了 [CopybookPick.FROM_ORDER] 却忘了改 [CopybookPick.build] 里的 push 顺序。
+     *
+     * 直接断言声明顺序的字面量，而不是拿 FROM_ORDER 去比自己：那样改一处
+     * 两个列表会一起变，测试就永远绿了，等于没测。
+     */
+    @Test
+    fun `来源的声明顺序是错题、弱笔、课时、低分`() {
+        assertEquals(
+            listOf("wrong", "weak", "lesson", "stars"),
+            CopybookPick.FROM_ORDER
+        )
+        // FROM_TEXT 是 LinkedHashMap（mapOf 保序），声明顺序要和 FROM_ORDER 一致
+        assertEquals(
+            listOf("wrong", "weak", "lesson", "stars"),
+            CopybookPick.FROM_TEXT.keys.toList()
+        )
+        assertEquals(
+            listOf("错题", "笔画弱", "课时", "低分"),
+            CopybookPick.FROM_TEXT.values.toList()
+        )
     }
 
     @Test

@@ -211,4 +211,46 @@ class ScreenshotTest {
         app.nav.push(Screen.About)
         shoot("13-about")
     }
+
+    @Test
+    fun `截图 - 学习周报`() {
+        val app = state()
+        // 有数据的周报才看得出柱状图、四格指标和逐日明细对不对
+        Repo.bookChars("1a").take(6).forEach { app.progress.learn(it) }
+        repeat(4) { app.progress.grade("天", it % 2 == 0, null) }
+        compose.setContent { HanziTheme { Root(app) } }
+        app.nav.push(Screen.Report)
+        shoot("14-report")
+    }
+
+    @Test
+    fun `截图 - 选字做字帖`() {
+        val app = state()
+        Repo.bookChars("1a").take(6).forEach { ch ->
+            app.progress.learn(ch)
+            app.progress.grade(ch, false, null)
+        }
+        compose.setContent { HanziTheme { Root(app) } }
+        app.nav.push(Screen.CopybookPick)
+        shoot("15-copybook-pick")
+    }
+
+    @Test
+    fun `截图 - 部首归类`() {
+        val app = state()
+        Repo.bookChars("1a").take(10).forEach { app.progress.learn(it) }
+        compose.setContent { HanziTheme { Root(app) } }
+        app.nav.push(Screen.Radical)
+        shoot("16-radical")
+    }
+
+    @Test
+    fun `截图 - 词语表`() {
+        val app = state()
+        // 一年级是派生词兜底那一档，提示语最需要看清楚
+        Repo.bookChars("1a").take(4).forEach { app.progress.learn(it) }
+        compose.setContent { HanziTheme { Root(app) } }
+        app.nav.push(Screen.Words)
+        shoot("17-words")
+    }
 }

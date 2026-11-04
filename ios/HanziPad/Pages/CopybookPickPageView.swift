@@ -234,6 +234,10 @@ struct CopybookPickPageView: View {
             .padding(.vertical, 6)
             .background(Capsule().fill(Palette.card))
             .overlay(Capsule().strokeBorder(Palette.line, lineWidth: 1))
+            // 胶囊本身只有 26pt 高，撑到 44 才够点——Menu 的 label 不会
+            // 自动继承 minTapTarget 的透明容器，得显式把高度做出来
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
         }
         .measureTapTarget("选字字帖-换课")
     }
@@ -277,7 +281,10 @@ struct CopybookPickPageView: View {
             spacing: 10
         ) {
             ForEach(r.items, id: \.ch) { it in
+                // 字格是这一页的主要交互，必须被探针量到——
+                // 之前只给导出/换课挂了探针，漏了真正天天点的这个
                 cell(it, selected: on.contains(it.ch))
+                    .measureTapTarget("选字字帖-字格")
             }
         }
     }

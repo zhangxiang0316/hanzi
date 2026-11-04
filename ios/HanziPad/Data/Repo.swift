@@ -54,8 +54,18 @@ final class Repo {
     private var bookCharsCache: [String: [String]] = [:]
     /// 课文词语表缓存（见 Logic/Words.swift）
     var lessonWordCache: [String: [LessonWord]] = [:]
-    /// 全库词语表缓存（见 Logic/Words.swift 的 `allWords`）
+    /// 单册词语表缓存（见 Logic/Words.swift 的 `bookWordEntries`）。
+    ///
+    /// 这一层缓存不是「顺手加的」：词语表页一进来就要把八册都列出来，
+    /// 每册还要算总数，而 `WordEntry` 的每个词都要过一遍 `wordPinyin`
+    /// （逐字查 meta、再扫该字的组词找带声调的拼音）。第一次进页面时
+    /// 不做缓存要重复算十几遍同样八册的东西，主线程卡好几秒——
+    /// 表现为点进词语表后白屏一会儿才出内容。
+    var bookWordsCache: [String: [WordEntry]] = [:]
+    /// 全库词语表缓存（按册拼接，见 Logic/Words.swift 的 `allWordEntries`）
     var allWordsCache: [WordEntry]?
+    /// 全库去重词语缓存（见 Logic/Words.swift 的 `uniqueWords`）
+    var uniqueWordsCache: [WordEntry]?
     private var strokeCache: [String: StrokeCodec.CharStrokes] = [:]
 
     init(source: Source = .bundle) {

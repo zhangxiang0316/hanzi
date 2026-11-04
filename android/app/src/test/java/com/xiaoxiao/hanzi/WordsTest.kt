@@ -156,4 +156,127 @@ class WordsTest {
             parts.forEach { assertNotNull("$it 缺元数据", Repo.meta(it)) }
         }
     }
+
+    // -----------------------------------------------------------------------
+    // 词语表浏览
+    //
+    // 词语此前只在「看拼音选词语」的题目和课时页里露过脸，
+    // 没有任何地方能从头翻一遍。以下与小程序 tests/words.test.mjs 对应。
+    // -----------------------------------------------------------------------
+
+    @Test
+    fun `全库词语按册拼接，8 册都有（一年级靠派生词兜底）`() {
+        val all = Words.allWords()
+        // 2492 = 八册册内去重后拼接的条目数；一年级的词全部来自生字组词兜底。
+        // 这个数字和数值都取自小程序侧，三端必须一致
+        assertEquals(2492, all.size)
+        val books = all.map { it.book }.toSet()
+        assertEquals(
+            listOf("1a", "1b", "2a", "2b", "3a", "3b", "4a", "4b"),
+            Repo.books.map { it.id }.filter { it in books }
+        )
+        assertEquals(8, books.size)
+    }
+
+    @Test
+    fun `一年级全是生字组词兜底，中高年级是课本词与派生词混着`() {
+        // 一年级课本没有词语表，所以用每课生字的第一组词补上。
+        // 但**一册里可能混合**——2a 有的课文有词语表、有的没有，
+        // 所以页面不能只看 every 就下「这一册没有词语表」的结论。
+        val g1 = Words.bookWords("1a")
+        assertTrue("一年级也要有词可看", g1.isNotEmpty())
+        assertTrue("一年级应该全是派生词", g1.all { !it.fromTextbook })
+
+        val g2 = Words.bookWords("2a")
+        assertTrue("2a 应该有真课本词", g2.any { it.fromTextbook })
+        assertTrue("2a 也有派生词——混合册", g2.any { !it.fromTextbook })
+        // 92 / 320，与小程序一致
+        assertEquals(92, g2.count { !it.fromTextbook })
+        assertEquals(320, g2.size)
+    }
+
+    @Test
+    fun `全库去重后少于按册拼接的条目数`() {
+        // 「旅行」在 1b 和 3a 各出一次是教材事实，分组浏览该各显示一次；
+        // 但统计「有多少个词」必须全局去重
+        val dup = Words.allWords().size
+        val uniq = Words.uniqueWords()
+        assertTrue("去重后 ${uniq.size} 应该少于 $dup", uniq.size < dup)
+        assertEquals(1967, uniq.size)
+        assertEquals("不能有重复的词", uniq.size, uniq.map { it.word }.toSet().size)
+    }
+
+    @Test
+    fun `跨册重复的词记下所有册次`() {
+        val travel = Words.uniqueWords().firstOrNull { it.word == "旅行" }
+        assertNotNull("应该有「旅行」", travel)
+        assertTrue("「旅行」应跨册，实际 ${travel!!.books}", travel.books.size >= 2)
+        assertEquals(listOf("1b", "3a"), travel.books)
+    }
+
+    @Test
+    fun `按字搜词能搜到跨册的词，且不重复`() {
+        val found = Words.wordsWithChar("行")
+        assertTrue("含「行」的词太少：${found.size}", found.size >= 3)
+        assertTrue("每个词都要含「行」", found.all { it.word.contains("行") })
+        assertEquals("搜索结果不能有重复的词", found.size, found.map { it.word }.toSet().size)
+        // 跨册的「旅行」在结果里只出现一次，但册次记全了
+        val travel = found.first { it.word == "旅行" }
+        assertEquals(listOf("1b", "3a"), travel.books)
+    }
+
+    @Test
+    fun `搜不存在的字返回空而不是报错`() {
+        assertTrue(Words.wordsWithChar("").isEmpty())
+        assertTrue(Words.wordsWithChar(null).isEmpty())
+        assertTrue(Words.wordsWithChar("龘").isEmpty())
+    }
+
+    @Test
+    fun `每个词都有拼音`() {
+        val bad = Words.uniqueWords().filter { it.pinyin.isEmpty() }
+        assertTrue(
+            "这些词缺拼音：${bad.take(5).map { it.word }}",
+            bad.isEmpty()
+        )
+    }
+
+    @Test
+    fun `每条词语都带课次与册次`() {
+        // 页面要显示「第 N 课」，没有课次就只能显示「第 0 课」
+        Words.allWords().forEach { w ->
+            assertTrue("${w.word} 册次为空", w.book.isNotEmpty())
+            assertTrue("${w.word} 应是本册的课", Repo.book(w.book)?.lessons?.contains(w.lesson) == true)
+            assertTrue("${w.word} 没有课次", w.lessonNo > 0)
+        }
+    }
+
+    @Test
+    fun `派生词里有少数含字库外的字，页面要认得出`() {
+        // 派生词取自每个字的组词，那些组词可能用到 2596 字之外的常用字
+        // （「弓弩」的弩、「镜匣」的匣）。这类字点不进详情页，
+        // 页面必须靠 Repo.hasChar 把它们置灰，而不是让用户点了以为卡住。
+        val derived = Words.uniqueWords().filter { !it.fromTextbook }
+        val withOutsider = derived.filter { w -> w.word.any { Repo.meta(it.toString()) == null } }
+
+        assertEquals("数据里确实有这类词，断言要贴着现实", 19, withOutsider.size)
+        val ratio = withOutsider.size.toDouble() / derived.size
+        assertTrue("含字库外字的派生词占比 ${ratio * 100}% 太高了", ratio < 0.05)
+        // 每个这样的词，至少有一个字能点，不至于整条都没得点
+        withOutsider.forEach { w ->
+            assertTrue(
+                "「${w.word}」一个字都点不了",
+                w.word.any { Repo.meta(it.toString()) != null }
+            )
+        }
+    }
+
+    @Test
+    fun `词算不算学过要看每一个字`() {
+        // 有一个字不认识，这个词孩子就读不出来，算「学过」是自欺欺人
+        val learnedChars = setOf("看", "见")
+        assertTrue(Words.learned("看见") { it in learnedChars })
+        assertFalse("缺一个字就不算学过", Words.learned("看见") { it == "看" })
+        assertFalse("空词不算学过", Words.learned("") { true })
+    }
 }

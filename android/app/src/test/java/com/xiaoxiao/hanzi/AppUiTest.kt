@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import com.xiaoxiao.hanzi.data.Repo
 import com.xiaoxiao.hanzi.ui.AppState
@@ -350,6 +351,11 @@ class AppUiTest {
         compose.onNodeWithText("我的徽章").assertExists()
         compose.onNodeWithText("破土而出").assertExists()
         compose.onNodeWithText("清空学习记录").assertExists()
+
+        // 四个新入口都挂在「更多」下：漏一个家长就找不到那一页
+        listOf("学习周报", "选字做字帖", "部首归类", "词语表").forEach {
+            compose.onNodeWithText(it).assertExists()
+        }
     }
 
     @Test
@@ -363,6 +369,100 @@ class AppUiTest {
         compose.onNodeWithText("关于小小识字家").assertExists()
         compose.onNodeWithText("数据来源").assertExists()
         compose.onNodeWithText("隐私").assertExists()
+    }
+
+    // ---------- 新增的四个浏览页 ----------
+
+    /**
+     * 周报页在完全没有数据时也要画得出来。
+     *
+     * 空周是最容易崩的一档：柱状图要除零、汇总要取 best、建议要只给一句。
+     * 这些口径在 ReportTest 里钉死了，这里验的是「页面真的能渲染 + 文案对」。
+     */
+    @Test
+    fun `周报页空数据也能渲染并说明还没开始`() {
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+
+        app.nav.push(Screen.Report)
+        compose.waitForIdle()
+
+        compose.onNodeWithText("最近 7 天").assertExists()
+        compose.onNodeWithText("这周还没有学习记录").assertExists()
+        // 没答题时正确率显示「—」，不是 0%
+        compose.onAllNodesWithText("—").onFirst().assertExists()
+        compose.onNodeWithText("给家长").assertExists()
+    }
+
+    @Test
+    fun `选字做字帖页默认带出本课生字`() {
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+
+        app.nav.push(Screen.CopybookPick)
+        compose.waitForIdle()
+
+        compose.onNodeWithText("按课时、错题、薄弱笔画挑字，导出成一张打印版字帖").assertExists()
+        compose.onNodeWithText("错题本").assertExists()
+        compose.onNodeWithText("本课生字").assertExists()
+        // 默认全选本课生字：导出按钮上的字数不该是 0
+        compose.onNodeWithText("全选").assertExists()
+        compose.onNodeWithText("清空").assertExists()
+    }
+
+    @Test
+    fun `部首归类页默认选中字数最多的部首`() {
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+
+        app.nav.push(Screen.Radical)
+        compose.waitForIdle()
+
+        compose.onNodeWithText("按部首看字，明白「三点水」「提手旁」是什么意思").assertExists()
+        compose.onNodeWithText("全部字库").assertExists()
+        // 默认选中第一个（频次最高的）部首，右侧列出它的字
+        val top = Repo.bookRadicals(app.currentBook).first()
+        compose.onNodeWithText("${top.first} 部").assertExists()
+        compose.onNodeWithText(
+            "${Repo.charsWithRadical(app.currentBook, top.first).size} 个字"
+        ).assertExists()
+    }
+
+    /**
+     * 词语表页：一年级也必须看得到词。
+     *
+     * 一年级课本没有词语表，一律靠生字组词兜底——早期实现漏掉这个兜底，
+     * 一年级点进来是一片空白，而那正是这个 App 最大的用户群。
+     */
+    @Test
+    fun `词语表页一年级也有词，并标出生字组词`() {
+        val app = state()
+        app.setBook("1a")
+        compose.setContent { HanziTheme { Root(app) } }
+
+        app.nav.push(Screen.Words)
+        compose.waitForIdle()
+
+        compose.onNodeWithText("课本词语表，加上一年级用生字组词补的部分").assertExists()
+        compose.onNodeWithText("一年级上册").assertExists()
+        compose.onNodeWithText("这一册课本没有词语表，下面是每课生字的组词").assertExists()
+        compose.onAllNodesWithText("生字组词").onFirst().assertExists()
+    }
+
+    @Test
+    fun `词语表页搜字能搜到跨册的词`() {
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+
+        app.nav.push(Screen.Words)
+        compose.waitForIdle()
+
+        compose.onNodeWithText("搜词语，或搜一个字（如「行」）").performTextInput("行")
+        compose.waitForIdle()
+
+        compose.onNodeWithText("找到 5 个词").assertExists()
+        // 跨册的词要标出所有册次，而不是只显示最早那一册
+        compose.onNodeWithText("一年级下册 / 三年级上册").assertExists()
     }
 
     @Test

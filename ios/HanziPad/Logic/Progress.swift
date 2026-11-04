@@ -288,6 +288,32 @@ final class Progress {
     /// `days` 是私有字典，周报又是纯函数、不该把手伸进 Progress 里，
     /// 所以在这里转成 Report 自己的轻量类型再递出去——顺带把
     /// `@MainActor` 隔离留在这个类里，Report 可以完全脱离 Progress 测试。
+    /// 自检用：直接往逐日统计里塞一周数据。
+    ///
+    /// 周报页光靠 `-seedDemo` 是空的（`learn()` 只记当天），看不到非空态的
+    /// 排版。而"空周周报长什么样"和"有数据时长什么样"都得看过才算验过。
+    ///
+    /// 只在 DEBUG 下存在，参数是 `-seedWeek`。
+    #if DEBUG
+    func seedWeekForDebug() {
+        // 故意留一天（前天）不填，用来验"缺数据 ≠ 0 分"的显示
+        let plan: [(Int, Int, Int, Int)] = [
+            (0, 5, 12, 10),
+            (1, 4, 10, 9),
+            (3, 6, 14, 12),
+            (4, 3, 6, 6),
+            (5, 2, 4, 3),
+            (6, 4, 8, 7),
+        ]
+        for (off, learned, answers, correct) in plan {
+            let d = Calendar.current.date(byAdding: .day, value: -off, to: Date()) ?? Date()
+            let key = DayUtil.todayKey(d)
+            days[key] = DayStat(learned: learned, answers: answers, correct: correct)
+        }
+        persistStats()
+    }
+    #endif
+
     var dayStats: [String: Report.DayStat] {
         days.mapValues {
             Report.DayStat(learned: $0.learned, answers: $0.answers, correct: $0.correct)
