@@ -335,7 +335,9 @@ struct CopybookPageView: View {
 }
 
 /// 分享用的包装。`sheet(item:)` 需要一个 Identifiable。
-private struct ShareItem: Identifiable {
+///
+/// 不设 private：「选字做字帖」也会导出 PDF，两个页面共用同一个包装。
+struct ShareItem: Identifiable {
     let url: URL
     var id: String { url.absoluteString }
 

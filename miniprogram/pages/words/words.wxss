@@ -87,6 +87,14 @@
   font-variant-numeric: tabular-nums;
 }
 
+.group-note {
+  margin: 0 8rpx 12rpx;
+}
+.group-note-text {
+  font-size: 21rpx;
+  color: var(--ink-3);
+}
+
 .list {
   background: var(--card);
   border-radius: 24rpx;
@@ -123,6 +131,19 @@
 }
 .row-meta {
   font-size: 22rpx;
+  color: var(--ink-3);
+}
+/* 派生词（课本没给词语表，用生字组词补的）标一下 */
+.row-mark {
+  margin-right: 12rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+  font-size: 19rpx;
+  color: var(--ink-3);
+  background: var(--paper-deep);
+}
+/* 字库外的字点了没反应，置灰表示不可点 */
+.row-ch.no-tap {
   color: var(--ink-3);
 }
 .row-dot {

@@ -63,4 +63,29 @@ object DayUtil {
         cal.add(Calendar.DAY_OF_MONTH, offsetDays)
         return cal.time
     }
+
+    /**
+     * 以 [from] 为基准偏移 [offsetDays] 的那一天。
+     *
+     * 周报要能按「注入的今天」算整周（测试要固定日期），不能用系统时钟；
+     * 与上面那个以今天为基准的重载区分开。
+     */
+    fun dateOfOffset(from: Date, offsetDays: Int): Date {
+        val cal = Calendar.getInstance()
+        cal.time = from
+        cal.add(Calendar.DAY_OF_MONTH, offsetDays)
+        return cal.time
+    }
+
+    /**
+     * 周几的序号，周一=0 … 周日=6。
+     *
+     * Calendar.DAY_OF_WEEK 是周日=1 … 周六=7，家长习惯的是周一开始，
+     * 所以这里直接换成周一起算的序号，省得每个调用方各转一遍。
+     */
+    fun weekdayIndexMonFirst(date: Date = Date()): Int {
+        val cal = Calendar.getInstance()
+        cal.time = date
+        return (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
+    }
 }

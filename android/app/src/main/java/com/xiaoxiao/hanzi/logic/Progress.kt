@@ -301,6 +301,14 @@ class Progress(private val store: Store) {
 
     fun todayStats(): DayStat = days[DayUtil.todayKey()] ?: DayStat()
 
+    /**
+     * 逐日统计的整份快照，键是 `yyyy-MM-dd`。
+     *
+     * 周报要按「最近 7 天」去查每一天，只给今天那一格不够用；
+     * 返回副本，免得调用方拿着引用改坏内存状态。
+     */
+    fun daysStats(): Map<String, DayStat> = HashMap(days)
+
     fun accuracyToday(): Int {
         val d = todayStats()
         return if (d.answers > 0) Math.round(d.correct.toFloat() / d.answers * 100) else 0

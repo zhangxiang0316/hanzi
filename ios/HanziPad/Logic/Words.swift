@@ -8,6 +8,33 @@ struct LessonWord: Equatable, Hashable {
     let fromTextbook: Bool
 }
 
+/// 词语表里的一条，带「它属于哪一课」的完整上下文。
+///
+/// 和小程序 `catalog.allWords()` 的返回项一一对应。之所以要带 `book`/`unit`/
+/// `lessonNo` 而不是只给一个课时 id：词语表页按册分组、每行标「第 N 课」，
+/// 再回头去 catalog 里反查一次既慢又容易和课时数据脱节。
+struct WordEntry: Equatable, Hashable, Identifiable {
+    let word: String
+    let lesson: String
+    let book: String
+    let unit: Int
+    let lessonNo: Int
+    /// 拆成单字：页面上每个字都要能单独点进详情
+    let chars: [String]
+    /// 这个词里不在字库中的字数，页面上要标一下
+    let missing: Int
+
+    var id: String { word }
+
+    /// 一个词算不算「学过」。
+    ///
+    /// 只有词里**每个字都学过**才算。有一个字不认识，这个词孩子读不出来，
+    /// 算学过是自欺欺人。
+    func isLearned(_ hasLearned: (String) -> Bool) -> Bool {
+        chars.allSatisfy(hasLearned)
+    }
+}
+
 /// 课文词语表。
 ///
 /// `Lesson.words` 是教材每课末尾的词语表，2a 起共 1276 条。这份数据
@@ -80,4 +107,59 @@ extension Repo {
     }
 
     func bookWordCount(_ bookId: String) -> Int { bookWords(bookId).count }
+
+    // MARK: - 词语表浏览（对应小程序 catalog.allWords 系列）
+
+    /// 全库词语表，按教材顺序，跨课去重。
+    ///
+    /// 1276 条词语此前只在「看拼音选词语」的题目和课时页里露过脸，没有任何
+    /// 地方能从头翻一遍。家长想帮孩子过一遍这学期的词，只能靠一课一课点进去。
+    ///
+    /// 同一个词可能在多课重复出现（教材就是这样），这里按词去重，保留**最早
+    /// 出现的那一课**——复习时按学习顺序过更顺。
+    ///
+    /// 只读 `lesson.words`，**不**走上面 `lessonWords` 的一年级兜底：
+    /// 一年级课本本身没有词语表，词语表页要老实显示「这一册没有」，
+    /// 拿生字组词兜底会让家长误以为课本上有这些词。
+    ///
+    /// 遍历顺序按「册 → 课」而不是字典键序：Swift 的 Dictionary 无序，
+    /// 不按教材顺序走的话，同一个词保留哪一课、整个列表的顺序都会不稳定。
+    func allWords() -> [WordEntry] {
+        if let c = allWordsCache { return c }
+        var seen = Set<String>()
+        var out: [WordEntry] = []
+        for b in books {
+            for lid in b.lessons {
+                guard let lesson = lesson(lid) else { continue }
+                for word in lesson.words where seen.insert(word).inserted {
+                    let chars = word.map(String.init)
+                    out.append(WordEntry(
+                        word: word,
+                        lesson: lid,
+                        book: lesson.book,
+                        unit: lesson.unit,
+                        lessonNo: lesson.no,
+                        chars: chars,
+                        missing: chars.filter { !hasChar($0) }.count
+                    ))
+                }
+            }
+        }
+        allWordsCache = out
+        return out
+    }
+
+    /// 某一册的词语（按教材顺序，跨课去重）。
+    func bookWordEntries(_ bookId: String) -> [WordEntry] {
+        allWords().filter { $0.book == bookId }
+    }
+
+    /// 按字搜词。
+    ///
+    /// 只看词里是否含这个字，不看读音——搜「行」应该把「行走」「银行」都列出来，
+    /// 孩子要的是「哪些词里有这个字」。
+    func wordsWithChar(_ ch: String) -> [WordEntry] {
+        guard !ch.isEmpty else { return [] }
+        return allWords().filter { $0.chars.contains(ch) }
+    }
 }

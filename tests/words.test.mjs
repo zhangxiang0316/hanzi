@@ -128,3 +128,90 @@ test('同 seed 的出题结果锁定为跨端黄金值', () => {
     '船身|chuán shēn|船身|展开|井沿|船身|时间',
   ]);
 });
+
+// ---------------------------------------------------------------------------
+// 词语表浏览
+//
+// 词语此前只在「看拼音选词语」的题目和课时页里露过脸，
+// 没有任何地方能从头翻一遍。
+// ---------------------------------------------------------------------------
+
+test('全库词语按册拼接，8 册都有（一年级靠派生词兜底）', () => {
+  const all = words.allWords();
+  assert.ok(all.length > 2400, `词语太少：${all.length}`);
+  const books = new Set(all.map((w) => w.book));
+  ['1a', '1b', '2a', '2b', '3a', '3b', '4a', '4b'].forEach((b) => {
+    assert.ok(books.has(b), `${b} 应该有词语`);
+  });
+});
+
+test('一年级全是生字组词兜底，中高年级是课本词与派生词混着', () => {
+  // 不是 bug，是数据事实：一年级课本没有词语表，用每课生字的第一组词补。
+  // 而且**一册里可能混合**——2a 有的课文有词语表、有的没有，
+  // 所以页面上不能只看 every 就下"这册没有词语表"的结论。
+  const g1 = words.bookWords('1a');
+  assert.ok(g1.length > 0, '一年级也要有词可看');
+  assert.ok(g1.every((w) => w.from === 'derived'), '一年级应该全是派生词');
+
+  const g2 = words.bookWords('2a');
+  assert.ok(g2.some((w) => w.from === 'textbook'), '2a 应该有真课本词');
+  assert.ok(g2.some((w) => w.from === 'derived'), '2a 也有派生词——混合册');
+});
+
+test('全库去重后少于按册拼接的条目数', () => {
+  // 「旅行」在 3a 和 3b 各出一次是教材事实，分组浏览该各显示一次；
+  // 但统计"有多少个词"必须全局去重
+  const dup = words.allWords().length;
+  const uniq = words.uniqueWords().length;
+  assert.ok(uniq < dup, `去重后 ${uniq} 应该少于 ${dup}`);
+  const seen = new Set();
+  words.uniqueWords().forEach((w) => {
+    assert.ok(!seen.has(w.word), `重复的词：${w.word}`);
+    seen.add(w.word);
+  });
+});
+
+test('跨册重复的词记下所有册次', () => {
+  const travel = words.uniqueWords().find((w) => w.word === '旅行');
+  assert.ok(travel, '应该有「旅行」');
+  assert.ok(travel.books.length >= 2, `「旅行」应跨册，实际 ${travel.books.join('/')}`);
+});
+
+test('按字搜词能搜到跨册的词，且不重复', () => {
+  const found = words.wordsWithChar('行');
+  assert.ok(found.length >= 3, `含「行」的词太少：${found.length}`);
+  assert.ok(found.every((w) => w.word.indexOf('行') >= 0));
+  const names = found.map((w) => w.word);
+  assert.equal(new Set(names).size, names.length, '搜索结果不能有重复的词');
+});
+
+test('搜不存在的字返回空数组而不是报错', () => {
+  assert.deepEqual(words.wordsWithChar(''), []);
+  assert.deepEqual(words.wordsWithChar('龘'), []);
+});
+
+test('每个词都有拼音', () => {
+  const bad = words.uniqueWords().filter((w) => !w.py);
+  assert.equal(bad.length, 0,
+    `这些词缺拼音：${bad.slice(0, 5).map((w) => w.word).join(' ')}`);
+});
+
+test('派生词里有少数含字库外的字，页面要认得出（不然点了没反应）', () => {
+  // 派生词取自每个字的组词，那些组词可能用到 2596 字之外的常用字
+  // （「弓弩」的弩、「镜匣」的匣）。这类字点不进详情页，
+  // 页面必须靠 catalog.hasChar 把它们置灰，而不是让用户点了以为卡住。
+  const derived = words.uniqueWords().filter((w) => w.from === 'derived');
+  const withOutsider = derived.filter((w) =>
+    Array.from(w.word).some((c) => !catalog.hasChar(c)));
+
+  assert.ok(withOutsider.length > 0, '数据里确实有这类词，断言要贴着现实');
+  // 比例不该高到离谱：绝大多数派生词都该是可点的
+  const ratio = withOutsider.length / derived.length;
+  assert.ok(ratio < 0.05, `含字库外字的派生词占比 ${(ratio * 100).toFixed(1)}% 太高了`);
+
+  // 每个这样的词，至少有一个字能点，不至于整条都没得点
+  withOutsider.forEach((w) => {
+    const tappable = Array.from(w.word).filter((c) => catalog.hasChar(c));
+    assert.ok(tappable.length > 0, `「${w.word}」一个字都点不了`);
+  });
+});

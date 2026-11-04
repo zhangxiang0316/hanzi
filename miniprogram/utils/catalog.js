@@ -189,65 +189,6 @@ function wordsUsing(ch, reading) {
   return out;
 }
 
-/**
- * 全库词语表，按教材顺序。
- *
- * 1276 条词语此前只在「看拼音选词语」的题目和课时页里露过脸，没有任何
- * 地方能从头翻一遍。家长想帮孩子过一遍这学期的词，只能靠一课一课点进去。
- *
- * 同一个词可能在多课重复出现（教材就是这样），这里按词去重，保留**最早
- * 出现的那一课**——复习时按学习顺序过更顺。
- *
- * @returns {Array<{word, lesson, book, unit, lessonNo, chars, missing}>}
- *   missing 是这个词里不在字库中的字，页面上要标一下：
- *   孩子还没学过它的读音。
- */
-function allWords() {
-  const seen = {};
-  const out = [];
-  Object.keys(lessonMap).forEach((id) => {
-    const lesson = lessonMap[id];
-    const list = lesson.words || [];
-    list.forEach((word) => {
-      if (!word || seen[word]) return;
-      seen[word] = true;
-      const chars = Array.from(word);
-      out.push({
-        word,
-        lesson: id,
-        book: lesson.book,
-        unit: lesson.unit,
-        lessonNo: lesson.no,
-        chars,
-        missing: chars.filter((c) => !meta[c]).length,
-      });
-    });
-  });
-  return out;
-}
-
-/** 某一册的词语（按教材顺序，跨课去重） */
-function bookWords(bookId) {
-  return allWords().filter((w) => w.book === bookId);
-}
-
-/** 某一课的词语 */
-function lessonWords(lessonId) {
-  const lesson = lessonMap[lessonId];
-  return lesson && lesson.words ? lesson.words.slice() : [];
-}
-
-/**
- * 按字搜词。
- *
- * 只看词里是否含这个字，不看读音——搜「行」应该把「行走」「银行」都列出来，
- * 孩子要的是"哪些词里有这个字"。
- */
-function wordsWithChar(ch) {
-  if (!ch) return [];
-  return allWords().filter((w) => w.chars.indexOf(ch) >= 0);
-}
-
 /** 册次在教材里的先后序号（越小越早） */
 function bookRank(bookId) {
   const i = books.findIndex((b) => b.id === bookId);
@@ -600,10 +541,6 @@ module.exports = {
   allCharsWithRadical,
   radicalDistractors,
   wordsUsing,
-  allWords,
-  bookWords,
-  lessonWords,
-  wordsWithChar,
   bookRank,
   wordRank,
   polyphoneCases,

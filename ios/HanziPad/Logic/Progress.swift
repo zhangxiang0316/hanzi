@@ -283,6 +283,17 @@ final class Progress {
 
     var todayStats: DayStat { days[DayUtil.todayKey()] ?? DayStat() }
 
+    /// 逐日统计的只读快照，给周报（`Report.build`）用。
+    ///
+    /// `days` 是私有字典，周报又是纯函数、不该把手伸进 Progress 里，
+    /// 所以在这里转成 Report 自己的轻量类型再递出去——顺带把
+    /// `@MainActor` 隔离留在这个类里，Report 可以完全脱离 Progress 测试。
+    var dayStats: [String: Report.DayStat] {
+        days.mapValues {
+            Report.DayStat(learned: $0.learned, answers: $0.answers, correct: $0.correct)
+        }
+    }
+
     var accuracyToday: Int {
         let d = todayStats
         guard d.answers > 0 else { return 0 }

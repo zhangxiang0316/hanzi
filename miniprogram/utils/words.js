@@ -95,4 +95,66 @@ function bookWordCount(bookId) {
   return bookWords(bookId).length;
 }
 
-module.exports = { lessonWords, bookWords, bookWordCount, wordPinyin };
+/**
+ * 全库词语，按册次顺序。
+ *
+ * 词语表页要"从头翻一遍"，所以需要一份把 8 册串起来的列表。
+ * 复用 `bookWords` 而不是另写一遍：那里面已经处理了一年级的兜底
+ * （课本没有词语表时用生字的组词补），另写一份必然会把那个兜底漏掉，
+ * 结果就是一年级点进词语表看到一片空白。
+ */
+function allWords() {
+  const out = [];
+  catalog.getBooks().forEach((b) => {
+    bookWords(b.id).forEach((w) => {
+      out.push(Object.assign({ book: b.id, bookName: b.name }, w));
+    });
+  });
+  return out;
+}
+
+/**
+ * 全库去重后的词语（按册次顺序，保留最早出现的那一册）。
+ *
+ * `allWords()` 是按册拼接的，去重只做到册内——「旅行」在 3a 和 3b 各出一次
+ * 是教材事实，分组浏览时应该各显示一次。但搜索和总数统计算的是"有多少个词"，
+ * 那就必须全局去重，否则搜「行」会列出两条「旅行」。
+ */
+function uniqueWords() {
+  const seen = {};
+  const out = [];
+  allWords().forEach((w) => {
+    if (seen[w.word]) {
+      // 记下还出现在哪些册，搜索结果里可以显示"3a / 3b"
+      seen[w.word].books.push(w.book);
+      return;
+    }
+    const item = Object.assign({}, w, { books: [w.book] });
+    seen[w.word] = item;
+    out.push(item);
+  });
+  return out;
+}
+
+/**
+ * 按字搜词。
+ *
+ * 只看词里是否含这个字，不看读音——搜「行」应该把「行走」「银行」都列出来，
+ * 孩子要的是"哪些词里有这个字"。
+ *
+ * @returns {Array<{word, py, lesson, book, books, from}>} 全局去重
+ */
+function wordsWithChar(ch) {
+  if (!ch) return [];
+  return uniqueWords().filter((w) => w.word.indexOf(ch) >= 0);
+}
+
+module.exports = {
+  lessonWords,
+  bookWords,
+  bookWordCount,
+  wordPinyin,
+  allWords,
+  uniqueWords,
+  wordsWithChar,
+};

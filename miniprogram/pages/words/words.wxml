@@ -14,21 +14,24 @@
   <!-- 搜索结果 -->
   <block wx:if="{{searching}}">
     <view class="search-head">
-      <text class="search-count">找到 {{results.length}} 个词</text>
+      <text class="search-count" wx:if="{{resultTotal > results.length}}">
+        找到 {{resultTotal}} 个词，先显示前 {{results.length}} 个
+      </text>
+      <text class="search-count" wx:else>找到 {{resultTotal}} 个词</text>
     </view>
     <view class="list">
       <view class="row" wx:for="{{results}}" wx:key="word">
         <view class="row-chars">
-          <text
-            class="row-ch"
+          <view
+            class="row-ch {{c.tap ? '' : 'no-tap'}}"
             wx:for="{{item.chars}}"
             wx:for-item="c"
             wx:key="c"
             data-ch="{{c.c}}"
             bindtap="onChar"
-          >{{c.c}}</text>
+          >{{c.c}}</view>
         </view>
-        <text class="row-meta">{{item.bookName}} 第 {{item.lessonNo}} 课</text>
+        <text class="row-meta">{{item.bookNames}}</text>
         <view class="row-dot" wx:if="{{item.learned}}"></view>
       </view>
     </view>
@@ -41,7 +44,7 @@
   <block wx:else>
     <view class="summary">
       <text class="summary-num">{{learnedWords}}</text>
-      <text class="summary-of">/ {{total}} 个词</text>
+      <text class="summary-of">/ {{uniqueTotal}} 个词</text>
       <text class="summary-hint">一个词里的字都学过，这个词才算学会</text>
     </view>
 
@@ -50,19 +53,30 @@
         <text class="group-name {{item.current ? 'current' : ''}}">{{item.name}}</text>
         <text class="group-count">{{item.learned}}/{{item.count}}</text>
       </view>
+      <!-- 有的课文课本没给词语表，就用生字的组词补上。一册里可能混合，
+           所以要报出数量，不能笼统说"这一册没有词语表"。 -->
+      <block wx:if="{{item.derivedCount}}">
+        <view class="group-note" wx:if="{{item.allDerived}}">
+          <text class="group-note-text">这一册课本没有词语表，下面是每课生字的组词</text>
+        </view>
+        <view class="group-note" wx:else>
+          <text class="group-note-text">其中 {{item.derivedCount}} 个是生字组词（课本这几课没有词语表）</text>
+        </view>
+      </block>
       <view class="list">
         <view class="row" wx:for="{{item.words}}" wx:for-item="w" wx:key="word">
           <view class="row-chars">
-            <text
-              class="row-ch"
+            <view
+              class="row-ch {{c.tap ? '' : 'no-tap'}}"
               wx:for="{{w.chars}}"
               wx:for-item="c"
               wx:for-index="i"
               wx:key="c"
               data-ch="{{c.c}}"
               bindtap="onChar"
-            >{{c.c}}</text>
+            >{{c.c}}</view>
           </view>
+          <text class="row-mark" wx:if="{{w.derived}}">生字组词</text>
           <text class="row-meta">第 {{w.lessonNo}} 课</text>
           <view class="row-dot" wx:if="{{w.learned}}"></view>
         </view>
@@ -73,9 +87,7 @@
     <view class="empty" wx:if="{{!groups.length}}">
       <text class="empty-text">还没有任何词语</text>
     </view>
-    <view class="notice" wx:if="{{groups.length && !hasWords}}">
-      <text class="notice-text">一年级课本没有词语表，从二年级上册开始才有。现在可以先看上面其它册的词语。</text>
-    </view>
+
   </block>
 
   <view class="safe-bottom"></view>

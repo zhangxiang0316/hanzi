@@ -54,6 +54,8 @@ final class Repo {
     private var bookCharsCache: [String: [String]] = [:]
     /// 课文词语表缓存（见 Logic/Words.swift）
     var lessonWordCache: [String: [LessonWord]] = [:]
+    /// 全库词语表缓存（见 Logic/Words.swift 的 `allWords`）
+    var allWordsCache: [WordEntry]?
     private var strokeCache: [String: StrokeCodec.CharStrokes] = [:]
 
     init(source: Source = .bundle) {
