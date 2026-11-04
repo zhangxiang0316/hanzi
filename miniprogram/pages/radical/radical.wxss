@@ -15,7 +15,12 @@
   flex: 1;
   margin-right: 16rpx;
   text-align: center;
-  padding: 18rpx 0;
+  /* 88rpx ≈ 45px，低于 44px 手指点不准 */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 88rpx;
+  padding: 0 0;
   border-radius: 999rpx;
   font-size: 26rpx;
   color: var(--ink-2);

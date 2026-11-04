@@ -106,12 +106,19 @@
   display: flex;
 }
 /* 每个字单独可点，但视觉上要像一个词——间距压紧、字号放大 */
+/* 每个字单独可点，所以要有 44px 的点击高度；
+   视觉上仍要像一个词——用 inline-flex 撑高度，不靠 margin 分开 */
 .row-ch {
-  margin-right: 4rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 宽度上不强行拉到 44px：词里的字必须挨着看才像一个词。
+     相邻的字连成一片，两个字的词整体就有 70px+ 的点击区。 */
+  min-width: 72rpx;
+  min-height: 88rpx;
   font-size: 38rpx;
   line-height: 1.3;
   color: var(--ink);
-  padding: 2rpx 6rpx;
   border-radius: 8rpx;
 }
 .row-meta {
