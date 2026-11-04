@@ -451,6 +451,30 @@ fun WritePage(
             }
         }
 
+        // 上一个字 / 下一个字。
+        //
+        // 只在描红模式出现：听写是「按这一课的顺序默写」，跳字会打乱听写列表
+        // 的推进逻辑，那边用完就靠 onFinished 自己往前走。
+        //
+        // 用 nav.replace 而不是 push：连翻十个字不该需要按十次返回。
+        // 状态按 ch 记忆（remember(ch)），换字后笔画进度自动归零。
+        if (onFinished == null) {
+            val chars = remember(lessonId) { Repo.lessonChars(lessonId) }
+            val idx = chars.indexOf(ch)
+            val hasPrev = idx > 0
+            val hasNext = idx >= 0 && idx < chars.size - 1
+
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                PagerButton("‹ 上一个", hasPrev, Modifier.weight(1f)) {
+                    if (hasPrev) app.nav.replace(Screen.Write(chars[idx - 1]))
+                }
+                PagerButton("下一个 ›", hasNext, Modifier.weight(1f)) {
+                    if (hasNext) app.nav.replace(Screen.Write(chars[idx + 1]))
+                }
+            }
+        }
+
         Spacer(Modifier.height(20.dp))
 
         // 完成弹层（用内联卡片代替 Dialog，保证能跟着页面滚，小屏不被键盘/导航栏遮挡）
@@ -595,4 +619,34 @@ private fun finish(
     app.progress.saveWrite(ch, r.score)
     app.touch()
     cb(r.score, r.stars)
+}
+
+/**
+ * 上一个 / 下一个的翻字按钮。
+ *
+ * 与详情页那个同名同形：同一种导航在两页长得不一样会让人以为功能不同。
+ */
+@Composable
+private fun PagerButton(
+    text: String,
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val p = LocalPalette.current
+    Box(
+        modifier
+            .height(44.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(p.card)
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text,
+            fontSize = 14.sp,
+            color = if (enabled) p.ink1 else p.ink3.copy(alpha = 0.45f),
+            fontWeight = FontWeight.Medium
+        )
+    }
 }

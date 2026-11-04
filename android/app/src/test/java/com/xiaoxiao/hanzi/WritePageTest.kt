@@ -20,6 +20,8 @@ import com.xiaoxiao.hanzi.ui.HanziPainter
 import com.xiaoxiao.hanzi.ui.HanziTheme
 import com.xiaoxiao.hanzi.ui.Root
 import com.xiaoxiao.hanzi.ui.Screen
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -288,5 +290,93 @@ class WritePageTest {
                 )
             }
         }
+    }
+
+    // MARK: - 上一个 / 下一个字
+
+    @Test
+    fun `描红页有上一个和下一个，点了能换字`() {
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+        app.nav.push(Screen.Write("天"))
+        compose.waitForIdle()
+
+        assertTrue("描红页应该有「下一个」", hasText("下一个 ›"))
+
+        compose.onNodeWithText("下一个 ›").performClick()
+        compose.waitForIdle()
+
+        // 天 在「天地人你我他」的第一个，下一个应是「地」
+        val cur = app.nav.current
+        assertTrue("点下一个后应该换成「地」，实际 $cur",
+            cur is Screen.Write && cur.ch == "地")
+    }
+
+    @Test
+    fun `上一个能回到前一个字`() {
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+        app.nav.push(Screen.Write("地"))
+        compose.waitForIdle()
+
+        compose.onNodeWithText("‹ 上一个").performClick()
+        compose.waitForIdle()
+
+        val cur = app.nav.current
+        assertTrue("点上一个后应该回到「天」，实际 $cur",
+            cur is Screen.Write && cur.ch == "天")
+    }
+
+    @Test
+    fun `课内第一个字不显示可用的上一个`() {
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+        // 天 是「天地人你我他」的第一个
+        app.nav.push(Screen.Write("天"))
+        compose.waitForIdle()
+
+        // 按钮在，但是禁用态（点了不动）
+        compose.onNodeWithText("‹ 上一个").performClick()
+        compose.waitForIdle()
+        val cur = app.nav.current
+        assertTrue("第一个字上点「上一个」不该换字，实际 $cur",
+            cur is Screen.Write && cur.ch == "天")
+    }
+
+    @Test
+    fun `翻字用 replace，不增加返回栈深度`() {
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+        app.nav.push(Screen.Write("天"))
+        compose.waitForIdle()
+        val before = app.nav.size()
+
+        compose.onNodeWithText("下一个 ›").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("下一个 ›").performClick()
+        compose.waitForIdle()
+
+        // 连翻两个字，返回栈不该长高——否则要按很多次返回才出得去
+        assertEquals("连翻不该加深返回栈", before, app.nav.size())
+    }
+
+    @Test
+    fun `换字后笔画进度归零`() {
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+        app.nav.push(Screen.Write("三"))
+        compose.waitForIdle()
+
+        // 先写掉前两笔，制造「写了一半」的状态
+        traceStroke("三", 0)
+        traceStroke("三", 1)
+        assertFalse("还没写完时不该出现完成卡片", hasText("再写一次"))
+
+        app.nav.replace(Screen.Write("大"))
+        compose.waitForIdle()
+
+        // 换了字，进度必须从第 1 笔重新开始；
+        // 否则孩子会发现自己从第 3 笔开始写，莫名其妙
+        assertTrue("换字后应从第 1 笔开始", hasText("第 1 笔"))
     }
 }

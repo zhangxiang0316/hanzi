@@ -223,3 +223,28 @@
 .result-next {
   margin-top: 18rpx;
 }
+
+/* ---------- 上一个 / 下一个字 ---------- */
+
+.pager {
+  display: flex;
+  justify-content: space-between;
+  padding: 10rpx 32rpx 0;
+}
+
+.pager-btn {
+  font-size: 25rpx;
+  color: var(--ink-2);
+  /* 触达面积：文字本身只有 25rpx 高，靠 padding 撑到 44px 以上 */
+  padding: 24rpx 16rpx;
+}
+
+.pager-btn.next {
+  color: var(--jade-deep);
+  font-weight: 600;
+}
+
+.pager-btn.off {
+  /* 禁用态仍要读得出来，否则用户以为按钮坏了 */
+  color: #b3a894;
+}

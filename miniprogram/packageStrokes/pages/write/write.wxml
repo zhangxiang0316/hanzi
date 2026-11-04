@@ -59,6 +59,21 @@
     </view>
   </view>
 
+  <!-- 上一个 / 下一个字。
+       听写模式下 hideGhost 为真，翻字会让听写列表的推进错乱，所以不显示 -->
+  <view class="pager" wx:if="{{showPager && meta && meta.s}}">
+    <view
+      class="pager-btn tap {{hasPrev ? '' : 'off'}}"
+      data-delta="-1"
+      bindtap="onPager"
+    >‹ 上一个</view>
+    <view
+      class="pager-btn next tap {{hasNext ? '' : 'off'}}"
+      data-delta="1"
+      bindtap="onPager"
+    >下一个 ›</view>
+  </view>
+
   <view class="result-mask" wx:if="{{done}}">
     <view class="result-card pop">
       <view class="result-title">{{stars >= 2 ? '写得真棒！' : '完成啦！'}}</view>

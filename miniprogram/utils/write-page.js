@@ -4,6 +4,12 @@
  */
 const catalog = require('./catalog');
 const progress = require('./progress');
+
+/** 某一课的字，按教材顺序；查不到就是空数组 */
+function lessonCharsOf(lessonId) {
+  const lesson = catalog.getLesson(lessonId);
+  return lesson && lesson.chars ? lesson.chars : [];
+}
 const hc = require('./hanzi-canvas');
 const strokeStore = require('./stroke-store');
 const { initCanvas, rpx } = require('./canvas-init');
@@ -66,7 +72,16 @@ module.exports = function createWritePage(options) {
       this.accepted = [];
       this.ink = [];       // 当前笔画轨迹
       this.drawing = false;
+
+      // 上一个 / 下一个字是否可用。放在这里算，是因为听写页也会换字，
+      // 而它不该显示翻字行（hideGhost 为真即为听写）。
+      const seq = lessonCharsOf(meta.l);
+      const at = seq.indexOf(this.ch);
       this.setData({
+        // hideGhost 只在实例上，没进 data；WXML 要读就得显式给一个字段
+        showPager: !this.hideGhost,
+        hasPrev: !this.hideGhost && at > 0,
+        hasNext: !this.hideGhost && at >= 0 && at < seq.length - 1,
         ch: this.ch,
         py: catalog.readingFor(this.ch, meta.l),
         meta,
@@ -366,6 +381,23 @@ module.exports = function createWritePage(options) {
 
     onAgain() {
       this.onReset();
+    },
+
+    /**
+     * 翻到课内相邻的字。
+     *
+     * 和「写完之后的下一个字」是两件事：那个（`onNext`）在最后一字时
+     * 直接返回上一页，而这个只在本课内移动。
+     */
+    onPager(e) {
+      const delta = Number(e.currentTarget.dataset.delta);
+      if (!delta) return;
+      const seq = lessonCharsOf(this.data.meta.l);
+      const at = seq.indexOf(this.ch);
+      const target = seq[at + delta];
+      if (!target) return;
+      this.loadChar(target);
+      wx.setNavigationBarTitle({ title: '描红 · ' + target });
     },
 
     onNext() {

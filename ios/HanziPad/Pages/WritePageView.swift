@@ -36,11 +36,17 @@ struct WritePageView: View {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 let prev = app.repo.prevInLesson(app.repo.meta(ch)?.lesson, ch)
                 let next = app.repo.nextInLesson(app.repo.meta(ch)?.lesson, ch)
+                // 带文字而不是光两个箭头：三端都写「上一个 / 下一个」，
+                // 同一个功能在不同端长得不一样会让人以为是两回事。
                 if !prev.isEmpty {
                     Button {
                         app.pushReplacing(AppState.WriteRoute(ch: prev))
                     } label: {
-                        Image(systemName: "chevron.left")
+                        HStack(spacing: 2) {
+                            Image(systemName: "chevron.left")
+                            Text("上一个")
+                        }
+                        .font(Fonts.s(13, .medium, .footnote))
                     }
                     .accessibilityLabel("上一个字")
                 }
@@ -48,7 +54,11 @@ struct WritePageView: View {
                     Button {
                         app.pushReplacing(AppState.WriteRoute(ch: next))
                     } label: {
-                        Image(systemName: "chevron.right")
+                        HStack(spacing: 2) {
+                            Text("下一个")
+                            Image(systemName: "chevron.right")
+                        }
+                        .font(Fonts.s(13, .medium, .footnote))
                     }
                     .accessibilityLabel("下一个字")
                 }
