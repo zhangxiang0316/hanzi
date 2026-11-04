@@ -338,7 +338,13 @@ struct AppRoutes: ViewModifier {
                 DetailPageView(ch: r.ch, lessonId: r.lesson)
             }
             .navigationDestination(for: WriteRoute.self) { r in
-                WritePageView(ch: r.ch)
+                // `.id(r.ch)` 让「换一个字」= 换一个视图身份。
+                //
+                // 不加的话，`pushReplacing` 换掉栈顶的 route 后，SwiftUI 在
+                // 同一个导航层位置上复用视图，`@State` 里的 WriteSession 会
+                // 活下来、`.onAppear` 也不再触发，画布就停在原来那个字上。
+                // 视图内部还有一层 `liveSession` 兜底，两层都不到位才会出错。
+                WritePageView(ch: r.ch).id(r.ch)
             }
             .navigationDestination(for: AppState.QuizPayload.self) { p in
                 QuizPageView(payload: p)

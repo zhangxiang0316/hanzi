@@ -18,8 +18,8 @@ struct WritePageView: View {
     var body: some View {
         GeometryReader { geo in
             Group {
-                if let session {
-                    WritePageBody(session: session, geo: geo, ch: ch,
+                if let liveSession {
+                    WritePageBody(session: liveSession, geo: geo, ch: ch,
                                   showResult: $showResult)
                 } else {
                     ProgressView()
@@ -55,9 +55,7 @@ struct WritePageView: View {
             }
         }
         .onAppear {
-            if session == nil {
-                session = WriteSession(ch: ch, strokes: app.repo.strokes(ch), box: 400)
-            }
+            if session == nil { session = makeSession() }
             #if DEBUG
             // 自检：进页面后自动用完美笔迹写 N 笔。
             // 用来确认「状态推进后界面有没有跟着刷新」——这一条光看代码看不出来。
@@ -83,8 +81,55 @@ struct WritePageView: View {
                     TapTargetProbe.shared.flush()
                 }
             }
+            // 自检：按 N 次「下一个字」，走导航栏按钮同一条路径
+            if let n = DebugArgs.writeStep, n != 0, !DebugArgs.writeStepDone {
+                DebugArgs.writeStepDone = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    var target = ch
+                    for _ in 0..<abs(n) {
+                        let lesson = app.repo.meta(target)?.lesson
+                        // 负数 = 按「上一个字」，正数 = 按「下一个字」
+                        let step = n > 0
+                            ? app.repo.nextInLesson(lesson, target)
+                            : app.repo.prevInLesson(lesson, target)
+                        if step.isEmpty { break }
+                        target = step
+                        app.pushReplacing(AppState.WriteRoute(ch: target))
+                    }
+                }
+            }
             #endif
         }
+        // 换字时必须重建 session。
+        //
+        // SwiftUI 在同一个导航层位置上复用视图身份，所以「下一个字」把 route
+        // 换成另一个字时，`@State` 里的 session 会活下来，`.onAppear` 也不再
+        // 触发（页面从来没有消失过）。结果是标题、拼音、笔画数都跟着 `ch`
+        // 更新了，画布还停在原来那个字上——看起来就是「点了没反应」。
+        //
+        // 实测（`-writeStep 1` 连点一次「下一个字」）：画布区域像素差 **0**。
+        .onChange(of: ch) { _, _ in
+            session = makeSession()
+            showResult = false
+        }
+    }
+
+    /// session 必须和当前字配对。
+    ///
+    /// 只看 `session != nil` 是不够的：换字的那一帧里 `ch` 已经是新字、
+    /// `session` 还是旧字（`.onChange` 在 body 求值之后才跑）。那一刻如果把
+    /// 旧 session 交给 `WritePageBody`，画布画的就是旧字，而标题、拼音、
+    /// 笔画数都已经跟着新字变了——看起来正是「点了没反应」。
+    ///
+    /// 这里选择「不匹配就不渲染」，宁可闪一帧加载态，也不让页面上出现
+    /// 「标题是新字、画布是旧字」这种自相矛盾的画面。
+    private var liveSession: WriteSession? {
+        guard let session, session.ch == ch else { return nil }
+        return session
+    }
+
+    private func makeSession() -> WriteSession {
+        WriteSession(ch: ch, strokes: app.repo.strokes(ch), box: 400)
     }
 }
 

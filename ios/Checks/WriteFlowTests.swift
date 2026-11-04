@@ -110,3 +110,67 @@ final class WriteFlowTests: XCTestCase {
         XCTAssertEqual(Trace.scoreChar([20, 20, 20, 20]).stars, 0)
     }
 }
+
+// MARK: - 换字：session 必须跟着字换
+
+/// 「上一个字 / 下一个字」换字后，session 必须重建。
+///
+/// 这是 iOS 独有的 bug：SwiftUI 在同一个导航层位置上复用视图身份，所以
+/// `pushReplacing` 换掉栈顶 route 后，`@State` 里的 WriteSession 会活下来，
+/// 画布停在原来那个字上，而标题、拼音、笔画数都已经跟着新字变了。
+///
+/// 修复是两层：`navigationDestination` 上加 `.id(r.ch)` 换视图身份，
+/// 视图内部再用 `liveSession` 挡「session 和字对不上」的中间态。
+/// 下面的用例锁住这两层各自的语义。
+@MainActor
+final class WriteStepTests: XCTestCase {
+
+    /// Repo 必须由 TestSupport 建一次，否则读 Bundle.main 会失败
+    private var repo: Repo { TestRepo.make() }
+
+    func testSessionCarriesItsOwnChar() {
+        // session 自带字，这是 liveSession 能判断「配不配对」的前提
+        let s = WriteSession(ch: "天", strokes: repo.strokes("天"), box: 400)
+        XCTAssertEqual(s.ch, "天")
+    }
+
+    func testNextSessionIsADifferentObject() {
+        let a = WriteSession(ch: "天", strokes: repo.strokes("天"), box: 400)
+        let b = WriteSession(ch: "地", strokes: repo.strokes("地"), box: 400)
+        XCTAssertFalse(a === b, "换字必须新建 session，不能复用")
+        XCTAssertNotEqual(a.ch, b.ch)
+    }
+
+    func testNewSessionStartsFromFirstStroke() {
+        // 换了字却接着上一个字的笔画进度，孩子会发现自己从第 3 笔开始写
+        let a = WriteSession(ch: "天", strokes: repo.strokes("天"), box: 400)
+        if !a.isDone, let t = a.targetPoints(for: a.index) { _ = a.submit(t) }
+        let b = WriteSession(ch: "你", strokes: repo.strokes("你"), box: 400)
+        XCTAssertEqual(b.index, 0, "新字的笔画进度必须从 0 开始")
+        XCTAssertTrue(b.scores.isEmpty, "新字不该继承上一个字的得分")
+    }
+
+    func testStrokesAreTheNewCharsStrokes() {
+        // 画布画的是 session.strokes，不是 ch——这就是「字没换」的根因
+        let tian = WriteSession(ch: "天", strokes: repo.strokes("天"), box: 400)
+        let ni = WriteSession(ch: "你", strokes: repo.strokes("你"), box: 400)
+        XCTAssertNotEqual(tian.strokes?.count, ni.strokes?.count,
+                          "天 和 你 的笔画数不同，拿错 session 一定看得出来")
+    }
+
+    func testPrevNextRoundTrip() {
+        // 天 → 下一个 是 地；地 → 上一个 回到 天
+        let lesson = repo.meta("天")?.lesson
+        let next = repo.nextInLesson(lesson, "天")
+        XCTAssertEqual(next, "地")
+        XCTAssertEqual(repo.prevInLesson(lesson, next), "天")
+    }
+
+    func testEdgeOfLessonReturnsEmpty() {
+        // 课时首尾没有上一个/下一个，按钮应该是隐藏的而不是跳到别处
+        let first = repo.lessonChars("1a-s1").first!
+        let last = repo.lessonChars("1a-s1").last!
+        XCTAssertEqual(repo.prevInLesson("1a-s1", first), "")
+        XCTAssertEqual(repo.nextInLesson("1a-s1", last), "")
+    }
+}
