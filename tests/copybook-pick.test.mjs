@@ -103,3 +103,31 @@ test('四条来源可以同时生效', () => {
   assert.deepEqual(chars, ['他', '你', '天', '地', '我'].sort());
   assert.equal(out.readyCount, 5);
 });
+
+test('条目顺序与标签顺序一致（错题 > 笔弱 > 课时 > 低分）', () => {
+  // 这两处曾经反着：条目是 错题>弱笔>低分>课时，标签是 错题>弱笔>课时>低分。
+  // 结果界面上标着「课时 · 低分」的字排在了纯课时字前面，用户没法解释
+  // 这个顺序。顺序只有一套才讲得通。
+  const out = pick.build({
+    lessonChars: ['天', '地'],
+    wrongChars: ['你'],
+    weakChars: ['我'],
+    records: [{ ch: '他', record: { stars: 1 } }],
+    stars: 1,
+    available: () => true,
+  });
+  assert.deepEqual(out.items.map((x) => x.ch), ['你', '我', '天', '地', '他']);
+
+  // 每个字的首个来源，按优先级必须是单调不增的
+  const rank = { wrong: 0, weak: 1, lesson: 2, stars: 3 };
+  const ranks = out.items.map((x) => rank[x.froms[0]]);
+  for (let i = 1; i < ranks.length; i++) {
+    assert.ok(ranks[i] >= ranks[i - 1],
+      `第 ${i} 个字的来源优先级倒退了：${out.items[i].ch}`);
+  }
+});
+
+test('条目顺序与 FROM_TEXT 的声明顺序对应', () => {
+  // 防止有人改 FROM_ORDER 却忘了改 build 里的 push 顺序
+  assert.deepEqual(Object.keys(pick.FROM_TEXT), ['wrong', 'weak', 'lesson', 'stars']);
+});

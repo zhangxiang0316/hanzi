@@ -123,8 +123,12 @@ function build(src) {
   const lesson = fromLesson(s.lessonChars, s.available);
   const stars = s.stars == null ? [] : fromStars(s.records, s.stars);
 
-  // 错题优先：它最该练
-  raw.push(...wrong, ...weak, ...stars, ...lesson);
+  // 顺序必须和 FROM_ORDER（标签顺序）一致：错题 > 笔弱 > 课时 > 低分。
+  //
+  // 这里曾经是 `...stars, ...lesson`——和标签顺序反着，结果同一个字
+  // 界面上标着「课时 · 低分」，却排在纯课时字的后面前面（取决于哪条先
+  // push）。两处顺序不一致时，用户看到的排序就没法解释了。
+  raw.push(...wrong, ...weak, ...lesson, ...stars);
 
   const merged = decorate(merge(raw));
 
