@@ -105,6 +105,11 @@
   </view>
 
   <view class="links">
+    <!-- 周报：首页只看得到「今天」，家长关心的是「这一周」 -->
+    <view class="link tap" bindtap="onReport">
+      <text class="link-name">学习周报</text>
+      <text class="link-value">最近 7 天 ›</text>
+    </view>
     <view class="link tap" bindtap="onVocab">
       <text class="link-name">识字量测试</text>
       <text class="link-value">{{vocabSize > 0 ? '上次 ' + vocabText + ' 字 ›' : '测一测 ›'}}</text>
@@ -118,6 +123,20 @@
     <view class="link tap" bindtap="onCopybook">
       <text class="link-name">我的字帖</text>
       <text class="link-value">{{writeCount > 0 ? writeCount + ' 个字 ›' : '还没写过 ›'}}</text>
+    </view>
+    <!-- 选字做字帖：「我的字帖」只能导写过的字，而家长想打的是"这课的生字""错题" -->
+    <view class="link tap" bindtap="onCopybookPick">
+      <text class="link-name">选字做字帖</text>
+      <text class="link-value">按课时 / 错题挑字 ›</text>
+    </view>
+    <!-- 部首与词语：两种"换个角度看字"的浏览方式 -->
+    <view class="link tap" bindtap="onRadical">
+      <text class="link-name">部首归类</text>
+      <text class="link-value">按部首看字 ›</text>
+    </view>
+    <view class="link tap" bindtap="onWords">
+      <text class="link-name">词语表</text>
+      <text class="link-value">按册翻词语 ›</text>
     </view>
     <view class="link tap" bindtap="onAbout">
       <text class="link-name">关于与数据来源</text>

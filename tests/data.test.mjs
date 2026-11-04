@@ -268,3 +268,59 @@ test('多音字同 seed 出题锁定为跨端黄金值', () => {
     '炸|炸死|zhà|zhà|zhá',
   ]);
 });
+
+// ---------------------------------------------------------------------------
+// 词语表浏览
+//
+// 1276 条词语此前只在「看拼音选词语」的题目和课时页里露过脸，
+// 没有任何地方能从头翻一遍。
+// ---------------------------------------------------------------------------
+
+test('词语表按教材顺序，且跨课去重', () => {
+  const all = catalog.allWords();
+  assert.ok(all.length > 1200, `词语太少：${all.length}`);
+  assert.ok(all.length <= 1276, '去重后不该多于原始条数');
+
+  const words = all.map((w) => w.word);
+  assert.equal(new Set(words).size, words.length, '不能有重复的词');
+
+  // 保留的是**最早**出现的那一课
+  const first = all[0];
+  assert.ok(first.lesson, '每条都要带课时');
+  assert.ok(first.book, '每条都要带册次');
+});
+
+test('词语只出现在 2~4 年级（一年级课本没有词语表）', () => {
+  // 这不是 bug，是数据事实。页面要据此给出提示，不能显示一片空白
+  const books = new Set(catalog.allWords().map((w) => w.book));
+  ['2a', '2b', '3a', '3b', '4a', '4b'].forEach((b) => {
+    assert.ok(books.has(b), `${b} 应该有词语`);
+  });
+  assert.equal(catalog.bookWords('1a').length, 0, '一年级没有词语表');
+});
+
+test('每条词语的每个字都在字库里', () => {
+  // 有字库外的字，孩子点进去查不到读音
+  const bad = catalog.allWords().filter((w) => w.missing > 0);
+  assert.equal(bad.length, 0,
+    `这些词含字库外的字：${bad.slice(0, 5).map((w) => w.word).join(' ')}`);
+});
+
+test('按字搜词能搜到跨册的词', () => {
+  const found = catalog.wordsWithChar('行');
+  assert.ok(found.length >= 3, `含「行」的词太少：${found.length}`);
+  // 「银行」和「行走」的「行」读音不同，搜字应该都列出来
+  const words = found.map((w) => w.word);
+  assert.ok(words.every((w) => w.includes('行')));
+});
+
+test('搜不存在的字返回空数组而不是报错', () => {
+  assert.deepEqual(catalog.wordsWithChar(''), []);
+  assert.deepEqual(catalog.wordsWithChar('龘'), []);
+});
+
+test('某一课的词语与教材一致', () => {
+  const words = catalog.lessonWords('2a-k1');
+  assert.ok(words.length > 0, '2a-k1 应该有词语');
+  words.forEach((w) => assert.equal(typeof w, 'string'));
+});

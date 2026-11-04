@@ -1,0 +1,82 @@
+<view class="page">
+  <!-- 搜索：家长想查某个字有哪些词，直接搜比一册一册翻快 -->
+  <view class="search">
+    <input
+      class="search-input"
+      value="{{query}}"
+      placeholder="搜词语，或搜一个字（如「行」）"
+      confirm-type="search"
+      bindinput="onSearch"
+    />
+    <text class="search-clear" wx:if="{{query}}" bindtap="onClear">✕</text>
+  </view>
+
+  <!-- 搜索结果 -->
+  <block wx:if="{{searching}}">
+    <view class="search-head">
+      <text class="search-count">找到 {{results.length}} 个词</text>
+    </view>
+    <view class="list">
+      <view class="row" wx:for="{{results}}" wx:key="word">
+        <view class="row-chars">
+          <text
+            class="row-ch"
+            wx:for="{{item.chars}}"
+            wx:for-item="c"
+            wx:key="c"
+            data-ch="{{c.c}}"
+            bindtap="onChar"
+          >{{c.c}}</text>
+        </view>
+        <text class="row-meta">{{item.bookName}} 第 {{item.lessonNo}} 课</text>
+        <view class="row-dot" wx:if="{{item.learned}}"></view>
+      </view>
+    </view>
+    <view class="empty" wx:if="{{!results.length}}">
+      <text class="empty-text">没找到含「{{query}}」的词语</text>
+    </view>
+  </block>
+
+  <!-- 按册分组的全部词语 -->
+  <block wx:else>
+    <view class="summary">
+      <text class="summary-num">{{learnedWords}}</text>
+      <text class="summary-of">/ {{total}} 个词</text>
+      <text class="summary-hint">一个词里的字都学过，这个词才算学会</text>
+    </view>
+
+    <view class="group" wx:for="{{groups}}" wx:key="bookId">
+      <view class="group-head">
+        <text class="group-name {{item.current ? 'current' : ''}}">{{item.name}}</text>
+        <text class="group-count">{{item.learned}}/{{item.count}}</text>
+      </view>
+      <view class="list">
+        <view class="row" wx:for="{{item.words}}" wx:for-item="w" wx:key="word">
+          <view class="row-chars">
+            <text
+              class="row-ch"
+              wx:for="{{w.chars}}"
+              wx:for-item="c"
+              wx:for-index="i"
+              wx:key="c"
+              data-ch="{{c.c}}"
+              bindtap="onChar"
+            >{{c.c}}</text>
+          </view>
+          <text class="row-meta">第 {{w.lessonNo}} 课</text>
+          <view class="row-dot" wx:if="{{w.learned}}"></view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 一年级没有词语表：要说明白，不能留一片空白 -->
+    <view class="empty" wx:if="{{!groups.length}}">
+      <text class="empty-text">还没有任何词语</text>
+    </view>
+    <view class="notice" wx:if="{{groups.length && !hasWords}}">
+      <text class="notice-text">一年级课本没有词语表，从二年级上册开始才有。现在可以先看上面其它册的词语。</text>
+    </view>
+  </block>
+
+  <view class="safe-bottom"></view>
+</view>

@@ -1,0 +1,78 @@
+<view class="page">
+  <view class="head">
+    <text class="head-date">{{todayText}}</text>
+    <text class="head-title">最近 7 天</text>
+    <text class="head-verdict tone-{{verdictTone}}">{{verdict}}</text>
+    <text class="head-line">{{headline}}</text>
+  </view>
+
+  <!-- 柱状图：每根柱子是一天的活跃度。高度在 JS 里算好（WXML 里没有 Math），
+       没学的那天没有柱子，只剩一条底边。 -->
+  <view class="chart">
+    <view class="chart-bars">
+      <view class="chart-col" wx:for="{{week}}" wx:key="key">
+        <text class="chart-num">{{item.learned || ''}}</text>
+        <view class="chart-bar-wrap">
+          <view
+            class="chart-bar {{item.active ? 'on' : ''}} {{item.daysAgo === 0 ? 'today' : ''}}"
+            style="height: {{item.ratio * 100}}%"
+          ></view>
+        </view>
+        <text class="chart-label {{item.daysAgo === 0 ? 'today' : ''}}">{{item.weekday}}</text>
+      </view>
+    </view>
+    <text class="chart-hint">柱子上面的数字是当天认识的字</text>
+  </view>
+
+  <!-- 四个指标 -->
+  <view class="stats">
+    <view class="stat">
+      <text class="stat-num">{{sum.learned}}</text>
+      <text class="stat-label">认识的字</text>
+    </view>
+    <view class="stat">
+      <text class="stat-num">{{sum.answers}}</text>
+      <text class="stat-label">答题数</text>
+    </view>
+    <view class="stat">
+      <text class="stat-num">{{sum.accuracy === null ? '—' : sum.accuracy}}</text>
+      <text class="stat-label">{{sum.accuracy === null ? '没答题' : '正确率 %'}}</text>
+    </view>
+    <view class="stat">
+      <text class="stat-num">{{sum.activeDays}}</text>
+      <text class="stat-label">学了几天</text>
+    </view>
+  </view>
+
+  <!-- 逐日明细：柱状图看趋势，这张表看具体哪天 -->
+  <view class="section-title">每天</view>
+  <view class="days">
+    <view class="day-row" wx:for="{{week}}" wx:key="key">
+      <text class="day-when {{item.daysAgo === 0 ? 'today' : ''}}">
+        {{item.daysAgo === 0 ? '今天' : (item.daysAgo === 1 ? '昨天' : item.weekday)}}
+      </text>
+      <view class="day-main">
+        <text class="day-learned {{item.learned ? '' : 'zero'}}">{{item.learned}} 字</text>
+        <text class="day-answers">{{item.answers ? item.answers + ' 题' : '没答题'}}</text>
+      </view>
+      <text class="day-rate {{item.active ? '' : 'zero'}}">
+        {{item.accuracy === null ? '—' : item.accuracy + '%'}}
+      </text>
+    </view>
+  </view>
+
+  <!-- 给家长的建议 -->
+  <view class="section-title">给家长</view>
+  <view class="advice">
+    <view class="advice-row tone-{{item.tone}}" wx:for="{{advice}}" wx:key="text">
+      <view class="advice-dot"></view>
+      <text class="advice-text">{{item.text}}</text>
+    </view>
+  </view>
+
+  <view class="foot-note">
+    周报统计最近 7 个自然日（含今天），不是周一到周日——滚动 7 天任何时候打开都有内容，不会周一早上看到一片空白。
+  </view>
+
+  <view class="safe-bottom"></view>
+</view>

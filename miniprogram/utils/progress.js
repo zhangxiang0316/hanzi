@@ -467,6 +467,25 @@ function recentDays(n) {
   return out;
 }
 
+/**
+ * 逐日统计的原始副本（`stats.days`）。
+ *
+ * 周报要按自己的口径重算（滚动 7 天、活跃判定、正确率），所以给它原始
+ * 数据而不是 `recentDays` 的结果——那个函数是练习页的 7 天图专用的，
+ * 口径和周报不完全一样。
+ *
+ * 返回的是浅拷贝，外面改了不会污染内存里的状态。
+ */
+function getDaysStats() {
+  const out = {};
+  Object.keys(stats.days || {}).forEach((k) => {
+    const d = stats.days[k];
+    if (!d) return;
+    out[k] = { learned: d.learned || 0, answers: d.answers || 0, correct: d.correct || 0 };
+  });
+  return out;
+}
+
 function activeDays() {
   let n = 0;
   Object.keys(stats.days).forEach((k) => {
@@ -549,6 +568,7 @@ module.exports = {
   getLast,
   setLast,
   recentDays,
+  getDaysStats,
   activeDays,
   getBadges,
   getStreak,

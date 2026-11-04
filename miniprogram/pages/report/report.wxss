@@ -1,0 +1,221 @@
+.page {
+  min-height: 100vh;
+  background: var(--paper);
+  padding: 0 32rpx;
+  box-sizing: border-box;
+}
+
+/* ---------- 顶部结论 ---------- */
+.head {
+  padding: 40rpx 8rpx 32rpx;
+}
+.head-date {
+  display: block;
+  font-size: 24rpx;
+  color: var(--ink-3);
+}
+.head-title {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 44rpx;
+  font-weight: 700;
+  color: var(--ink);
+}
+.head-verdict {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+.head-line {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  color: var(--ink-2);
+}
+.tone-good { color: var(--jade); }
+.tone-tip { color: var(--cinnabar); }
+.tone-plain { color: var(--ink-2); }
+
+/* ---------- 柱状图 ---------- */
+.chart {
+  background: var(--card);
+  border-radius: 24rpx;
+  padding: 32rpx 24rpx 20rpx;
+}
+.chart-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  height: 240rpx;
+}
+.chart-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+}
+.chart-num {
+  font-size: 20rpx;
+  color: var(--ink-3);
+  height: 28rpx;
+}
+.chart-bar-wrap {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.chart-bar {
+  width: 36rpx;
+  border-radius: 8rpx 8rpx 0 0;
+  background: transparent;
+  /* 没学的那天只有这一条 2rpx 的底边，表示"这一天存在，但是空的" */
+  min-height: 2rpx;
+}
+.chart-bar.on {
+  background: var(--jade-soft);
+}
+.chart-bar.on.today {
+  background: var(--jade);
+}
+.chart-label {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: var(--ink-3);
+}
+.chart-label.today {
+  color: var(--jade);
+  font-weight: 600;
+}
+.chart-hint {
+  display: block;
+  margin-top: 16rpx;
+  font-size: 22rpx;
+  color: var(--ink-3);
+  text-align: center;
+}
+
+/* ---------- 四个指标 ---------- */
+.stats {
+  display: flex;
+  margin-top: 24rpx;
+  background: var(--card);
+  border-radius: 24rpx;
+  padding: 28rpx 12rpx;
+}
+.stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.stat-num {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.stat-label {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: var(--ink-3);
+}
+
+/* ---------- 逐日明细 ---------- */
+.section-title {
+  margin: 40rpx 0 16rpx 8rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.days {
+  background: var(--card);
+  border-radius: 24rpx;
+  overflow: hidden;
+}
+.day-row {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 28rpx;
+  border-bottom: 1rpx solid var(--line);
+}
+.day-row:last-child {
+  border-bottom: none;
+}
+.day-when {
+  width: 96rpx;
+  font-size: 26rpx;
+  color: var(--ink-2);
+}
+.day-when.today {
+  color: var(--jade);
+  font-weight: 600;
+}
+.day-main {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+}
+.day-learned {
+  margin-right: 16rpx;
+  font-size: 28rpx;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.day-learned.zero {
+  color: var(--ink-3);
+}
+.day-answers {
+  font-size: 22rpx;
+  color: var(--ink-3);
+}
+.day-rate {
+  font-size: 26rpx;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.day-rate.zero {
+  color: var(--ink-3);
+}
+
+/* ---------- 建议 ---------- */
+.advice {
+  background: var(--card);
+  border-radius: 24rpx;
+  padding: 8rpx 0;
+}
+.advice-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 20rpx 28rpx;
+}
+.advice-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  margin-top: 14rpx;
+  flex: none;
+  background: var(--ink-3);
+}
+.advice-row.tone-good .advice-dot { background: var(--jade); }
+.advice-row.tone-tip .advice-dot { background: var(--cinnabar); }
+.advice-text {
+  flex: 1;
+  margin-left: 16rpx;
+  font-size: 26rpx;
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+
+.foot-note {
+  margin: 32rpx 8rpx 0;
+  font-size: 22rpx;
+  line-height: 1.7;
+  color: var(--ink-3);
+}
+.safe-bottom {
+  height: calc(40rpx + env(safe-area-inset-bottom));
+}

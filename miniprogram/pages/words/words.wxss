@@ -1,0 +1,153 @@
+.page {
+  min-height: 100vh;
+  background: var(--paper);
+  padding: 0 32rpx;
+  box-sizing: border-box;
+}
+
+/* ---------- 搜索 ---------- */
+.search {
+  position: relative;
+  padding: 24rpx 0 8rpx;
+}
+.search-input {
+  height: 88rpx;
+  padding: 0 72rpx 0 32rpx;
+  border-radius: 999rpx;
+  background: var(--card);
+  border: 1rpx solid var(--line);
+  font-size: 28rpx;
+  color: var(--ink);
+  box-sizing: border-box;
+}
+.search-clear {
+  position: absolute;
+  right: 28rpx;
+  top: 50%;
+  transform: translateY(-30%);
+  font-size: 30rpx;
+  color: var(--ink-3);
+  padding: 12rpx;
+}
+
+.search-head {
+  padding: 24rpx 8rpx 12rpx;
+}
+.search-count {
+  font-size: 24rpx;
+  color: var(--ink-3);
+}
+
+/* ---------- 汇总 ---------- */
+.summary {
+  padding: 32rpx 8rpx 8rpx;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+.summary-num {
+  font-size: 52rpx;
+  font-weight: 700;
+  color: var(--jade);
+  font-variant-numeric: tabular-nums;
+}
+.summary-of {
+  margin-left: 8rpx;
+  font-size: 26rpx;
+  color: var(--ink-3);
+}
+.summary-hint {
+  width: 100%;
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: var(--ink-3);
+}
+
+/* ---------- 分组 ---------- */
+.group {
+  margin-top: 28rpx;
+}
+.group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 8rpx 12rpx;
+}
+.group-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.group-name.current {
+  color: var(--jade-deep);
+}
+.group-count {
+  font-size: 22rpx;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.list {
+  background: var(--card);
+  border-radius: 24rpx;
+  overflow: hidden;
+}
+.row {
+  display: flex;
+  align-items: center;
+  padding: 22rpx 28rpx;
+  border-bottom: 1rpx solid var(--line);
+}
+.row:last-child {
+  border-bottom: none;
+}
+.row-chars {
+  flex: 1;
+  display: flex;
+}
+/* 每个字单独可点，但视觉上要像一个词——间距压紧、字号放大 */
+.row-ch {
+  margin-right: 4rpx;
+  font-size: 38rpx;
+  line-height: 1.3;
+  color: var(--ink);
+  padding: 2rpx 6rpx;
+  border-radius: 8rpx;
+}
+.row-meta {
+  font-size: 22rpx;
+  color: var(--ink-3);
+}
+.row-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background: var(--jade);
+  margin-left: 14rpx;
+  flex: none;
+}
+
+/* ---------- 空态与提示 ---------- */
+.empty {
+  padding: 60rpx 32rpx;
+  text-align: center;
+}
+.empty-text {
+  font-size: 26rpx;
+  color: var(--ink-3);
+}
+.notice {
+  margin-top: 28rpx;
+  padding: 24rpx 28rpx;
+  border-radius: 20rpx;
+  background: var(--gold-soft);
+}
+.notice-text {
+  font-size: 24rpx;
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+
+.safe-bottom {
+  height: calc(40rpx + env(safe-area-inset-bottom));
+}

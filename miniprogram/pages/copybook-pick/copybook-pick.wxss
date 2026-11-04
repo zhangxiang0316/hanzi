@@ -1,0 +1,167 @@
+.page {
+  min-height: 100vh;
+  background: var(--paper);
+  padding: 0 32rpx 260rpx;
+  box-sizing: border-box;
+}
+
+/* ---------- 来源 ---------- */
+.src {
+  padding: 24rpx 0 8rpx;
+}
+.src-row {
+  display: flex;
+  flex-wrap: wrap;
+}
+.chip {
+  margin: 0 14rpx 14rpx 0;
+  padding: 16rpx 30rpx;
+  border-radius: 999rpx;
+  font-size: 26rpx;
+  color: var(--ink-2);
+  background: var(--card);
+  border: 1rpx solid var(--line);
+}
+.chip.on {
+  color: #fff;
+  background: var(--jade);
+  border-color: var(--jade);
+  font-weight: 600;
+}
+.stars {
+  margin-top: 20rpx;
+}
+.stars-label {
+  font-size: 22rpx;
+  color: var(--ink-3);
+}
+.stars-row {
+  display: flex;
+  margin-top: 10rpx;
+}
+.star-chip {
+  margin-right: 12rpx;
+  padding: 12rpx 22rpx;
+  border-radius: 12rpx;
+  font-size: 24rpx;
+  color: var(--ink-2);
+  background: var(--card);
+  border: 1rpx solid var(--line);
+}
+.star-chip.on {
+  color: var(--jade-deep);
+  background: var(--jade-soft);
+  border-color: var(--jade);
+}
+.lesson-hint {
+  margin-top: 14rpx;
+}
+.lesson-hint-text {
+  font-size: 22rpx;
+  color: var(--ink-3);
+}
+
+/* ---------- 选中条 ---------- */
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 8rpx 12rpx;
+}
+.bar-count {
+  font-size: 26rpx;
+  color: var(--ink-2);
+}
+.bar-num {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: var(--jade);
+}
+.bar-actions {
+  display: flex;
+}
+.bar-btn {
+  margin-left: 24rpx;
+  font-size: 24rpx;
+  color: var(--jade-deep);
+}
+
+/* ---------- 字格 ---------- */
+.chars {
+  display: flex;
+  flex-wrap: wrap;
+}
+.cell {
+  margin: 0 14rpx 14rpx 0;
+  position: relative;
+  width: 152rpx;
+  height: 152rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20rpx;
+  background: var(--card);
+  border: 2rpx solid var(--line);
+  box-sizing: border-box;
+}
+/* 选中：加粗边框 + 淡绿底，不用对勾——对勾会挡字 */
+.cell.on {
+  background: var(--jade-soft);
+  border-color: var(--jade);
+}
+/* 画不出来的字：整格变淡，并写明原因 */
+.cell.off {
+  opacity: 0.45;
+  background: var(--paper-deep);
+}
+.cell-ch {
+  font-size: 56rpx;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.cell-from {
+  font-size: 18rpx;
+  color: var(--ink-3);
+  margin-top: 6rpx;
+}
+.cell-lock {
+  position: absolute;
+  bottom: 8rpx;
+  font-size: 17rpx;
+  color: var(--cinnabar);
+}
+
+/* ---------- 空态与提示 ---------- */
+.empty {
+  padding: 80rpx 32rpx;
+  text-align: center;
+}
+.empty-text {
+  font-size: 26rpx;
+  color: var(--ink-3);
+}
+.notice {
+  margin-top: 24rpx;
+  padding: 24rpx 28rpx;
+  border-radius: 20rpx;
+  background: var(--cinnabar-soft);
+}
+.notice-soft {
+  background: var(--paper-deep);
+}
+.notice-text {
+  font-size: 23rpx;
+  line-height: 1.75;
+  color: var(--ink-2);
+}
+
+/* ---------- 底部按钮 ---------- */
+.foot {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 20rpx 40rpx calc(20rpx + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(251, 247, 238, 0) 0%, var(--paper) 30%);
+}

@@ -10,7 +10,11 @@
     "pages/copybook/copybook",
     "pages/wrong/wrong",
     "pages/vocab/vocab",
-    "pages/about/about"
+    "pages/about/about",
+    "pages/report/report",
+    "pages/radical/radical",
+    "pages/words/words",
+    "pages/copybook-pick/copybook-pick"
   ],
   "subpackages": [
     {

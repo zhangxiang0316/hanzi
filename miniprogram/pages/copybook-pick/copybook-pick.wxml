@@ -1,0 +1,68 @@
+<view class="page">
+  <!-- 来源：错题 / 笔画弱 / 本课 / 低星 -->
+  <view class="src">
+    <view class="src-row">
+      <view class="chip tap {{srcWrong ? 'on' : ''}}" data-key="wrong" bindtap="onToggle">错题本</view>
+      <view class="chip tap {{srcWeak ? 'on' : ''}}" data-key="weak" bindtap="onToggle">笔画弱</view>
+      <view class="chip tap {{srcLesson ? 'on' : ''}}" data-key="lesson" bindtap="onToggle">本课生字</view>
+      <view class="chip tap {{srcStars ? 'on' : ''}}" data-key="stars" bindtap="onToggle">低分字</view>
+    </view>
+    <!-- 选了「低分字」才出现星档 -->
+    <view class="stars" wx:if="{{srcStars}}">
+      <text class="stars-label">几颗星以下</text>
+      <view class="stars-row">
+        <view
+          class="star-chip tap {{starLevel === n ? 'on' : ''}}"
+          wx:for="{{[0, 1, 2]}}"
+          wx:for-item="n"
+          wx:key="*this"
+          data-n="{{n}}"
+          bindtap="onStar"
+        >{{n}} 星及以下</view>
+      </view>
+    </view>
+    <view class="lesson-hint" wx:if="{{srcLesson}}">
+      <text class="lesson-hint-text">本课：{{bookName}}</text>
+    </view>
+  </view>
+
+  <!-- 选中情况 -->
+  <view class="bar">
+    <text class="bar-count">已选 <text class="bar-num">{{selectedCount}}</text> 个字</text>
+    <view class="bar-actions">
+      <text class="bar-btn tap" bindtap="onSelectAll">全选</text>
+      <text class="bar-btn tap" bindtap="onSelectNone">清空</text>
+    </view>
+  </view>
+
+  <!-- 字网格：能导的正常显示，不能导的置灰并标原因 -->
+  <view class="chars">
+    <view
+      class="cell tap {{item.on ? 'on' : ''}} {{item.ready ? '' : 'off'}}"
+      wx:for="{{items}}"
+      wx:key="ch"
+      data-ch="{{item.ch}}"
+      bindtap="onTapChar"
+    >
+      <text class="cell-ch">{{item.ch}}</text>
+      <text class="cell-from">{{item.fromText}}</text>
+      <text class="cell-lock" wx:if="{{!item.ready}}">点我去描</text>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{!items.length}}">
+    <text class="empty-text">上面几个来源都没有字，换一个来源试试</text>
+  </view>
+
+  <!-- 有字但都画不出来：说清楚原因和下一步 -->
+  <view class="notice" wx:if="{{nothingReady}}">
+    <text class="notice-text">这些字还没有笔顺数据，画出来会是空田字格。笔画数据放在分包里，只有描过的字才有——点任意一个字去描一遍，回来就能导出了。</text>
+  </view>
+  <view class="notice notice-soft" wx:elif="{{missingCount > 0}}">
+    <text class="notice-text">有 {{missingCount}} 个字还没描过，画不出来（点一下就能去描）。导出只含已经能画的 {{readyCount}} 个字。</text>
+  </view>
+
+  <view class="foot">
+    <button class="btn btn-primary btn-block" bindtap="onExport">导出字帖（{{selectedCount}} 个字）</button>
+  </view>
+</view>

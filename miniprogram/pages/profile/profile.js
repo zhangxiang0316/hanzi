@@ -103,6 +103,22 @@ Page({
     wx.navigateTo({ url: '/pages/wrong/wrong' });
   },
 
+  onCopybookPick() {
+    wx.navigateTo({ url: '/pages/copybook-pick/copybook-pick' });
+  },
+
+  onRadical() {
+    wx.navigateTo({ url: '/pages/radical/radical' });
+  },
+
+  onWords() {
+    wx.navigateTo({ url: '/pages/words/words' });
+  },
+
+  onReport() {
+    wx.navigateTo({ url: '/pages/report/report' });
+  },
+
   onAbout() {
     wx.navigateTo({ url: '/pages/about/about' });
   },

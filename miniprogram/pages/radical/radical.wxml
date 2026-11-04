@@ -1,0 +1,55 @@
+<view class="page">
+  <!-- 本册 / 全部：本册是"这学期要学哪些部首"，全部是"字库里一共有哪些" -->
+  <view class="scope">
+    <view class="scope-btn tap {{scope === 'book' ? 'on' : ''}}" data-scope="book" bindtap="onScope">
+      本册（{{bookName}}）
+    </view>
+    <view class="scope-btn tap {{scope === 'all' ? 'on' : ''}}" data-scope="all" bindtap="onScope">
+      全部字库
+    </view>
+  </view>
+
+  <!-- 部首格子：按字数从多到少，冷门部首排后面 -->
+  <scroll-view class="radicals" scroll-y>
+    <view class="grid">
+      <view
+        class="cell tap {{sel === item.radical ? 'on' : ''}}"
+        wx:for="{{radicals}}"
+        wx:key="radical"
+        data-r="{{item.radical}}"
+        bindtap="onPick"
+      >
+        <text class="cell-r">{{item.radical}}</text>
+        <text class="cell-n">{{item.count}}</text>
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 选中部首下的字 -->
+  <view class="result" wx:if="{{sel}}">
+    <view class="result-head">
+      <text class="result-title">{{sel}} 部</text>
+      <text class="result-sub">{{selCount}} 个字{{learnedCount ? '，认识 ' + learnedCount + ' 个' : ''}}</text>
+    </view>
+    <view class="chars">
+      <view
+        class="char tap {{item.learned ? 'learned' : ''}}"
+        wx:for="{{chars}}"
+        wx:key="ch"
+        data-ch="{{item.ch}}"
+        bindtap="onChar"
+      >
+        <text class="char-ch">{{item.ch}}</text>
+        <text class="char-py">{{item.py}}</text>
+        <view class="char-dot" wx:if="{{item.learned}}"></view>
+      </view>
+    </view>
+    <text class="taps-hint">带绿点的字已经学过；点一个字看笔顺和组词</text>
+  </view>
+
+  <view class="empty" wx:else>
+    <text class="empty-text">本册还没有学过的部首</text>
+  </view>
+
+  <view class="safe-bottom"></view>
+</view>
