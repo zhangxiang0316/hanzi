@@ -288,10 +288,18 @@ test('remember 对册没加载的字返回 false，不抛异常', () => {
 
 test('isCached 反映缓存状态', () => {
   resetStore();
+  // 注意：注册了加载器之后，「天」就已经可画了（get 能取到），
+  // isCached 必须跟着说 true。这条断言以前写的是 false —— 那正是
+  // 「浏览过课文但没描红的字被判成不可导出」这个 bug 的化石。
   strokeStore.registerAll(BOOKS);
-  assert.equal(strokeStore.isCached('天'), false);
+  assert.equal(strokeStore.isCached('天'), true);
   strokeStore.remember('天');
   assert.equal(strokeStore.isCached('天'), true);
+});
+
+test('没有任何加载器也没有缓存时，isCached 为 false', () => {
+  resetStore();
+  assert.equal(strokeStore.isCached('天'), false);
 });
 
 test('rememberAll 批量补齐，返回新增数', () => {
@@ -354,4 +362,38 @@ test('缓存的字能直接生成 PDF（冷启动场景）', () => {
   assert.deepEqual(r.skipped, []);
 
   strokeStore.registerAll(BOOKS);
+});
+
+test('isCached 与 get 判同一件事：注册过加载器的册也算可画', () => {
+  // 这条不一致曾经让「选字做字帖」看着像坏的：
+  // 用户只是浏览了课文（分包页面加载过、加载器注册了，get() 能取到数据），
+  // 但没亲手描过这个字，持久缓存里没有。isCached 只查持久缓存，
+  // 于是把一堆本来能导出的字置灰成「点我去描」。
+  resetStore();
+  assert.equal(strokeStore.get('天'), null, '初始应该什么都取不到');
+  assert.equal(strokeStore.isCached('天'), false);
+
+  // 注册 1a 的加载器，模拟"分包页面已经加载过"
+  strokeStore.register('1a', () => strokes1a);
+
+  assert.ok(strokeStore.get('天'), '注册后 get 应该能取到');
+  assert.equal(strokeStore.isCached('天'), true,
+    'get 能取到的字，isCached 也必须说能——否则页面会误判成不可导出');
+});
+
+test('isCached 对字库外的字返回 false，不抛异常', () => {
+  resetStore();
+  assert.equal(strokeStore.isCached('龘'), false);
+});
+
+test('描过的字即使这一册的加载器没了，isCached 仍为 true（持久缓存这条路）', () => {
+  // 刻意分三步，才能真的测到「持久缓存」这一路：
+  // 注册 → 描红写入缓存 → 清掉加载器，此时内存里已经没有册数据了。
+  resetStore();
+  strokeStore.registerAll(BOOKS);
+  strokeStore.remember('天');
+
+  strokeStore._reset(); // 只清内存，不动持久缓存
+  assert.equal(strokeStore.isCached('天'), true,
+    '描过的字靠持久缓存就该能画出来，不该因为这次会话没加载分包就置灰');
 });

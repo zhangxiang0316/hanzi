@@ -112,7 +112,23 @@ function rememberAll(chars) {
 }
 
 /** 该字的轮廓是否已经在本地缓存里（字帖导出前用它判断要不要提示） */
+/**
+ * 这个字现在能不能画出来。
+ *
+ * **必须和 `get()` 查同样的两处**：内存里已注册的册数据 + 持久轮廓缓存。
+ *
+ * 早先只查了持久缓存，结果是误判：用户只是浏览课文（分包页面加载过了、
+ * 加载器也注册了，`get()` 明明能取到数据），但没亲手描过这个字，
+ * 持久缓存里就没有——选字做字帖的页面会把一堆**本来能导**的字置灰成
+ * 「点我去描」。功能看着像坏的。
+ *
+ * 名字里的 cached 有点误导，它的真实语义是"此刻可画"。
+ */
 function isCached(ch) {
+  if (charCache[ch]) return true;
+  const m = meta[ch];
+  if (!m) return false;
+  if (loadBook(m.b)[ch]) return true;
   return !!readCache()[ch];
 }
 
