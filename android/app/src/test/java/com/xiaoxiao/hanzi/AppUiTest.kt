@@ -371,6 +371,26 @@ class AppUiTest {
         compose.onNodeWithText("隐私").assertExists()
     }
 
+    /**
+     * 关于页显示的版本号必须来自构建配置。
+     *
+     * 这里曾经写死 `v1.0.0`，而应用实际已经走到 1.0.7——页面上一直是错的，
+     * 而且改了 versionName 它也不会跟着变。断言里刻意不写具体版本号：
+     * 写死就会变成"每次发版都要改测试"，那正是这个 bug 的成因。
+     */
+    @Test
+    fun `关于页版本号跟着构建配置走`() {
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+
+        app.nav.push(Screen.About)
+        compose.waitForIdle()
+
+        compose.onNodeWithText("v${BuildConfig.VERSION_NAME} · 内容仅供学习使用").assertExists()
+        // 反证：不能还留着硬编码的旧版本
+        compose.onNodeWithText("v1.0.0 · 内容仅供学习使用").assertDoesNotExist()
+    }
+
     // ---------- 新增的四个浏览页 ----------
 
     /**

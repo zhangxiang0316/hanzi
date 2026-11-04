@@ -14,8 +14,8 @@ android {
         applicationId = "com.xiaoxiao.hanzi"
         minSdk = 24
         targetSdk = 36
-        versionCode = 7
-        versionName = "1.0.7"
+        versionCode = 8
+        versionName = "1.1.0"
     }
 
     // debug 签名默认落在 ~/.android/debug.keystore，放在工程内便于沙箱环境和 CI 复用
@@ -70,6 +70,9 @@ android {
 
     buildFeatures {
         compose = true
+        // 关于页要显示版本号。以前那里写死了 "v1.0.0"，而应用已经走到 1.0.7——
+        // 页面上显示的版本一直是错的。改成读 BuildConfig 就不会再漂。
+        buildConfig = true
     }
 
     // 笔顺数据是构建产物，由 scripts/build-data.mjs 生成到 assets，

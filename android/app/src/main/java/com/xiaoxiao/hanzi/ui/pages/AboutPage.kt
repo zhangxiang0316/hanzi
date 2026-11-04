@@ -1,5 +1,6 @@
 package com.xiaoxiao.hanzi.ui.pages
 
+import com.xiaoxiao.hanzi.BuildConfig
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -76,7 +77,9 @@ fun AboutPage() {
 
         Spacer(Modifier.height(20.dp))
         Text(
-            "v1.0.0 · 内容仅供学习使用",
+            // 从构建产物读版本，别再写死——写死的那个 "v1.0.0" 在应用
+            // 已经走到 1.0.7 之后仍然显示 1.0.0，页面上一直是错的。
+            "v${BuildConfig.VERSION_NAME} · 内容仅供学习使用",
             fontSize = 11.sp,
             color = p.ink3,
             modifier = Modifier.fillMaxWidth()

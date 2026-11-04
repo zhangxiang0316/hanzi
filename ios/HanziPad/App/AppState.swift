@@ -190,6 +190,11 @@ final class AppState {
                 "developmentLocalization: \(b.developmentLocalization ?? "nil")",
                 "CFBundleLocalizations: \(b.infoDictionary?["CFBundleLocalizations"] as? [String] ?? [])",
                 "displayName: \(b.infoDictionary?["CFBundleDisplayName"] as? String ?? "nil")",
+                // 关于页显示的就是这两项（经 AppInfo.version 拼成 v1.1.0 (2)）。
+                // 写进报告，才能在不看截图的前提下确认版本真的升上去了。
+                "CFBundleShortVersionString: \(b.infoDictionary?["CFBundleShortVersionString"] as? String ?? "nil")",
+                "CFBundleVersion: \(b.infoDictionary?["CFBundleVersion"] as? String ?? "nil")",
+                "AppInfo.version: \(AppInfo.version)",
             ]
             let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
                 .appendingPathComponent("bundle-report.txt")
