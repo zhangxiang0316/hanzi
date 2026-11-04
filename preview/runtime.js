@@ -90,6 +90,9 @@
   };
 
   const toasts = [];
+  const loadingLog = [];
+  const fsLog = [];
+  const openDocLog = [];
   const screen = { width: 390, height: 844 };
   window.__subpackageLog = window.__subpackageLog || [];
 
@@ -171,6 +174,27 @@
       toasts.push(o.title);
       renderToast(o.title);
     },
+    // 加载指示在浏览器里没有对应物，只记账。
+    // 补这两个桩是为了让「导出字帖」这条链路可在预览里跑通——
+    // 在此之前 showLoading 不存在，一点导出就抛 TypeError，
+    // 整条导出路径（含老的「我的字帖」）在预览里从来没能验证过。
+    showLoading: (o) => {
+      loadingLog.push((o && o.title) || '');
+    },
+    hideLoading: () => {
+      loadingLog.push(null);
+    },
+    // 文件系统：只记录写盘内容，真字节留在 fsLog 里供断言检查
+    getFileSystemManager: () => ({
+      writeFile: (opts) => {
+        fsLog.push({ filePath: opts && opts.filePath, data: opts && opts.data });
+        if (opts && typeof opts.success === 'function') opts.success({});
+      },
+    }),
+    openDocument: (opts) => {
+      openDocLog.push(opts && opts.filePath);
+      if (opts && typeof opts.success === 'function') opts.success({});
+    },
     showModal: (o) => {
       // 预览里默认点“确定”
       if (o.success) o.success({ confirm: true, cancel: false });
@@ -184,6 +208,9 @@
     setNavigationBarTitle: ({ title }) => {
       runtime.setTitle(title);
     },
+    // 小程序里是真实可写目录；浏览器里给一个假的前缀，
+    // 只要能和 wx.getFileSystemManager 的桩对上就行
+    env: { USER_DATA_PATH: 'wxfile://usr' },
     vibrateShort: () => {},
     base64ToArrayBuffer: (b64) => {
       const bin = atob(b64);
@@ -743,6 +770,9 @@
     redirect: (url) => runtime.redirect(url),
     events: eventLog,
     toasts,
+    loadingLog,
+    fsLog,
+    openDocLog,
     storage,
     seed: (fn) => fn(),
   };

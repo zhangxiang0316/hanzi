@@ -1181,6 +1181,65 @@ async function shots() {
   }
   if (writeBtns.length) console.log(`  ✓ 描红结果按钮  ${writeBtns.map((b) => b.text).join(' / ')}`);
 
+  // ---- 选字做字帖：导出 PDF 的完整链路 ----
+  //
+  // 这条链路此前在预览里跑不了：wx.showLoading 没实现，一点导出就 TypeError，
+  // 所以老的「我的字帖」导出也从来没被验证过。现在 runtime 补齐了
+  // showLoading / getFileSystemManager / openDocument 的桩，可以真的验了。
+  step('选字做字帖导出 PDF');
+  {
+    // 先进一个详情页，触发分包加载并注册笔画加载器
+    await page.goto(`http://127.0.0.1:${PORT}/#/packageStrokes/pages/detail/detail?ch=%E5%A4%A9`,
+      { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.waitForFunction('window.__ready === true', { timeout: 20000 });
+    await new Promise((r) => setTimeout(r, 2400));
+
+    await page.evaluate(() => window.__preview.navigate('/pages/copybook-pick/copybook-pick'));
+    await new Promise((r) => setTimeout(r, 1200));
+
+    const before = await page.evaluate(() => ({
+      cells: document.querySelectorAll('.cell').length,
+      ready: [...document.querySelectorAll('.cell')].filter((c) => !c.classList.contains('off')).length,
+      fs: window.__preview.fsLog.length,
+    }));
+    if (!before.cells) failures.push('选字页没有任何字格');
+    // 浏览过课文之后，本课的字应该都是可导的（这正是 isCached 那个 bug 的回归点）
+    if (before.ready !== before.cells) {
+      failures.push(`选字页有 ${before.cells - before.ready} 个字被误判为不可导出`);
+    }
+
+    const out = await page.evaluate(async () => {
+      const inst = window.__page.__instance;
+      inst.onExport();
+      await new Promise((r) => setTimeout(r, 1500));
+      const fs = window.__preview.fsLog;
+      const last = fs[fs.length - 1];
+      let header = '';
+      let size = 0;
+      if (last && last.data) {
+        const u8 = new Uint8Array(last.data);
+        size = u8.length;
+        header = String.fromCharCode.apply(null, u8.slice(0, 8));
+      }
+      return {
+        wrote: fs.length,
+        size,
+        header,
+        opened: window.__preview.openDocLog.slice(),
+        loading: window.__preview.loadingLog.slice(),
+      };
+    });
+
+    if (out.wrote <= before.fs) failures.push('点导出没有写出文件');
+    if (out.size < 5000) failures.push(`导出的 PDF 太小: ${out.size}`);
+    if (!out.header.startsWith('%PDF-')) failures.push(`不是合法 PDF，头是 ${JSON.stringify(out.header)}`);
+    if (!out.opened.length) failures.push('导出后没有调起打开文档');
+    if (!out.loading.length || out.loading[out.loading.length - 1] !== null) {
+      failures.push('导出时 loading 没有正确开关');
+    }
+    console.log(`  ✓ 选字导出   ${out.size} bytes  ${out.header}  ${out.opened.length} 次打开`);
+  }
+
   fs.writeFileSync(path.join(outDir, 'console.log'), logs.join('\n'));
   await browser.close();
   clearTimeout(guard);
