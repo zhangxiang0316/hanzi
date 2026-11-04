@@ -29,6 +29,15 @@ enum DebugArgs {
         guard let i = args.firstIndex(of: "-writeStep"), i + 1 < args.count else { return nil }
         return Int(args[i + 1])
     }
+    /// `-popAfter N`：N 秒后把导航栈弹回根页面。
+    ///
+    /// 用来验证「推入页隐藏 tab 栏」之后，返回时 tab 栏能不能回来。
+    /// 这一条光看推入的效果看不出来——iOS 16 上曾经有「弹出后 tab 栏
+    /// 再也不出现」的 bug，必须实际推一次再弹回来才算验过。
+    static var popAfter: Double? {
+        guard let i = args.firstIndex(of: "-popAfter"), i + 1 < args.count else { return nil }
+        return Double(args[i + 1])
+    }
     /// 自动翻字只跑一次：`.id(ch)` 让每换一个字都重跑 `onAppear`，
     /// 不挡的话每换一次就又排一轮，越点越远。
     static var writeStepDone = false
@@ -37,5 +46,6 @@ enum DebugArgs {
     static var writeSkip: Int? { nil }
     static var writeStep: Int? { nil }
     static var writeStepDone: Bool { false }
+    static var popAfter: Double? { nil }
     #endif
 }

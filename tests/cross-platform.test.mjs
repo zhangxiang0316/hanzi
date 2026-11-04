@@ -236,3 +236,81 @@ test('描红最后一笔必须算进已绘制笔画（三端语义一致）', ()
     '小程序应遍历 accepted 绘制已完成笔画');
   assert.match(mp, /this\.accepted\.push\(/, '小程序每通过一笔要 push 进 accepted');
 });
+
+// ---------------------------------------------------------------------------
+// 底部导航只在三个 tab 根页面出现
+//
+// 三端的导航范式不同（小程序原生 tabBar / Android 自绘 BottomBar /
+// iOS TabView），但「什么时候该有底部导航」必须一致：只有「换大区」的
+// 三个根页面有，往下走的每一步都没有。
+//
+// 这条曾在 iOS 上漏掉：TabView 推入详情页后底部标签栏还挂在下面，
+// 而 Android 和小程序本来就是隐藏的。孩子在三端看到的是两种布局。
+// ---------------------------------------------------------------------------
+
+/** iOS 的 AppRoutes 里有几个 navigationDestination */
+function iosDestinationCount(src) {
+  return (src.match(/\.navigationDestination\(for:/g) || []).length;
+}
+
+test('iOS 每个 navigationDestination 都隐藏了 tab 栏', () => {
+  const src = read('ios/HanziPad/App/AppState.swift');
+  const routes = iosDestinationCount(src);
+  const marked = (src.match(/\.pushedScreen\(\)/g) || []).length;
+
+  assert.ok(routes >= 10, `只找到 ${routes} 个 destination，样本不对`);
+  // 少一个就意味着那个页面推入后底部还挂着 tab 栏
+  assert.equal(marked, routes,
+    `${routes} 个 destination 里只有 ${marked} 个调了 pushedScreen()`);
+});
+
+test('iOS 的 pushedScreen 真的隐藏 tab 栏', () => {
+  const src = read('ios/HanziPad/App/AppState.swift');
+  const m = /func pushedScreen\(\)[^{]*\{([\s\S]*?)\n    \}/.exec(src);
+  assert.ok(m, '找不到 pushedScreen 的定义');
+  assert.match(m[1], /toolbar\(\.hidden, for: \.tabBar\)/,
+    'pushedScreen 必须调 toolbar(.hidden, for: .tabBar)');
+});
+
+test('Android 底部导航只画在三个 tab 根页面', () => {
+  const nav = read('android/app/src/main/java/com/xiaoxiao/hanzi/ui/Nav.kt');
+  const roots = /TAB_ROOTS = setOf\(([^)]*)\)/.exec(nav);
+  assert.ok(roots, '找不到 TAB_ROOTS');
+  const names = roots[1].split(',').map((s) => s.trim()).filter(Boolean);
+  assert.deepEqual(names, ['Screen.Index', 'Screen.Practice', 'Screen.Profile'],
+    'tab 根应该正好是首页/练习/我的三个');
+
+  // 根页面之外一律不画
+  const root = read('android/app/src/main/java/com/xiaoxiao/hanzi/ui/Root.kt');
+  assert.match(root, /if \(isTabRoot\(screen\)\)\s*\{\s*BottomBar\(/,
+    'BottomBar 必须以 isTabRoot(screen) 为条件');
+});
+
+test('小程序 tabBar 只列三个根页面', () => {
+  const app = JSON.parse(read('miniprogram/app.json'));
+  const pages = (app.tabBar.list || []).map((x) => x.pagePath);
+  assert.deepEqual(pages, [
+    'pages/index/index',
+    'pages/practice/practice',
+    'pages/profile/profile',
+  ], 'tabBar 只该有首页/练习/我的');
+});
+
+test('三端的 tab 根集合一致', () => {
+  // 小程序三页 → Android 三个 Screen → iOS 三个 Section
+  const root = read('android/app/src/main/java/com/xiaoxiao/hanzi/ui/Nav.kt');
+  const androidNames = /TAB_ROOTS = setOf\(([^)]*)\)/.exec(root)[1]
+    .split(',').map((s) => s.replace(/.*\./, '').trim());
+
+  const phone = read('ios/HanziPad/App/PhoneRootView.swift');
+  const iosNames = [...phone.matchAll(/tab\(\.(\w+),/g)].map((m) => m[1]);
+
+  assert.equal(androidNames.length, iosNames.length,
+    `Android ${androidNames.join('/')}，iOS ${iosNames.join('/')}`);
+  // Index≈home, Practice≈practice, Profile≈profile
+  const pairs = [['Index', 'home'], ['Practice', 'practice'], ['Profile', 'profile']];
+  for (const [a, i] of pairs) {
+    assert.ok(androidNames.includes(a), `Android 缺 ${a}`);
+    assert.ok(iosNames.includes(i), `iOS 缺 ${i}`);
+  }
+});

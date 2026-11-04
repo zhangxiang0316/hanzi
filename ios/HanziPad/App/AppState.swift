@@ -201,6 +201,13 @@ final class AppState {
             }
         }
 
+        // 自检：推入后过 N 秒弹回根页面，验证 tab 栏能回来
+        if let delay = DebugArgs.popAfter {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                self.path = NavigationPath()
+            }
+        }
+
         if let route = value("-startRoute") {
             let parts = route.split(separator: ":").map(String.init)
             switch parts.first {
@@ -323,19 +330,36 @@ final class AppState {
 }
 
 /// 详情列的路由目的地。集中在一处，新增页面时不容易漏。
+extension View {
+
+    /// 推入的页面隐藏底部 tab 栏。
+    ///
+    /// SwiftUI 的默认行为是 tab 栏一直贴在底部，推入详情页后它还占着约 49pt，
+    /// 而详情页自己的页脚就有「描红 / 听写 / 练这个字」这排操作，两排叠在
+    /// 一起既挤又分不清哪个是"换页"哪个是"做事情"。
+    ///
+    /// 规则很简单：**只有三个 tab 的根页面有 tab 栏**——它们才是"换大区"
+    /// 的入口；往下走的每一步都是"在当前大区里深入"。
+    ///
+    /// iPad 走 `NavigationSplitView`，本来就没有 tab 栏，这里是空操作。
+    func pushedScreen() -> some View {
+        toolbar(.hidden, for: .tabBar)
+    }
+}
+
 struct AppRoutes: ViewModifier {
     @Environment(AppState.self) private var app
 
     func body(content: Content) -> some View {
         content
             .navigationDestination(for: BookRoute.self) { r in
-                UnitPageView(book: r.id)
+                UnitPageView(book: r.id).pushedScreen()
             }
             .navigationDestination(for: LessonRoute.self) { r in
-                LessonPageView(lessonId: r.id)
+                LessonPageView(lessonId: r.id).pushedScreen()
             }
             .navigationDestination(for: CharRoute.self) { r in
-                DetailPageView(ch: r.ch, lessonId: r.lesson)
+                DetailPageView(ch: r.ch, lessonId: r.lesson).pushedScreen()
             }
             .navigationDestination(for: WriteRoute.self) { r in
                 // `.id(r.ch)` 让「换一个字」= 换一个视图身份。
@@ -344,31 +368,31 @@ struct AppRoutes: ViewModifier {
                 // 同一个导航层位置上复用视图，`@State` 里的 WriteSession 会
                 // 活下来、`.onAppear` 也不再触发，画布就停在原来那个字上。
                 // 视图内部还有一层 `liveSession` 兜底，两层都不到位才会出错。
-                WritePageView(ch: r.ch).id(r.ch)
+                WritePageView(ch: r.ch).id(r.ch).pushedScreen()
             }
             .navigationDestination(for: AppState.QuizPayload.self) { p in
-                QuizPageView(payload: p)
+                QuizPageView(payload: p).pushedScreen()
             }
             .navigationDestination(for: AppState.ResultPayload.self) { p in
-                ResultPageView(payload: p)
+                ResultPageView(payload: p).pushedScreen()
             }
             .navigationDestination(for: AboutRoute.self) { _ in
-                AboutPageView()
+                AboutPageView().pushedScreen()
             }
             .navigationDestination(for: CopybookRoute.self) { _ in
-                CopybookPageView()
+                CopybookPageView().pushedScreen()
             }
             .navigationDestination(for: DictationRoute.self) { r in
                 DictationPageView(
                     level: DictationLevel(rawValue: r.level) ?? .normal,
                     book: r.book
-                )
+                ).pushedScreen()
             }
             .navigationDestination(for: WrongRoute.self) { _ in
-                WrongPageView()
+                WrongPageView().pushedScreen()
             }
             .navigationDestination(for: VocabRoute.self) { _ in
-                VocabPageView()
+                VocabPageView().pushedScreen()
             }
     }
 }
