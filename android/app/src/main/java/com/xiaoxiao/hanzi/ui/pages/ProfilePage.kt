@@ -344,11 +344,13 @@ fun ProfilePage(app: AppState) {
             }
         }
 
-        SectionHead("更多")
-        // 九行入口，与 iOS 一致：**每行一张独立卡**（不是一张大卡加分隔线），
-        // 每行带图标和 chevron。早先这里是一张圆角 20 的大卡、行间用 1px
-        // lineSoft 分隔、没有图标也没有箭头——和 iOS 摆在一起时，
-        // 一眼就能看出「这不是同一个 App 的两个版本」。
+        // 分组与 iOS 一致：「学习」（看数据、找练习材料）和
+        // 「设置」（改配置、清数据）分开。九张卡平铺时，
+        // 「清空学习记录」紧挨着「关于与数据来源」，误触代价太大。
+        SectionHead("学习")
+        // 每行一张独立卡（不是一张大卡加分隔线），每行带图标和 chevron。
+        // 早先这里是一张圆角 20 的大卡、行间用 1px lineSoft 分隔、
+        // 没有图标也没有箭头——和 iOS 摆在一起时一眼就能看出不是同一个 App。
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             // 周报：首页只看得到「今天」，家长关心的是「这一周」
             LinkRow(
@@ -409,6 +411,11 @@ fun ProfilePage(app: AppState) {
                 value = null
             ) { app.nav.push(Screen.Words) }
 
+        }
+
+        Spacer(Modifier.height(18.dp))
+        SectionHead("设置")
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             LinkRow(
                 icon = NavIcon.Info,
                 title = "关于与数据来源",
@@ -427,7 +434,10 @@ fun ProfilePage(app: AppState) {
 
         Spacer(Modifier.height(22.dp))
         Text(
-            "小小识字家 v1.0.0 · 内容仅供学习使用",
+            // 从构建产物读版本。写死的 "v1.0.0" 曾经在版本走到 1.1.0
+            // 之后仍然显示 1.0.0；AboutPage 已经改成读 BuildConfig，
+            // 这里统一走同一个来源。
+            "小小识字家 v${com.xiaoxiao.hanzi.BuildConfig.VERSION_NAME} · 内容仅供学习使用",
             fontSize = 11.sp,
             color = p.ink3,
             modifier = Modifier.fillMaxWidth(),

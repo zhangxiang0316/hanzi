@@ -537,3 +537,20 @@ test('题库的汉字题干用笔形画，不是系统字体', () => {
     'iOS 题库页的汉字题干应当走 HanziView'
   );
 });
+
+test('界面上显示的版本号都从构建产物读，不硬编码', () => {
+  // 这个 bug 复发过：Android 的 AboutPage 和 ProfilePage 都曾写死
+  // "v1.0.0"，版本走到 1.1.0 之后页面上仍然显示 1.0.0。
+  // 修了 AboutPage 却漏了 ProfilePage，所以用扫描守住。
+  const androidPages = readDir('android/app/src/main/java/com/xiaoxiao/hanzi/ui/pages')
+    .filter((f) => f.endsWith('.kt'));
+  const bad = [];
+  for (const f of androidPages) {
+    const src = stripComments(read(`android/app/src/main/java/com/xiaoxiao/hanzi/ui/pages/${f}`));
+    // 只看界面上的 "v1.2.3" 字面量，不看注释
+    if (/["'][^"']*v\d+\.\d+\.\d+[^"']*["']/.test(src)) {
+      bad.push(f);
+    }
+  }
+  assert.deepEqual(bad, [], `这些页面把版本号写死了：${bad.join(', ')}`);
+});

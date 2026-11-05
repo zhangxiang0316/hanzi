@@ -70,6 +70,8 @@ fun RadicalPage(app: AppState) {
     val book = Repo.book(bookId)
     var scopeAll by remember { mutableStateOf(false) }
     var sel by remember { mutableStateOf("") }
+    // 部首格子是固定高度的内部滚动区（与 iOS 一致）
+    val gridScroll = rememberScrollState()
 
     val radicals = remember(bookId, scopeAll, app.revision) {
         if (scopeAll) Repo.allRadicals() else Repo.bookRadicals(bookId)
@@ -119,17 +121,28 @@ fun RadicalPage(app: AppState) {
         if (radicals.isEmpty()) {
             EmptyState("🧩", "本册还没有学过的部首")
         } else {
-            // 部首格子：96dp 一格装得下「部首 + 字数」两行
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            // 部首格子：固定 176dp 高 + 内部滚动，与 iOS radicalGrid 一致。
+            //
+            // 「全部字库」有 237 个部首，全铺开会把下面「这个部首有哪些字」
+            // 推到屏外——而那一块才是家长真正要看的。固定高度让它始终可见。
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(176.dp)
+                    .verticalScroll(gridScroll)
+                    .testTag("radical-grid")
             ) {
-                radicals.forEach { r ->
-                    RadicalCell(
-                        radical = r.first,
-                        count = r.second,
-                        on = r.first == active
-                    ) { sel = r.first }
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    radicals.forEach { r ->
+                        RadicalCell(
+                            radical = r.first,
+                            count = r.second,
+                            on = r.first == active
+                        ) { sel = r.first }
+                    }
                 }
             }
 

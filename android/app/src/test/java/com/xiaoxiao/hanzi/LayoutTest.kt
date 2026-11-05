@@ -57,6 +57,9 @@ class LayoutTest {
     }
 
     /** 屏幕宽度（dp） */
+    private fun screenHeightDp(): Float = compose.activity.resources.displayMetrics.heightPixels /
+        compose.activity.resources.displayMetrics.density
+
     private fun screenWidthDp(): Float = compose.activity.resources.displayMetrics.widthPixels /
         compose.activity.resources.displayMetrics.density
 
@@ -584,6 +587,9 @@ class StyleParityTest {
         return AppState(app)
     }
 
+    private fun screenHeightDp(): Float = compose.activity.resources.displayMetrics.heightPixels /
+        compose.activity.resources.displayMetrics.density
+
     private fun screenWidthDp(): Float = compose.activity.resources.displayMetrics.widthPixels /
         compose.activity.resources.displayMetrics.density
 
@@ -723,4 +729,32 @@ class StyleParityTest {
             44f, btnH, 1.5f
         )
     }
+
+    @Test
+    fun `部首格子是固定高度并内部滚动`() {
+        // 「全部字库」有 237 个部首。全铺开会把下面「这个部首有哪些字」
+        // 推到屏外，而那一块才是要看的。iOS 那边是 .frame(height: 176)
+        // 包住 ScrollView，这里跟着对齐。
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+        app.nav.switchTab(Screen.Practice)
+        app.nav.push(Screen.Radical)
+        compose.waitForIdle()
+
+        // 切到「全部字库」，部首最多的情况
+        compose.onNodeWithTag("radical-scope-all").performClick()
+        compose.waitForIdle()
+
+        val g = compose.onNodeWithTag("radical-grid").getBoundsInRoot()
+        val h = g.bottom.value - g.top.value
+        assertTrue("部首格子高度应为 176dp（与 iOS 一致），实际 $h", h in 175f..177f)
+
+        // 而且下面那块「N 个字」必须还在屏幕内——这正是固定高度的目的
+        val title = compose.onNodeWithText(" 部", substring = true).getBoundsInRoot()
+        assertTrue(
+            "选了部首之后，字列表标题被推到了屏幕外（top=${title.top.value}）",
+            title.top.value < screenHeightDp()
+        )
+    }
+
 }
