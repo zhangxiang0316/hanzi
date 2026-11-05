@@ -38,6 +38,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -205,6 +206,43 @@ fun ProgressBar(
                 .clip(CircleShape)
                 .background(color)
         )
+    }
+}
+
+/**
+ * 单笔字形：其余笔浅色打底，目标笔用墨色。
+ *
+ * 对应 iOS 的 `StrokeGlyphView`。详情页的笔画表用这个而不是数字圆点——
+ * 「第 3 笔」写成数字，孩子得先在脑子里把它换算成形状；直接画出来，
+ * 看到的和要写的是同一个东西。
+ */
+@Composable
+fun SingleStrokeGlyph(
+    ch: String,
+    index: Int,
+    modifier: Modifier = Modifier,
+    ghostColor: Color = LocalPalette.current.line
+) {
+    val p = LocalPalette.current
+    val strokes = remember(ch) { Repo.strokes(ch) }
+    if (strokes == null || index >= strokes.count) {
+        Box(modifier, contentAlignment = Alignment.Center) {
+            Text("${index + 1}", fontSize = 12.sp, color = p.ink2)
+        }
+        return
+    }
+    Canvas(modifier) {
+        // 留 6dp 边，笔画贴边会被圆角切掉
+        val box = minOf(size.width, size.height) - 6.dp.toPx()
+        val ox = (size.width - box) / 2f
+        val oy = (size.height - box) / 2f
+        drawIntoCanvas { c ->
+            HanziPainter.drawSingleStroke(
+                c.nativeCanvas, strokes, index, box, ox, oy,
+                inkColor = p.ink1.toArgb(),
+                ghostColor = ghostColor.copy(alpha = 0.55f).toArgb()
+            )
+        }
     }
 }
 

@@ -202,6 +202,8 @@ fun IndexPage(app: AppState) {
                             bookId = book.id,
                             name = book.name,
                             gradeText = gradeName(book.grade),
+                            term = book.term,
+                            lessonCount = book.lessons.size,
                             learned = app.progress.counts(Repo.bookChars(book.id)).learned,
                             total = book.stat.chars,
                             active = book.id == app.currentBook,
@@ -290,6 +292,8 @@ private fun BookTile(
     bookId: String,
     name: String,
     gradeText: String,
+    term: Int,
+    lessonCount: Int,
     learned: Int,
     total: Int,
     active: Boolean,
@@ -299,9 +303,6 @@ private fun BookTile(
     val p = LocalPalette.current
     val color = HanziColors.bookColor(bookId)
     val pct = if (total > 0) Math.round(learned * 100f / total) else 0
-    // 册名首字就是年级（一年级上册 → 一），网格里用单字标色，省掉独立色块
-    val short = gradeText.take(1)
-
     Surface(
         modifier
             .clip(RoundedCornerShape(Dimens.radiusInner.dp))
@@ -314,43 +315,48 @@ private fun BookTile(
             if (active) color.copy(alpha = 0.55f) else p.line.copy(alpha = 0.8f)
         )
     ) {
-        Column(Modifier.padding(horizontal = 11.dp, vertical = 10.dp)) {
+        // 与 iOS 册卡同构：年级大字 + 学期胶囊 + 右侧百分比，
+        // 下面是进度条和「N 课 · M 字 · 已学 K」。
+        // 之前是「年级首字方块 + 13sp 册名 + K/M 字」——同一张卡，
+        // 两端的信息密度和字号都对不上。
+        Column(Modifier.padding(13.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    gradeText,
+                    fontSize = 15.sp,
+                    lineHeight = 19.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = p.ink1,
+                    maxLines = 1
+                )
+                Spacer(Modifier.width(6.dp))
                 Box(
                     Modifier
-                        .size(17.dp)
-                        .clip(RoundedCornerShape(5.dp))
-                        .background(color.copy(alpha = 0.16f)),
-                    contentAlignment = Alignment.Center
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(color.copy(alpha = 0.14f))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Text(
-                        text = short,
-                        modifier = Modifier.wrapContentSize(Alignment.Center),
-                        fontSize = 10.sp,
-                        lineHeight = 10.sp,
-                        color = color,
-                        fontWeight = FontWeight.Bold)
+                        if (term == 1) "上册" else "下册",
+                        fontSize = 11.sp,
+                        lineHeight = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = color
+                    )
                 }
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    name,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = p.ink1,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-                Text("$pct%", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = color)
+                Spacer(Modifier.weight(1f))
+                Text("$pct%", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = color)
             }
-            Spacer(Modifier.height(7.dp))
+            Spacer(Modifier.height(8.dp))
             ProgressBar(pct, color = color, height = 5)
             Spacer(Modifier.height(5.dp))
             Text(
-                "$learned / $total 字",
-                fontSize = 10.sp,
+                "$lessonCount 课 · $total 字 · 已学 $learned",
+                fontSize = 11.sp,
+                lineHeight = 14.sp,
                 color = p.ink3,
-                maxLines = 1
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }

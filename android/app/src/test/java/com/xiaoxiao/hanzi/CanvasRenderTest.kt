@@ -220,3 +220,104 @@ class CanvasRenderTest {
         assertTrue("不应出现大片纯黑，实际 $black", black < 20000)
     }
 }
+
+/**
+ * 详情页笔画格：画出的是笔形，不是空白格。
+ *
+ * 「节点存在」证明不了「这一笔画出来了」——格子空着也满足所有布局断言。
+ * 之前笔画表是数字圆点，数字当然是渲染出来的；改成画笔形后，
+ * 如果 drawSingleStroke 的坐标或颜色传错，格子会变成一片空白而测试全绿。
+ *
+ * 做法：把页面画进 Bitmap，在笔画格区域内数墨色像素。
+ * ink1 = #25332D，笔画外的底色是 cardWarm #FDF9F0，两者差异很大。
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(qualifiers = "w411dp-h2400dp-xxhdpi", sdk = [34])
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+class StrokeGlyphRenderTest {
+
+    @get:Rule
+    val compose = createAndroidComposeRule<ComponentActivity>()
+
+    private fun state(): AppState =
+        AppState(ApplicationProvider.getApplicationContext<Application>())
+
+    private fun capture(): Bitmap {
+        compose.waitForIdle()
+        val view = compose.activity.window.decorView
+        val w = if (view.width > 0) view.width else 1080
+        val h = if (view.height > 0) view.height else 2400
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        compose.runOnUiThread { view.draw(Canvas(bmp)) }
+        return bmp
+    }
+
+    /** 在给定矩形里数「接近墨色」的像素 */
+    private fun inkPixels(bmp: Bitmap, l: Int, t: Int, r: Int, b: Int): Int {
+        val target = 0x25332D
+        val tr = (target shr 16) and 0xFF
+        val tg = (target shr 8) and 0xFF
+        val tb = target and 0xFF
+        var n = 0
+        for (y in maxOf(0, t) until minOf(bmp.height, b)) {
+            for (x in maxOf(0, l) until minOf(bmp.width, r)) {
+                val c = bmp.getPixel(x, y)
+                if (abs(((c shr 16) and 0xFF) - tr) <= 40 &&
+                    abs(((c shr 8) and 0xFF) - tg) <= 40 &&
+                    abs((c and 0xFF) - tb) <= 40
+                ) n++
+            }
+        }
+        return n
+    }
+
+    private fun rectOf(tag: String): android.graphics.Rect {
+        val b = compose.onNodeWithTag(tag).getBoundsInRoot()
+        val d = compose.activity.resources.displayMetrics.density
+        return android.graphics.Rect(
+            (b.left.value * d).toInt(), (b.top.value * d).toInt(),
+            (b.right.value * d).toInt(), (b.bottom.value * d).toInt()
+        )
+    }
+
+    @Test
+    fun `笔画格里真的画出了笔形`() {
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+        // 「三」三笔，每格都应是可辨认的横
+        app.nav.push(Screen.Detail("三", null))
+        compose.waitForIdle()
+
+        val bmp = capture()
+        val cells = (0..2).map { rectOf("stroke-cell-$it") }
+        val inkEach = cells.map { inkPixels(bmp, it.left, it.top, it.right, it.bottom) }
+
+        inkEach.forEachIndexed { i, n ->
+            // 一格 44dp @xxhdpi 约 132px 见方，一笔横画至少几百个墨点
+            assertTrue(
+                "第 ${i + 1} 个笔画格只有 $n 个墨色像素，几乎是空白——" +
+                    "笔形没画出来（drawSingleStroke 的坐标或颜色可能传错了）",
+                n >= 100
+            )
+        }
+    }
+
+    @Test
+    fun `不同的笔画格画的是不同的笔`() {
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+        // 「三」三横长度不同，三格的墨点数不该完全一样
+        app.nav.push(Screen.Detail("三", null))
+        compose.waitForIdle()
+
+        val bmp = capture()
+        val inkEach = (0..2).map {
+            val r = rectOf("stroke-cell-$it")
+            inkPixels(bmp, r.left, r.top, r.right, r.bottom)
+        }
+        assertTrue(
+            "三格墨点数完全相同 $inkEach，说明画的是同一笔（index 没生效）",
+            inkEach.toSet().size > 1
+        )
+    }
+}

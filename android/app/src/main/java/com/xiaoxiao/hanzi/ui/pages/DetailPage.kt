@@ -3,6 +3,7 @@ package com.xiaoxiao.hanzi.ui.pages
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -51,6 +52,8 @@ import com.xiaoxiao.hanzi.logic.Tts
 import com.xiaoxiao.hanzi.ui.AppState
 import com.xiaoxiao.hanzi.ui.BtnStyle
 import com.xiaoxiao.hanzi.ui.Dimens
+import com.xiaoxiao.hanzi.ui.SingleStrokeGlyph
+import com.xiaoxiao.hanzi.ui.FontSizes
 import com.xiaoxiao.hanzi.ui.HanziButton
 import com.xiaoxiao.hanzi.ui.HanziColors
 import com.xiaoxiao.hanzi.ui.HanziPainter
@@ -210,7 +213,11 @@ fun DetailPage(app: AppState, ch: String, lessonId: String?) {
             }
             ToolChip(
                 icon = "①",
-                label = "笔顺",
+                // 这个开关的实际作用是「在字上显示笔画序号」，不是「播放笔顺」。
+                // 之前叫「笔顺」，和页面里新加的「笔顺」区块标题撞名，
+                // 一个屏幕上两个「笔顺」谁也说不清。
+                // 改成 iOS 的叫法：「显示序号 / 隐藏序号」。
+                label = if (showNumbers) "隐藏序号" else "显示序号",
                 on = showNumbers,
                 modifier = Modifier.weight(1f)
             ) {
@@ -268,43 +275,68 @@ fun DetailPage(app: AppState, ch: String, lessonId: String?) {
             )
         }
 
-        // 笔画条：多的字换行，不做横向滚动
-        if (count > 1) {
+        // 笔画表，与 iOS 一致：一格画一笔（不是数字圆点），
+        // 每格 44dp 高、圆角 8、包在一张卡里。
+        //
+        // 原来这里是 32dp 的数字圆点。数字要孩子自己在脑子里换算成形状，
+        // 而这一栏的目的恰恰是「让你看清这一笔长什么样」。
+        // count > 0 而不是 > 1：iOS 只要这个字有笔顺数据就显示笔画表。
+        // 单笔字（「一」「乙」）恰恰是一年级最先学的，把它排除掉没有道理。
+        if (count > 0) {
             Spacer(Modifier.height(16.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("按笔顺写", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = p.ink1)
-                Spacer(Modifier.weight(1f))
-                Text("点数字看这一笔", fontSize = 11.sp, color = p.ink3)
-            }
-            Spacer(Modifier.height(8.dp))
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(7.dp),
-                verticalArrangement = Arrangement.spacedBy(7.dp)
+            Surface(
+                Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(Dimens.radiusCard.dp),
+                color = p.card,
+                border = BorderStroke(1.dp, p.line)
             ) {
-                repeat(count) { i ->
-                    val on = frozenStroke == i
-                    Box(
-                        Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(if (on) p.jade else p.card)
-                            .clickable {
-                                // 再点一次同一笔 -> 取消定格，回到自动播放
-                                if (frozenStroke == i) {
-                                    frozenStroke = -1
-                                    playToken++
-                                } else {
-                                    frozenStroke = i
-                                }
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
+                Column(Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            "${i + 1}",
-                            fontSize = 12.sp,
-                            fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
-                            color = if (on) Color.White else p.ink2
+                            "笔顺",
+                            fontSize = FontSizes.sectionTitle.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = p.ink1
                         )
+                        Spacer(Modifier.weight(1f))
+                        Text("$count 笔", fontSize = FontSizes.caption.sp, color = p.ink3)
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        repeat(count) { i ->
+                            val on = frozenStroke == i
+                            Box(
+                                Modifier
+                                    .width(44.dp)
+                                    .height(44.dp)
+                                    .testTag("stroke-cell-$i")
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (on) p.jadeSoft else p.cardWarm)
+                                    .border(
+                                        BorderStroke(1.dp, if (on) p.jade else p.line),
+                                        RoundedCornerShape(8.dp)
+                                    )
+                                    .clickable {
+                                        // 再点一次同一笔 -> 取消定格，回到自动播放
+                                        if (frozenStroke == i) {
+                                            frozenStroke = -1
+                                            playToken++
+                                        } else {
+                                            frozenStroke = i
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                SingleStrokeGlyph(
+                                    ch = ch,
+                                    index = i,
+                                    modifier = Modifier.size(34.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }

@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -163,14 +164,17 @@ fun PracticePage(app: AppState) {
                 title = "错题本",
                 desc = "$wrong 个字",
                 badge = wrong,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                accent = p.clay,
+                enabled = wrong > 0
             ) { app.nav.push(Screen.Wrong) }
             ActionCard(
                 emoji = "🎲",
                 title = "随机练习",
                 desc = Repo.book(app.currentBook)?.short ?: "",
                 badge = 0,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                accent = p.jade
             ) { app.nav.push(Screen.Quiz("free", app.currentBook, null)) }
         }
 
@@ -183,9 +187,11 @@ fun PracticePage(app: AppState) {
             title = "多音字",
             desc = if (polyCount > 0) "本册 $polyCount 个多音字，练读准" else "换一册就会有多音字",
             badge = 0,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            accent = p.amber,
+            enabled = polyCount > 0
         ) {
-            if (polyCount > 0) app.nav.push(Screen.Quiz("polyphone", app.currentBook, null))
+            app.nav.push(Screen.Quiz("polyphone", app.currentBook, null))
         }
 
         Spacer(Modifier.height(12.dp))
@@ -197,9 +203,11 @@ fun PracticePage(app: AppState) {
             title = "部首",
             desc = "本册 $radicalCount 个部首，练查字法",
             badge = 0,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            accent = p.clay,
+            enabled = radicalCount > 0
         ) {
-            if (radicalCount > 0) app.nav.push(Screen.Quiz("radical", app.currentBook, null))
+            app.nav.push(Screen.Quiz("radical", app.currentBook, null))
         }
 
         // 同音字：一个音有好几个字，练「写哪个」。
@@ -210,9 +218,11 @@ fun PracticePage(app: AppState) {
             title = "同音字",
             desc = if (homoCount > 0) "本册 $homoCount 个字有同音伙伴，练写对" else "换一册就会有多组",
             badge = 0,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            accent = p.jade,
+            enabled = homoCount > 0
         ) {
-            if (homoCount > 0) app.nav.push(Screen.Quiz("homophone", app.currentBook, null))
+            app.nav.push(Screen.Quiz("homophone", app.currentBook, null))
         }
 
         // 形近字：长得像的字别写混（未/末、天/夫）。
@@ -223,9 +233,11 @@ fun PracticePage(app: AppState) {
             title = "形近字",
             desc = if (simCount > 0) "本册 $simCount 个字长得像，练分清" else "这一册没有形近字",
             badge = 0,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            accent = p.sky,
+            enabled = simCount > 0
         ) {
-            if (simCount > 0) app.nav.push(Screen.Quiz("similar", app.currentBook, null))
+            app.nav.push(Screen.Quiz("similar", app.currentBook, null))
         }
 
         // 看拼音选词语：题源是课本词语表，不是生字表。
@@ -236,9 +248,11 @@ fun PracticePage(app: AppState) {
             title = "看拼音选词语",
             desc = "本册 $wordCount 个课文词语，练读整个词",
             badge = 0,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            accent = p.clay,
+            enabled = wordCount >= 4
         ) {
-            if (wordCount >= 4) app.nav.push(Screen.Quiz("words", app.currentBook, null))
+            app.nav.push(Screen.Quiz("words", app.currentBook, null))
         }
 
         SectionHead("听写", "念一个词，凭记忆写出来")
@@ -468,24 +482,42 @@ private fun ActionCard(
     desc: String,
     badge: Int,
     modifier: Modifier = Modifier,
+    /** 这一项现在能不能点。不能点时整张卡变淡，而不是「看起来能点、点了没反应」 */
+    enabled: Boolean = true,
+    /** 模式色，用于描边。与 iOS 的 modeCard(color:) 对应 */
+    accent: androidx.compose.ui.graphics.Color? = null,
     onClick: () -> Unit
 ) {
     val p = LocalPalette.current
+    // 尺寸与 iOS modeCard 对齐：radiusCard 20、padding 16、emoji 28、标题 16 bold。
+    // 原来是 radiusInner 14 / padding 14 / emoji 22 / 标题 14——练习页是入口页，
+    // 卡片做得比其他页小一号，点起来也更容易点错。
+    val dim = if (enabled) 1f else 0.5f
     Surface(
         modifier
-            .clip(RoundedCornerShape(Dimens.radiusInner.dp))
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(Dimens.radiusInner.dp),
+            .clip(RoundedCornerShape(Dimens.radiusCard.dp))
+            .clickable(enabled = enabled, onClick = onClick),
+        shape = RoundedCornerShape(Dimens.radiusCard.dp),
         color = p.card,
-        border = BorderStroke(1.dp, p.line)
+        // 描边用模式色 35%：练习页有八九张卡并排，全都一个灰边时
+        // 分不清哪张是哪张；淡彩边让人一眼认出「错题本是红的、多音字是橙的」
+        border = BorderStroke(
+            1.dp,
+            if (enabled) (accent ?: p.line).copy(alpha = 0.35f) else p.line
+        )
     ) {
-        Box {
-            Column(Modifier.padding(14.dp)) {
-                Text(emoji, fontSize = 22.sp)
-                Spacer(Modifier.height(8.dp))
-                Text(title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = p.ink1)
+        Box(Modifier.graphicsLayer(alpha = dim)) {
+            Column(Modifier.padding(16.dp)) {
+                Text(emoji, fontSize = 28.sp)
+                Spacer(Modifier.height(9.dp))
+                Text(
+                    title,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = p.ink1
+                )
                 Spacer(Modifier.height(2.dp))
-                Text(desc, fontSize = 11.sp, color = p.ink3)
+                Text(desc, fontSize = FontSizes.caption.sp, color = p.ink3)
             }
             if (badge > 0) {
                 Box(

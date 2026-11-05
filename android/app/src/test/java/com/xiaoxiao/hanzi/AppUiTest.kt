@@ -5,6 +5,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -57,9 +58,10 @@ class AppUiTest {
         // 问候语随时段变化，用日期行定位更稳
         compose.onNodeWithText("跟课本学").assertIsDisplayed()
 
-        // 八册全部渲染：册名来自 catalog
+        // 八册全部渲染。册卡与 iOS 同构后，「一年级上册」被拆成
+        // 年级大字 + 学期胶囊，所以按 testTag 逐张验证更可靠
         for (book in Repo.books) {
-            compose.onNodeWithText(book.name).assertExists()
+            compose.onNodeWithTag("index-book-${book.id}").assertExists()
         }
         assertEquals(8, Repo.books.size)
     }
@@ -147,7 +149,10 @@ class AppUiTest {
         app.nav.push(Screen.Detail("一", null))
         compose.waitForIdle()
 
+        // 「笔顺」是笔画表的区块标题（不是工具条芯片——
+        // 那个芯片叫「显示序号」，和 iOS 一致）
         compose.onNodeWithText("笔顺").assertExists()
+        compose.onNodeWithText("显示序号").assertExists()
         compose.onNodeWithText("再写一遍").assertExists()
         compose.onNodeWithText("描红跟写").assertExists()
         compose.onNodeWithText("我认识它了").assertExists()
@@ -163,11 +168,11 @@ class AppUiTest {
         app.nav.push(Screen.Detail("人", null))
         compose.waitForIdle()
 
-        compose.onNodeWithText("笔顺").performClick()
+        compose.onNodeWithText("显示序号").performClick()
         compose.waitForIdle()
 
         // 点完之后工具条、操作按钮都还在，说明没有布局爆炸
-        compose.onNodeWithText("笔顺").assertExists()
+        compose.onNodeWithText("隐藏序号").assertExists()
         compose.onNodeWithText("描红跟写").assertExists()
     }
 
@@ -184,10 +189,11 @@ class AppUiTest {
         app.nav.push(Screen.Detail(ch, null))
         compose.waitForIdle()
 
-        // 第 1 笔到第 n 笔的芯片都应存在
-        compose.onNodeWithText("1").assertExists()
-        compose.onNodeWithText("按笔顺写").assertExists()
-        compose.onNodeWithText("点数字看这一笔").assertExists()
+        // 第 1 到第 n 个笔形格都应存在，且换行而不是横向滚动
+        compose.onNodeWithTag("stroke-cell-0").assertExists()
+        compose.onNodeWithTag("stroke-cell-${strokes - 1}").assertExists()
+        compose.onNodeWithText("笔顺").assertExists()
+        compose.onNodeWithText("$strokes 笔").assertExists()
     }
 
     @Test
@@ -198,8 +204,9 @@ class AppUiTest {
         app.nav.push(Screen.Detail("三", null))
         compose.waitForIdle()
 
-        // 「三」三笔，点第 2 笔
-        compose.onNodeWithText("2").performClick()
+        // 「三」三笔，点第 2 格（i=1）。
+        // 格子现在画的是笔形而不是数字，所以按 testTag 点，不能按文本找。
+        compose.onNodeWithTag("stroke-cell-1").performClick()
         compose.waitForIdle()
 
         // 定格后仍能正常渲染

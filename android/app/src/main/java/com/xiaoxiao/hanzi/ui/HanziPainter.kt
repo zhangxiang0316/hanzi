@@ -51,7 +51,8 @@ object HanziPainter {
         return pad + (v / SIZE) * (box - 2 * pad)
     }
 
-    private fun buildPath(cmds: List<StrokeCodec.Cmd>, box: Float, ox: Float, oy: Float): Path {
+    // 对外可见：单笔字形（笔画表里一格画一笔）也要用它构建轮廓
+    fun buildPath(cmds: List<StrokeCodec.Cmd>, box: Float, ox: Float, oy: Float): Path {
         val path = Path()
         for (c in cmds) {
             when (c.op) {
@@ -291,6 +292,43 @@ object HanziPainter {
     }
 
     /** 整字填充（结果页大字用） */
+    /**
+     * 只画一笔：其余笔用浅灰做参照，目标笔用墨色。
+     *
+     * 对应 iOS 的 `StrokeGlyphView`。详情页的笔画表用它，
+     * 这样孩子看到的是「这一笔长什么样」，而不是一个数字。
+     */
+    fun drawSingleStroke(
+        canvas: Canvas,
+        data: StrokeCodec.CharStrokes,
+        index: Int,
+        box: Float,
+        ox: Float,
+        oy: Float,
+        inkColor: Int = INK,
+        ghostColor: Int = -0x1
+    ) {
+        if (index < 0 || index >= data.count) return
+        val ghost = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+            // 默认拿调色板的 line 色，调用方可以覆盖
+            color = ghostColor
+            strokeJoin = Paint.Join.ROUND
+            strokeCap = Paint.Cap.ROUND
+        }
+        val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+            color = inkColor
+            strokeJoin = Paint.Join.ROUND
+            strokeCap = Paint.Cap.ROUND
+        }
+        for (i in 0 until data.count) {
+            if (i == index) continue
+            canvas.drawPath(buildPath(data.strokes[i], box, ox, oy), ghost)
+        }
+        canvas.drawPath(buildPath(data.strokes[index], box, ox, oy), fill)
+    }
+
     fun drawCharInk(canvas: Canvas, ch: String, box: Float, ox: Float, oy: Float, color: Int = INK) {
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             this.color = color

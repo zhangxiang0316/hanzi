@@ -2,6 +2,7 @@ package com.xiaoxiao.hanzi
 
 import android.app.Application
 import androidx.activity.ComponentActivity
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.performScrollToNode
@@ -16,6 +17,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.xiaoxiao.hanzi.data.Repo
 import com.xiaoxiao.hanzi.ui.AppState
 import com.xiaoxiao.hanzi.ui.HanziTheme
+import com.xiaoxiao.hanzi.ui.pages.gradeName
 import com.xiaoxiao.hanzi.ui.Root
 import com.xiaoxiao.hanzi.ui.Screen
 import org.junit.Assert.assertEquals
@@ -237,11 +239,14 @@ class LayoutTest {
 
         val count = Repo.strokeCount("繁")
         assertTrue(count >= 10)
-        // 每个数字芯片都在屏幕内
-        for (i in 1..count) {
-            val b = compose.onAllNodesWithText("$i").onFirst().getBoundsInRoot()
-            assertTrue("第 $i 笔芯片左侧越界", b.left.value >= 0f)
-            assertTrue("第 $i 笔芯片右侧越界 ${b.right.value}", b.right.value <= screenWidthDp() + 0.5f)
+        // 每个笔形格都在屏幕内（格子画的是笔形不是数字，按 testTag 找）
+        for (i in 0 until count) {
+            val b = compose.onNodeWithTag("stroke-cell-$i").getBoundsInRoot()
+            assertTrue("第 ${i + 1} 笔格子左侧越界", b.left.value >= 0f)
+            assertTrue(
+                "第 ${i + 1} 笔格子右侧越界 ${b.right.value}",
+                b.right.value <= screenWidthDp() + 0.5f
+            )
         }
     }
 
@@ -294,6 +299,15 @@ class LayoutTest {
             "册次区总高应 <= 400dp，实际 ${(bottom - top).toInt()}dp",
             bottom - top <= 400f
         )
+
+        // 单张卡的高度要和 iOS 接近（那边约 86pt）。
+        // 这条能抓住「加了信息但没压行高」——卡片悄悄长胖时，
+        // 只有总高护栏是不够的（八册还能塞进 400dp，但每张已经胖了）。
+        val cardH = positions.first().let { it.bottom.value - it.top.value }
+        assertTrue(
+            "册卡高度应在 80–90dp（iOS 约 86pt），实际 ${cardH}dp",
+            cardH in 80f..90f
+        )
     }
 
     @Test
@@ -302,9 +316,17 @@ class LayoutTest {
         compose.setContent { HanziTheme { Root(app) } }
         compose.waitForIdle()
 
-        // 最长的册名（四年级上册）必须完整显示
-        listOf("一年级上册", "四年级下册", "三年级上册").forEach {
-            compose.onNodeWithText(it).assertExists()
+        // 册卡现在与 iOS 同构：年级单独一行大字、学期是小胶囊，
+        // 不再是「一年级上册」一个整串。
+        //
+        // 这里验证的是「文字完整、没被省略号吃掉」——直接读每张卡的
+        // 合并文本，四段信息（年级 / 册次 / 百分比 / 课数字数）都要在。
+        // 换回「按整串找节点」会因为页头也有「一年级」而匹配到两个节点。
+        for (book in Repo.books) {
+            val node = compose.onNodeWithTag("index-book-${book.id}")
+            node.assertTextContains(gradeName(book.grade), substring = true)
+            node.assertTextContains(if (book.term == 1) "上册" else "下册", substring = true)
+            node.assertTextContains("课 ·", substring = true)
         }
     }
 
