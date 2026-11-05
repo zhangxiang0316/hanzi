@@ -223,8 +223,12 @@ struct DictationPageView: View {
 
     private func footer(plan: DictationPlan, session: WriteSession) -> some View {
         HStack(spacing: 12) {
-            HanziButton(title: justFinished ? "下一个" : "放弃这个字", kind: .ghost) {
-                if justFinished { next(plan) } else { next(plan) }
+            // 文案与 Android 一致：「跳过这个字」。
+            // 这里原来是个三元 `justFinished ? "下一个" : "放弃这个字"`，
+            // 但两个分支做的事**完全一样**（都是 next(plan)）——
+            // 也就是说同一颗按钮会随机显示两个不同的词，做的事却相同。
+            HanziButton(title: "跳过这个字", kind: .ghost) {
+                next(plan)
             }
             Spacer()
         }

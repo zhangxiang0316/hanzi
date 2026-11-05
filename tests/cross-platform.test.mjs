@@ -649,3 +649,25 @@ test('错题本空状态不额外放「去练习」按钮', () => {
   assert.ok(!android.includes('去练习'), 'Android 空状态不该有「去练习」按钮');
   assert.ok(!ios.includes('去练习'), 'iOS 空状态不该有「去练习」按钮');
 });
+
+test('听写页的跳过按钮文案与 Android 一致', () => {
+  // iOS 原来写 `justFinished ? "下一个" : "放弃这个字"`，
+  // 但两个分支做的事完全一样（都是 next(plan)）——同一颗按钮
+  // 会显示两个不同的词，做的事却相同。文案跟 Android 统一为「跳过这个字」。
+  const ios = stripComments(read('ios/HanziPad/Pages/DictationPageView.swift'));
+  const android = stripComments(read('android/app/src/main/java/com/xiaoxiao/hanzi/ui/pages/DictationPage.kt'));
+
+  assert.ok(ios.includes('跳过这个字'), 'iOS 听写的跳过按钮应写「跳过这个字」');
+  assert.ok(android.includes('跳过这个字'), 'Android 听写的跳过按钮应写「跳过这个字」');
+  assert.ok(!ios.includes('放弃这个字'), 'iOS 不该再出现「放弃这个字」');
+});
+
+test('同一颗按钮不该用三元表达式换文案', () => {
+  // 上面那条的具体形态：文案随状态变化，但分支行为相同。
+  // 这种写法让人以为做了两件事，实际只做了一件。
+  const ios = stripComments(read('ios/HanziPad/Pages/DictationPageView.swift'));
+  assert.ok(
+    !/HanziButton\(title:\s*[a-zA-Z]\w*\s*\?/.test(ios),
+    'iOS 听写页的 HanziButton 标题不该用三元表达式'
+  );
+});
