@@ -668,6 +668,19 @@ test('课文页的主操作是「开始/继续学习」，练习与描红降为�
   assert.ok(main >= 0 && quiz > main, 'iOS 的「本课练习」应排在「开始学习」之后');
 });
 
+test('详情页的写字按钮文案两端一致', () => {
+  // 要求会写的字叫「描红跟写」，只要求认的叫「想写就试试」。
+  // iOS 原来写「开始描红」——同一颗按钮两种叫法。
+  const ios = stripComments(read('ios/HanziPad/Pages/DetailPageView.swift'));
+  const android = stripComments(read('android/app/src/main/java/com/xiaoxiao/hanzi/ui/pages/DetailPage.kt'));
+
+  for (const [name, src] of [['iOS', ios], ['Android', android]]) {
+    assert.ok(src.includes('描红跟写'), `${name} 应写「描红跟写」`);
+    assert.ok(src.includes('想写就试试'), `${name} 应写「想写就试试」`);
+  }
+  assert.ok(!ios.includes('开始描红'), 'iOS 不该再出现「开始描红」');
+});
+
 test('听写页的跳过按钮文案与 Android 一致', () => {
   // iOS 原来写 `justFinished ? "下一个" : "放弃这个字"`，
   // 但两个分支做的事完全一样（都是 next(plan)）——同一颗按钮

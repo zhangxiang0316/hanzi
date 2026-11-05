@@ -113,6 +113,10 @@ struct DetailPageView: View {
 
             Spacer()
 
+            // 这里的「描红」是**翻页栏中间的快捷入口**，不是写字主按钮
+            // （主按钮在下面，文案已经区分「开始描红 / 想写就试试」）。
+            // 曾想把它也改成「描红跟写」，读代码时发现那样会和主按钮
+            // 撞名，作罢。
             HanziButton(title: "描红", fullWidth: false) {
                 app.push(AppState.WriteRoute(ch: ch))
             }
@@ -340,9 +344,12 @@ struct DetailPageView: View {
                         .foregroundStyle(Palette.sky)
                 }
 
+                // 文案与 Android 一致：要求会写的字「描红跟写」，
+                // 只要求认的「想写就试试」。原来 iOS 写「开始描红」，
+                // 而 Android 写「描红跟写」——同一颗按钮两种叫法。
                 HanziButton(
                     title: app.repo.isWriteChar(ch)
-                        ? (record == nil ? "开始描红" : "再写一遍")
+                        ? (record == nil ? "描红跟写" : "再写一遍")
                         : (record == nil ? "想写就试试" : "再写一遍"),
                     kind: app.repo.isWriteChar(ch) ? .primary : .ghost,
                     fullWidth: true
