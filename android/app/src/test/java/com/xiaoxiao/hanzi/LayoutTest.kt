@@ -757,4 +757,25 @@ class StyleParityTest {
         )
     }
 
+
+    @Test
+    fun `详情页属性区是四项且含册次与状态`() {
+        // iOS 的 infoItem 是「部首 / 笔画 / 册次 / 状态」四项。
+        // Android 原来是「部首 / 笔画 / 读音」——读音挤成 11sp 还在
+        // 一格塞两个音，而「学到哪一步了」这个家长最关心的反而没有。
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+        app.nav.push(Screen.Detail("天", null))
+        compose.waitForIdle()
+
+        listOf("部首", "笔画", "册次", "状态").forEach {
+            compose.onNodeWithText(it).assertExists()
+        }
+        // 读音不再占一格（多音字在下面单独一行）
+        assertTrue(
+            "读音不该再作为一个属性方块",
+            compose.onAllNodesWithText("读音").fetchSemanticsNodes().isEmpty()
+        )
+    }
+
 }

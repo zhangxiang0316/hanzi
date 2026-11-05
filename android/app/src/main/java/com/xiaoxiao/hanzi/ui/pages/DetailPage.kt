@@ -47,6 +47,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.xiaoxiao.hanzi.data.Repo
+import com.xiaoxiao.hanzi.logic.Srs
 import com.xiaoxiao.hanzi.data.StrokeCodec
 import com.xiaoxiao.hanzi.logic.Tts
 import com.xiaoxiao.hanzi.ui.AppState
@@ -263,15 +264,19 @@ fun DetailPage(app: AppState, ch: String, lessonId: String?) {
 
         Spacer(Modifier.height(12.dp))
 
-        // 部首 / 笔画 / 读音
+        // 部首 / 笔画 / 册次 / 状态，与 iOS 的 infoItem 四项一致。
+        //
+        // 原来是「部首 / 笔画 / 读音」三个方块：读音挤成 11sp、一格塞两个音，
+        // 而「这个字学到哪一步了」这个家长最关心的信息反而没有。
+        // 多音字的读音在下面单独一行显示（与 iOS 相同）。
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             AttrBox("部首", meta.radical, Modifier.weight(1f))
             AttrBox("笔画", "${meta.strokes}", Modifier.weight(1f))
+            AttrBox("册次", meta.book.uppercase(), Modifier.weight(1f))
             AttrBox(
-                "读音",
-                Repo.readingsOf(ch).joinToString(" "),
-                Modifier.weight(1f),
-                small = true
+                "状态",
+                Srs.STAGE_LABEL[Srs.stageOf(app.progress.entry(ch))] ?: "未学",
+                Modifier.weight(1f)
             )
         }
 
