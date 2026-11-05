@@ -256,6 +256,85 @@ SDK 路径（已 gitignore）。
 | 数据存储 | `wx.setStorageSync` | SharedPreferences（`commit()` 同步落盘） |
 | 升级 | 无需安装 | 需签名、发版 |
 
+### 样式对齐：iOS 与 Android 的 token 与按钮位置
+
+用户反馈「iOS 端和 Android 端有很多样式不统一，按钮位置也不统一」。
+逐页对账后确认问题真实存在，根因是**两端各写各的，缺一层共享约定**。
+
+#### 已对齐的共享组件
+
+| 组件 | 对齐前（Android） | 对齐后（两端一致） |
+| --- | --- | --- |
+| `HanziCard` 描边 | `line` @80%（几乎看不见） | `edge` #B8A583 1dp |
+| `HanziCard` 内边距 | 16 | 18 |
+| `HanziButton` 高度 | 48dp | 44dp |
+| `HanziButton` 字号 | 16sp | 15sp |
+| 次要按钮 | jadeSoft 水绿底、无描边 | 白底 + `edge` 描边 + ink1 字 |
+| Ghost 按钮 | 透明 + `line` 描边 + ink2 字 | 透明、jade 字、无描边 |
+| `TinyPill` | 12sp medium / h10 v4 / α0.14 | 11sp semibold / h9 v3 / α0.13 |
+| `SectionHead` | 17sp Bold | 17sp SemiBold |
+| `EmptyState` | emoji 34 / 标题 15 ink2 / 上下 40 | emoji 42 / 标题 16 ink1 / 上下 36 |
+| `HairLine` | `lineSoft`（白卡上不可见） | `line` |
+
+`BtnStyle` 同时改名：`Soft` → `Secondary`，三档含义（Primary/Secondary/Ghost）
+现在与 iOS 的 `.primary/.secondary/.ghost` 一一对应。
+
+#### 新增的字号 token
+
+Android 之前没有字号 token，267 处 `fontSize = N.sp` 硬编码，
+同一个视觉角色在不同页面用了不同的值。现在新增 `FontSizes`：
+
+| token | 值 | 对应 iOS |
+| --- | --- | --- |
+| `FontSizes.pageTitle` | 26 | `Fonts.pageTitle` |
+| `FontSizes.sectionTitle` | 17 | `Fonts.sectionTitle` |
+| `FontSizes.body` | 15 | `Fonts.body` |
+| `FontSizes.bodySmall` | 13 | `Fonts.bodySmall` |
+| `FontSizes.caption` | 12 | `Fonts.caption` |
+
+新增页面请只用这些 token。**存量 267 处硬编码没有一次性全换**：
+其中大量是 emoji 尺寸、大号分数、字格里的汉字等**有具体语境的**值，
+机械替换会把「emoji 该多大」和「说明文字该多大」混为一谈。
+已按页面标题这一层先对齐（首页 22→26、练习页 24→26）。
+
+#### 按钮位置的统一规则
+
+定下来一条规则：**页面级的唯一主操作钉在底部，次要操作留在内容末尾。**
+依据是小程序（设计基准）一直这么做——`lesson.wxml` 的 `.footer` 就是 `position: fixed`。
+
+这条规则之前三端执行得不一致：
+
+| 页面 | 对齐前 | 对齐后 |
+| --- | --- | --- |
+| 课文 | iOS 内联 / Android 钉底 / 小程序钉底 | 三端钉底 |
+| 识字量测试 | iOS 钉底 / Android 内联 | 两端钉底 |
+| 选字做字帖 | iOS 钉底 / Android 内联 | 两端钉底 |
+| 错题本 | iOS 主按钮在列表后 / Android 在列表前 | 两端都在列表后 |
+
+现在三端钉底的页面集合完全一致，由 `tests/cross-platform.test.mjs` 守着。
+
+#### 防回归
+
+样式差异肉眼可见、单测照不到，所以补了两层断言：
+
+- `android/app/src/test/.../LayoutTest.kt` 的 `StyleParityTest`（6 条几何断言）：
+  九行入口是独立卡片且间距 12dp、每行高度 ≥48dp、两个主按钮真的贴屏幕底、
+  主按钮高 44dp、首页进度是 84dp 正圆环。
+- `tests/cross-platform.test.mjs`（5 条源码扫描）：三端钉底的页面集合一致、
+  课文页三端都钉底、错题本主按钮位置一致。
+
+#### 没有对齐的部分（有意保留）
+
+- **页面结构差异**：iOS 练习页有「课本练习」入口、Android 有「按册来练」和
+  「描红练字」两块；iOS 详情页是平板分栏、Android 单列。这些是**功能差异**，
+  不是样式差异，需要产品决策，不在这次样式统一的范围内。
+- **Dynamic Type**：iOS 用 `LayoutRules.scaled()` 按系统字号缩放，Android 用
+  sp 跟随系统。机制不同但目的相同，不算不一致。
+- **左右留白**：iOS `pagePad(width)` 在宽屏增到 28/36，Android 固定 20。
+  只在 ≥500dp 时有差别，属于平板适配问题。
+- **朗读设置**：iOS「我的」页有「朗读」开关和 0.3–1.7 的语速滑杆，
+  Android 完全没有。这是**功能缺失**，需要单独实现。
+
 ### 朗读：已接入，但三端不一致
 
 > 这一节原先写的是「朗读：`TextToSpeech` 可直连，代码未接入」——**这是错的**。

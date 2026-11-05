@@ -24,6 +24,17 @@ function read(rel) {
   return fs.readFileSync(path.join(ROOT, rel), 'utf8');
 }
 
+/** 列目录里的条目名（不递归）。目录不存在时返回空数组，调用方不用自己判。 */
+function readDir(rel) {
+  const p = path.join(ROOT, rel);
+  if (!fs.existsSync(p)) return [];
+  return fs.readdirSync(p);
+}
+
+function exists(rel) {
+  return fs.existsSync(path.join(ROOT, rel));
+}
+
 /**
  * 从文本里抠出某个模式匹配到的数字（用于比较公式里的系数）。
  *
@@ -313,4 +324,126 @@ test('三端的 tab 根集合一致', () => {
     assert.ok(androidNames.includes(a), `Android 缺 ${a}`);
     assert.ok(iosNames.includes(i), `iOS 缺 ${i}`);
   }
+});
+
+// ---------------------------------------------------------------------------
+// 主操作按钮的位置
+//
+// 用户报的是「按钮位置不统一」。查下来根因不是某一页放错了，而是两端对
+// 「什么时候该把主操作钉在底部」没有共同约定，于是同一个页面各写各的：
+//   - 识字量测试 / 选字做字帖：iOS 钉底，Android 跟着内容滚
+//   - 课文页：iOS 跟着内容滚，Android 和小程序钉底
+//   - 错题本：iOS 主按钮在列表之后，Android 在列表之前
+//
+// 定下来的规则：**页面级的唯一主操作钉在底部，次要操作留在内容末尾。**
+// 小程序（设计基准）一直是这么做的 —— lesson.wxml 的 .footer 就是 fixed。
+// 下面把这条规则锁成断言。
+
+/** 页面源码正文（去掉注释，免得注释里的字样误判） */
+function stripComments(src) {
+  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+}
+
+test('三端把主操作钉在底部的页面集合一致', () => {
+  // iOS：.safeAreaInset(edge: .bottom) 出现在哪些 Page
+  const iosFiles = readDir('ios/HanziPad/Pages').filter((f) => f.endsWith('PageView.swift'));
+  const iosPinned = iosFiles.filter((f) =>
+    /safeAreaInset\(edge:\s*\.bottom\)/.test(stripComments(read('ios/HanziPad/Pages/' + f))));
+
+  // Android：页面根 Column 里有一个「滚动区 + 底部条」结构，
+  // 底部条统一是 Surface(color = p.paper, shadowElevation = 8.dp)
+  const androidFiles = readDir('android/app/src/main/java/com/xiaoxiao/hanzi/ui/pages')
+    .filter((f) => f.endsWith('Page.kt'));
+  const androidPinned = androidFiles.filter((f) => {
+    const src = stripComments(read('android/app/src/main/java/com/xiaoxiao/hanzi/ui/pages/' + f));
+    return /shadowElevation\s*=\s*8\.dp/.test(src);
+  });
+
+  // 小程序：WXSS 里的底部条类名不统一——lesson 叫 .footer，
+  // vocab / copybook-pick 叫 .foot，两个都是 position: fixed。
+  // 一并认，否则会误判成「小程序只有课文页钉底」。
+  const mpFiles = readDir('miniprogram/pages').filter((d) => !d.includes('.'));
+  const mpPinned = [];
+  for (const d of mpFiles) {
+    const wxss = 'miniprogram/pages/' + d + '/' + d + '.wxss';
+    if (!exists(wxss)) continue;
+    const src = stripComments(read(wxss));
+    if (/\.(?:footer|foot)\s*\{[^}]*position:\s*fixed/.test(src)) mpPinned.push(d);
+  }
+
+  // 钉底的页面：课文、识字量测试、选字做字帖
+  // 三端页面文件名不同，所以比数量 + 各自点名（见下一条用例）
+  assert.equal(iosPinned.length, androidPinned.length,
+    `iOS 钉底 ${iosPinned.length} 页 [${iosPinned}]，` +
+    `Android 钉底 ${androidPinned.length} 页 [${androidPinned}]`);
+  assert.equal(mpPinned.length, iosPinned.length,
+    `小程序钉底 ${mpPinned.length} 页 [${mpPinned}]，` +
+    `iOS 钉底 ${iosPinned.length} 页 [${iosPinned}]`);
+  assert.ok(iosPinned.length >= 3,
+    `只剩 ${iosPinned.length} 页钉底了，主操作位置规则可能被改回去了`);
+});
+
+test('小程序三页底部条都是 fixed', () => {
+  const cases = [
+    ['miniprogram/pages/vocab/vocab.wxss', 'vocab'],
+    ['miniprogram/pages/copybook-pick/copybook-pick.wxss', 'copybook-pick'],
+    ['miniprogram/pages/lesson/lesson.wxss', 'lesson'],
+  ];
+  for (const [file, name] of cases) {
+    assert.match(stripComments(read(file)),
+      /\.(?:footer|foot)\s*\{[^}]*position:\s*fixed/,
+      `小程序 ${name} 的底部条应 fixed`);
+  }
+  // 而且底部条里真的有按钮，不是个空壳
+  for (const [file, name] of [
+    ['miniprogram/pages/vocab/vocab.wxml', 'vocab'],
+    ['miniprogram/pages/copybook-pick/copybook-pick.wxml', 'copybook-pick'],
+    ['miniprogram/pages/lesson/lesson.wxml', 'lesson'],
+  ]) {
+    assert.match(read(file), /<button[^>]*class="btn btn-primary/,
+      `小程序 ${name} 的底部条里应有主按钮`);
+  }
+});
+
+test('识字量测试与选字做字帖两端都钉底', () => {
+  const cases = [
+    ['ios/HanziPad/Pages/VocabPageView.swift', 'iOS 识字量测试'],
+    ['ios/HanziPad/Pages/CopybookPickPageView.swift', 'iOS 选字做字帖'],
+    ['android/app/src/main/java/com/xiaoxiao/hanzi/ui/pages/VocabPage.kt', 'Android 识字量测试'],
+    ['android/app/src/main/java/com/xiaoxiao/hanzi/ui/pages/CopybookPickPage.kt', 'Android 选字做字帖'],
+  ];
+  for (const [file, name] of cases) {
+    const src = stripComments(read(file));
+    const pinned = /safeAreaInset\(edge:\s*\.bottom\)/.test(src) ||
+      /shadowElevation\s*=\s*8\.dp/.test(src);
+    assert.ok(pinned, `${name} 的主操作没有钉底`);
+  }
+});
+
+test('课文页三端都把主操作钉在底部', () => {
+  // iOS
+  assert.match(stripComments(read('ios/HanziPad/Pages/LessonPageView.swift')),
+    /safeAreaInset\(edge:\s*\.bottom\)/, 'iOS 课文页主操作应钉底');
+  // Android
+  assert.match(stripComments(read('android/app/src/main/java/com/xiaoxiao/hanzi/ui/pages/LessonPage.kt')),
+    /shadowElevation\s*=\s*8\.dp/, 'Android 课文页主操作应钉底');
+  // 小程序（设计基准）
+  assert.match(stripComments(read('miniprogram/pages/lesson/lesson.wxss')),
+    /\.footer\s*\{[^}]*position:\s*fixed/, '小程序课文页 footer 应 fixed');
+});
+
+test('错题本主按钮在列表之后（两端一致）', () => {
+  const ios = stripComments(read('ios/HanziPad/Pages/WrongPageView.swift'));
+  // iOS: list 在前，HanziButton 在后
+  const iosList = ios.indexOf('list');
+  const iosBtn = ios.indexOf('练一遍错题');
+  assert.ok(iosList >= 0 && iosBtn > iosList,
+    'iOS 错题本主按钮应排在列表之后');
+
+  const android = stripComments(
+    read('android/app/src/main/java/com/xiaoxiao/hanzi/ui/pages/WrongPage.kt'));
+  const aBtn = android.indexOf('重练这些字');
+  const aLoop = android.indexOf('items.forEach');
+  assert.ok(aLoop >= 0 && aBtn > aLoop,
+    'Android 错题本主按钮应排在列表之后（之前跑到了列表上方）');
 });

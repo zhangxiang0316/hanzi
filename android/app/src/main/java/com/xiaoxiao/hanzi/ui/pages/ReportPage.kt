@@ -69,7 +69,9 @@ fun ReportPage(app: AppState) {
             color = p.ink3
         )
         Spacer(Modifier.height(4.dp))
-        Text("最近 7 天", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = p.ink1)
+        // 24 与 iOS 一致（那边是 Fonts.s(24, .bold, .title2)）。
+        // 这是页内的大区块标题，不是页面标题，所以不用 pageTitle。
+        Text("最近 7 天", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = p.ink1)
         Spacer(Modifier.height(6.dp))
         Text(
             Report.verdict(built.sum),
@@ -213,7 +215,9 @@ private fun ChartCard(week: List<Report.Day>) {
                                     // 比例最小 0.08（见 Report.withRatios），
                                     // 在这个高度里约 8dp，柱子不会细得看不见
                                     .fillMaxHeight(d.ratio.coerceIn(0.0, 1.0).toFloat())
-                                    .width(18.dp)
+                                    // 撑满列宽（与 iOS 一致）：固定 18dp 时
+                                    // 七根细柱孤零零地立在宽屏上，像没画完的草图
+                                    .fillMaxWidth(0.62f)
                                     .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
                                     .background(if (d.daysAgo == 0) p.jade else p.jadeSoft)
                             )

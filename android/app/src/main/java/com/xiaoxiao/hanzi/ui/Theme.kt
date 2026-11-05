@@ -41,6 +41,20 @@ object HanziColors {
     val skySoft = Color(0xFFE8F0F7)
 
     val line = Color(0xFFE9DFCD)
+
+    /**
+     * 可点击元素的边框。与 iOS 的 `Palette.edge` 同一个值。
+     *
+     * `line`（#E9DFCD）和纸色背景的对比度只有 1.23:1，画分隔线没问题，
+     * 但拿来画按钮/字格的边框时孩子几乎看不见边界——iOS 端早就发现并修过
+     * 这件事（见 AppTheme.swift 里 `edge` 的注释），Android 一直没跟，
+     * 于是同样的「答题选项」在 iOS 上是有清楚描边的白底卡、在 Android 上
+     * 是一团模糊的浅色。这个色对比度 2.23:1，配卡片底色就能看出边界。
+     *
+     * **可点的元素用 edge，纯装饰的分隔线才用 line。**
+     */
+    val edge = Color(0xFFB8A583)
+
     val lineSoft = Color(0xFFFAF5EB)
     val track = Color(0xFFF4EFE4)
 
@@ -66,6 +80,39 @@ object Dimens {
     const val gap = 12
 }
 
+/**
+ * 字号 token。与 iOS 的 `Fonts` 一一对应。
+ *
+ * ## 为什么要有这一层
+ *
+ * iOS 端早就有 `Fonts.pageTitle / sectionTitle / body / bodySmall / caption`
+ * 五级，页面里只引用语义名。Android 这边一直没有，各页面直接写
+ * `fontSize = 13.sp`、`12.sp`、`11.sp`……同一个 App 里出现了 9～26 之间
+ * 十几个互不相干的字号，而且**同一个视觉角色在不同页面用了不同的值**
+ * （例如「页面说明文字」有的地方 12、有的地方 13）。
+ *
+ * 结果就是两端同一个元素字号对不上，改一处也没法全局生效。
+ *
+ * 下面这五级是按 iOS `Fonts` 的实际取值对齐的，新增页面请只用这些，
+ * 别再写字面量。
+ */
+object FontSizes {
+    /** 页面主标题。iOS `Fonts.pageTitle` = 26 */
+    const val pageTitle = 26
+
+    /** 区块标题。iOS `Fonts.sectionTitle` = 17 */
+    const val sectionTitle = 17
+
+    /** 正文。iOS `Fonts.body` = 15 */
+    const val body = 15
+
+    /** 次要正文。iOS `Fonts.bodySmall` = 13 */
+    const val bodySmall = 13
+
+    /** 说明/注解。iOS `Fonts.caption` = 12 */
+    const val caption = 12
+}
+
 class Palette(
     val paper: Color = HanziColors.paper,
     val card: Color = HanziColors.card,
@@ -81,6 +128,8 @@ class Palette(
     val clay: Color = HanziColors.clay,
     val claySoft: Color = HanziColors.claySoft,
     val line: Color = HanziColors.line,
+    /** 可点击元素的边框色，见 HanziColors.edge 的注释 */
+    val edge: Color = HanziColors.edge,
     val lineSoft: Color = HanziColors.lineSoft,
     val track: Color = HanziColors.track,
     /** 第五种强调色（多音字、只认不写提示），与 iOS Palette.sky 一致 */

@@ -1,6 +1,8 @@
 package com.xiaoxiao.hanzi.ui.pages
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -37,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import kotlin.math.max
 import androidx.compose.ui.unit.sp
 import com.xiaoxiao.hanzi.data.Repo
 import com.xiaoxiao.hanzi.ui.AppState
@@ -114,38 +117,46 @@ fun CopybookPage(app: AppState) {
 
         Spacer(Modifier.height(14.dp))
 
-        // 用固定列宽的网格：手机上 3 列、平板上更多，和首页生字卡密度一致
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 84.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            // 外层已经在滚动，这里不能自己再滚：高度不设限会崩（无限约束）
-            modifier = Modifier.height(tileGridHeight(shown.size))
-        ) {
-            items(shown, key = { it.first }) { item ->
-                CopybookTile(item.first, item.second.best, item.second.stars) {
-                    app.nav.push(Screen.Write(item.first))
+        // 自己排行，不用 LazyVerticalGrid。
+        //
+        // 原来这里是 LazyVerticalGrid + 一个「按每行 4 列估算高度」的函数。
+        // 但列数其实是由 84dp 最小列宽算出来的：411dp 宽是 4 列，
+        // 360dp 宽（很常见的一档）只有 3 列。于是 3 列时行数比估算的多，
+        // 尾行被切掉一半、还得不到滚动。
+        //
+        // 改成按实际可用宽度算列数、自己拼行，高度自然由内容决定，
+        // 不存在估算误差。
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val spacing = 10.dp
+            val minTile = 84.dp
+            val cols = max(
+                1,
+                ((maxWidth + spacing) / (minTile + spacing)).toInt()
+            )
+            val rows = (shown.size + cols - 1) / cols
+            Column(verticalArrangement = Arrangement.spacedBy(spacing)) {
+                repeat(rows) { r ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(spacing)) {
+                        repeat(cols) { c ->
+                            val item = shown.getOrNull(r * cols + c)
+                            if (item == null) {
+                                // 占位，让最后一行不满时也保持列宽一致
+                                Spacer(Modifier.weight(1f))
+                            } else {
+                                Box(Modifier.weight(1f)) {
+                                    CopybookTile(item.first, item.second.best, item.second.stars) {
+                                        app.nav.push(Screen.Write(item.first))
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
 
         Spacer(Modifier.height(24.dp))
     }
-}
-
-/**
- * 网格高度。
- *
- * LazyVerticalGrid 被放进 verticalScroll 的 Column 里时拿到的是无限高度约束，
- * 直接摆放会抛异常。这里按「每行约 108dp + 间距」估一个确定高度，
- * 既能让外层正常滚动，也不会把内容裁掉（尾行留足余量）。
- */
-private fun tileGridHeight(count: Int): androidx.compose.ui.unit.Dp {
-    if (count <= 0) return 0.dp
-    // 自适应列宽最小 84dp，窄屏至少 3 列；按 3 列保守估算行数
-    val perRow = 4
-    val rows = (count + perRow - 1) / perRow
-    return (rows * 108 + (rows - 1) * 10).dp
 }
 
 @Composable
@@ -244,8 +255,12 @@ private fun CopybookTile(ch: String, best: Int, stars: Int, onClick: () -> Unit)
     val p = LocalPalette.current
     Column(
         Modifier
+            .fillMaxWidth()
             .clip(RoundedCornerShape(Dimens.radiusInner.dp))
             .background(p.card)
+            // 描边与 iOS 字格一致：白卡压在纸底上，没有边界时
+            // 一片白里分不清哪一格是哪一格
+            .border(BorderStroke(1.dp, p.line), RoundedCornerShape(Dimens.radiusInner.dp))
             .clickable(onClick = onClick)
             .padding(vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally

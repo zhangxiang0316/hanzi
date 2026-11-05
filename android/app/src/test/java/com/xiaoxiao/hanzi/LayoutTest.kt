@@ -538,3 +538,167 @@ class LayoutTest {
         assertTrue("按钮高度应 >= 44dp，实际 ${(b.bottom - b.top).value}", (b.bottom - b.top).value >= 44f)
     }
 }
+
+/**
+ * 两端样式对齐的几何断言。
+ *
+ * 背景：iOS 和 Android 是两套独立 UI，样式慢慢漂开了——同一个「次要按钮」
+ * 在 iOS 是白底描边、在 Android 是浅绿水底；同一个入口在 iOS 是独立卡片
+ * 带图标和箭头、在 Android 是一张大卡加分隔线。这些差异肉眼一看就知道
+ * 「这不是同一个 App」，但单测完全照不到。
+ *
+ * 下面几条把对齐后的关键几何固定住。
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(qualifiers = "w411dp-h2400dp-xxhdpi", sdk = [34])
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+class StyleParityTest {
+
+    @get:Rule
+    val compose = createAndroidComposeRule<ComponentActivity>()
+
+    private fun state(): AppState {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        return AppState(app)
+    }
+
+    private fun screenWidthDp(): Float = compose.activity.resources.displayMetrics.widthPixels /
+        compose.activity.resources.displayMetrics.density
+
+    /**
+     * 「我的」页九行是**九张独立卡片**，不是一张大卡。
+     *
+     * iOS 侧每行一张 radiusInner 卡片、行间 12。判断方法很直接：
+     * 相邻两行的纵向间距必须等于 12dp 的卡片间隔，而不是 0（同卡内分隔线）。
+     */
+    @Test
+    fun `我的页九行是独立卡片且间距 12dp`() {
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+        app.nav.switchTab(Screen.Profile)
+        compose.waitForIdle()
+
+        val first = compose.onNodeWithTag("profile-row-学习周报").getBoundsInRoot()
+        val second = compose.onNodeWithTag("profile-row-识字量测试").getBoundsInRoot()
+
+        // 两张卡之间的空隙 = 第二张顶 - 第一张底，应为 12dp
+        val gap = second.top.value - first.bottom.value
+        assertTrue(
+            "九行应当是独立卡片、行间 12dp，实测间距 ${gap}dp（若是 0 说明又合并成一张大卡了）",
+            abs(gap - 12f) <= 1.5f
+        )
+    }
+
+    /**
+     * 九行每行的触达高度不低于 48dp。
+     *
+     * iOS 是 padding 16 + 15pt 字 + 可选副标题。Android 若漏掉副标题或
+     * padding 给小了，行高会掉到 44 以下——九行全靠手指点，这一条不能松。
+     */
+    @Test
+    fun `我的页每行入口高度不低于 48dp`() {
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+        app.nav.switchTab(Screen.Profile)
+        compose.waitForIdle()
+
+        listOf("学习周报", "识字量测试", "错题本", "我的字帖", "选字做字帖",
+               "部首归类", "词语表", "关于与数据来源", "清空学习记录").forEach { name ->
+            val b = compose.onNodeWithTag("profile-row-$name").getBoundsInRoot()
+            val rowH = b.bottom.value - b.top.value
+            assertTrue(
+                "「$name」行高 ${rowH}dp，低于 48dp",
+                rowH >= 48f
+            )
+        }
+    }
+
+    /**
+     * 识字量测试的「开始测」固定在**屏幕底部**，不跟着内容滚。
+     *
+     * iOS 用 .safeAreaInset(edge: .bottom) 钉底。Android 早先是跟着
+     * verticalScroll 走的，按钮浮在屏幕中间。
+     */
+    @Test
+    fun `识字量测试的开始按钮贴屏幕底部`() {
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+        app.nav.push(Screen.Vocab)
+        compose.waitForIdle()
+
+        val btn = compose.onNodeWithTag("识字量-开始").getBoundsInRoot()
+        val screenH = compose.activity.resources.displayMetrics.heightPixels /
+            compose.activity.resources.displayMetrics.density
+
+        // 按钮底边应落在屏幕底部 24dp 以内（底部条 padding 12 + 按钮自身）
+        val fromBottom = screenH - btn.bottom.value
+        assertTrue(
+            "「开始测」应当在屏幕底部，实际距底 ${fromBottom}dp（屏幕 ${screenH}dp）",
+            fromBottom <= 24f
+        )
+        // 且不能超出屏幕
+        assertTrue("按钮超出了屏幕底部", btn.bottom.value <= screenH + 1f)
+    }
+
+    /**
+     * 选字做字帖的「导出」同样钉底。
+     */
+    @Test
+    fun `选字做字帖的导出按钮贴屏幕底部`() {
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+        app.nav.push(Screen.CopybookPick)
+        compose.waitForIdle()
+
+        val btn = compose.onNodeWithTag("选字-导出").getBoundsInRoot()
+        val screenH = compose.activity.resources.displayMetrics.heightPixels /
+            compose.activity.resources.displayMetrics.density
+        val fromBottom = screenH - btn.bottom.value
+        assertTrue(
+            "「导出字帖」应当固定在底部，实际距底 ${fromBottom}dp",
+            fromBottom <= 72f
+        )
+    }
+
+    /**
+     * 首页总进度是环形图（不是横条），且百分比嵌在环心。
+     *
+     * iOS 一直是 84dp 环 + 环内 19pt 百分比。Android 之前是「横条 + 靠右数字」，
+     * 同一个指标在两端是两种完全不同的信息图。
+     */
+    @Test
+    fun `首页总进度是 84dp 环形图`() {
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+        compose.waitForIdle()
+
+        val ring = compose.onNodeWithTag("progress-ring").getBoundsInRoot()
+        val w = ring.right.value - ring.left.value
+        val h = ring.bottom.value - ring.top.value
+        assertEquals("环形应为 84dp 见方，实测宽 ${w}dp", 84f, w, 1.5f)
+        assertEquals("环形应为 84dp 见方，实测高 ${h}dp", 84f, h, 1.5f)
+        // 正圆，不是椭圆
+        assertEquals("应当是正圆", w, h, 0.5f)
+    }
+
+    /**
+     * 主按钮高度 44dp，与 iOS 一致（原来是 48）。
+     */
+    @Test
+    fun `主按钮高度是 44dp`() {
+        val app = state()
+        compose.setContent { HanziTheme { Root(app) } }
+        app.nav.switchTab(Screen.Profile)
+        compose.waitForIdle()
+        // 「我的」页九行里没有主按钮，用识字量页的开始按钮
+        app.nav.push(Screen.Vocab)
+        compose.waitForIdle()
+
+        val b = compose.onNodeWithTag("识字量-开始").getBoundsInRoot()
+        val btnH = b.bottom.value - b.top.value
+        assertEquals(
+            "按钮高度应为 44dp（与 iOS 一致），实测 ${btnH}dp",
+            44f, btnH, 1.5f
+        )
+    }
+}

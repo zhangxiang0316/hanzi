@@ -412,7 +412,7 @@ fun DetailPage(app: AppState, ch: String, lessonId: String?) {
             Box(Modifier.weight(1f)) {
                 HanziButton(
                     if (learned) "已学会 ✓" else "我认识它了",
-                    style = BtnStyle.Soft
+                    style = BtnStyle.Secondary
                 ) {
                     if (!learned) {
                         app.progress.markKnown(ch)

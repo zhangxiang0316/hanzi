@@ -70,10 +70,11 @@ struct RadicalPageView: View {
     // MARK: - 顶部
 
     private var header: some View {
+        // 这里不再渲染 26pt 的「部首归类」大标题。
+        // 导航栏已经有同名标题，正文再来一个就是同一句话说两遍，
+        // 而且白占掉首屏一整块。Android 和小程序这一页也只有
+        // 顶栏标题 + 一行说明。
         HStack(alignment: .firstTextBaseline) {
-            Text("部首归类")
-                .font(Fonts.pageTitle)
-                .foregroundStyle(Palette.ink1)
             Spacer()
             Text("\(radicals.count) 个部首")
                 .font(Fonts.caption)

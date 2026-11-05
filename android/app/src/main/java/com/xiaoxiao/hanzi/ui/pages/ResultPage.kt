@@ -218,7 +218,7 @@ fun ResultPage(
                 }
             }
             Box(Modifier.weight(1f)) {
-                HanziButton("回首页", style = BtnStyle.Soft) {
+                HanziButton("回首页", style = BtnStyle.Secondary) {
                     app.nav.switchTab(Screen.Index)
                 }
             }

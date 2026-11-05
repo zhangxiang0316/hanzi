@@ -16,7 +16,6 @@ struct LessonPageView: View {
                     if let lesson {
                         header(lesson)
                         charGrid(lesson)
-                        actionRow(lesson)
                     } else {
                         EmptyState(emoji: "📄", title: "找不到这一课",
                                    desc: "也许课本数据更新了，回上一页看看")
@@ -28,6 +27,17 @@ struct LessonPageView: View {
                 .frame(maxWidth: .infinity)
             }
             .background(Palette.paper)
+        }
+        // 主操作固定在底部，与 Android 和小程序一致。
+        // 之前这两个按钮跟在生字网格后面的滚动内容里：一课上到二十几个字时，
+        // 「本课练习」被推到屏幕外，得先滑到底才能点。
+        .safeAreaInset(edge: .bottom) {
+            if let lesson {
+                actionRow(lesson)
+                    .padding(.horizontal, Dimens.pagePad(0))
+                    .padding(.vertical, 12)
+                    .background(Palette.paper)
+            }
         }
         .navigationTitle(lesson?.title ?? "课文")
         .navigationBarTitleDisplayMode(.inline)

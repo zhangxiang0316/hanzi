@@ -42,10 +42,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.xiaoxiao.hanzi.data.Repo
 import com.xiaoxiao.hanzi.logic.Vocab
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
 import com.xiaoxiao.hanzi.ui.AppState
 import com.xiaoxiao.hanzi.ui.Dimens
 import com.xiaoxiao.hanzi.ui.HanziCard
+import com.xiaoxiao.hanzi.ui.FontSizes
 import com.xiaoxiao.hanzi.ui.LocalPalette
+import com.xiaoxiao.hanzi.ui.NavIcon
+import com.xiaoxiao.hanzi.ui.NavIconView
 import com.xiaoxiao.hanzi.ui.ProgressBar
 import com.xiaoxiao.hanzi.ui.Screen
 import com.xiaoxiao.hanzi.ui.SectionHead
@@ -339,60 +345,84 @@ fun ProfilePage(app: AppState) {
         }
 
         SectionHead("更多")
-        Surface(
-            Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(Dimens.radiusCard.dp),
-            color = p.card,
-            border = BorderStroke(1.dp, p.line)
-        ) {
-            Column {
-                // 周报：首页只看得到「今天」，家长关心的是「这一周」
-                LinkRow("学习周报", "最近 7 天 ›") {
-                    app.nav.push(Screen.Report)
-                }
-                Box(Modifier.fillMaxWidth().height(1.dp).background(p.lineSoft))
-                // 识字量测试：「学过多少字」是点过多少个字，不是认识多少，
-                // 家长真正想知道的是后者，所以按抽测单独给一个入口。
-                LinkRow(
-                    "识字量测试",
-                    if (app.progress.vocabSize() > 0)
-                        "上次 ${Vocab.sizeLabel(app.progress.vocabSize())} 字 ›" else "测一测 ›"
-                ) {
-                    app.nav.push(Screen.Vocab)
-                }
-                Box(Modifier.fillMaxWidth().height(1.dp).background(p.lineSoft))
-                LinkRow("错题本", "${app.progress.wrongCount()} 个字 ›") {
-                    app.nav.push(Screen.Wrong)
-                }
-                Box(Modifier.fillMaxWidth().height(1.dp).background(p.lineSoft))
-                // 字帖：写出来的字和认得的字是两种能力，值得单独有一个入口。
-                // 徽章体系几乎全是「认识 N 个字」，写字这个维度此前只有单字页里的三颗星。
-                LinkRow(
-                    "我的字帖",
-                    if (app.progress.writeCount() > 0) "${app.progress.writeCount()} 个字 ›" else "还没写过 ›"
-                ) {
-                    app.nav.push(Screen.Copybook)
-                }
-                Box(Modifier.fillMaxWidth().height(1.dp).background(p.lineSoft))
-                // 选字做字帖：「我的字帖」只能导写过的字，而家长想打的是
-                // 「这课的生字」「错题」——那是「需要练的」，不是「写过的」
-                LinkRow("选字做字帖", "按课时 / 错题挑字 ›") {
-                    app.nav.push(Screen.CopybookPick)
-                }
-                Box(Modifier.fillMaxWidth().height(1.dp).background(p.lineSoft))
-                // 部首与词语：两种「换个角度看字」的浏览方式
-                LinkRow("部首归类", "按部首看字 ›") {
-                    app.nav.push(Screen.Radical)
-                }
-                Box(Modifier.fillMaxWidth().height(1.dp).background(p.lineSoft))
-                LinkRow("词语表", "按册翻词语 ›") {
-                    app.nav.push(Screen.Words)
-                }
-                Box(Modifier.fillMaxWidth().height(1.dp).background(p.lineSoft))
-                LinkRow("关于与数据来源", "›") { app.nav.push(Screen.About) }
-                Box(Modifier.fillMaxWidth().height(1.dp).background(p.lineSoft))
-                LinkRow("清空学习记录", "›", danger = true) { showReset = true }
-            }
+        // 九行入口，与 iOS 一致：**每行一张独立卡**（不是一张大卡加分隔线），
+        // 每行带图标和 chevron。早先这里是一张圆角 20 的大卡、行间用 1px
+        // lineSoft 分隔、没有图标也没有箭头——和 iOS 摆在一起时，
+        // 一眼就能看出「这不是同一个 App 的两个版本」。
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            // 周报：首页只看得到「今天」，家长关心的是「这一周」
+            LinkRow(
+                icon = NavIcon.Chart,
+                title = "学习周报",
+                subtitle = "最近 7 天",
+                value = null
+            ) { app.nav.push(Screen.Report) }
+
+            // 识字量测试：「学过多少字」是点过多少个字，不是认识多少，
+            // 家长真正想知道的是后者，所以按抽测单独给一个入口。
+            LinkRow(
+                icon = NavIcon.Ruler,
+                title = "识字量测试",
+                subtitle = "从八册里抽字估算",
+                value = if (app.progress.vocabSize() > 0)
+                    "上次 ${Vocab.sizeLabel(app.progress.vocabSize())} 字" else "测一测"
+            ) { app.nav.push(Screen.Vocab) }
+
+            LinkRow(
+                icon = NavIcon.Bubble,
+                title = "错题本",
+                subtitle = null,
+                value = "${app.progress.wrongCount()} 个字"
+            ) { app.nav.push(Screen.Wrong) }
+
+            // 字帖：写出来的字和认得的字是两种能力，值得单独有一个入口。
+            // 徽章体系几乎全是「认识 N 个字」，写字这个维度此前只有单字页里的三颗星。
+            LinkRow(
+                icon = NavIcon.Grid,
+                title = "我的字帖",
+                subtitle = null,
+                value = if (app.progress.writeCount() > 0)
+                    "${app.progress.writeCount()} 个字" else "还没写过"
+            ) { app.nav.push(Screen.Copybook) }
+
+            // 选字做字帖：「我的字帖」只能导写过的字，而家长想打的是
+            // 「这课的生字」「错题」——那是「需要练的」，不是「写过的」
+            LinkRow(
+                icon = NavIcon.Pencil,
+                title = "选字做字帖",
+                subtitle = "按课时 / 错题挑字导出",
+                value = null
+            ) { app.nav.push(Screen.CopybookPick) }
+
+            // 部首与词语：两种「换个角度看字」的浏览方式
+            LinkRow(
+                icon = NavIcon.Grid3,
+                title = "部首归类",
+                subtitle = "按部首看字",
+                value = null
+            ) { app.nav.push(Screen.Radical) }
+
+            LinkRow(
+                icon = NavIcon.Book,
+                title = "词语表",
+                subtitle = "按册翻词语",
+                value = null
+            ) { app.nav.push(Screen.Words) }
+
+            LinkRow(
+                icon = NavIcon.Info,
+                title = "关于与数据来源",
+                subtitle = null,
+                value = null
+            ) { app.nav.push(Screen.About) }
+
+            LinkRow(
+                icon = NavIcon.Trash,
+                title = "清空学习记录",
+                subtitle = null,
+                value = null,
+                danger = true
+            ) { showReset = true }
         }
 
         Spacer(Modifier.height(22.dp))
@@ -562,25 +592,61 @@ private fun SegItem(
 
 @Composable
 private fun LinkRow(
-    name: String,
-    value: String,
+    icon: NavIcon,
+    title: String,
+    subtitle: String?,
+    value: String?,
     danger: Boolean = false,
     onClick: () -> Unit
 ) {
     val p = LocalPalette.current
-    Row(
-        Modifier
+    val tint = if (danger) p.clay else p.jade
+    Surface(
+        modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(Dimens.radiusInner.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .testTag("profile-row-$title"),
+        shape = RoundedCornerShape(Dimens.radiusInner.dp),
+        color = p.card,
+        border = BorderStroke(1.dp, p.line)
     ) {
-        Text(
-            name,
-            fontSize = 14.sp,
-            color = if (danger) p.clay else p.ink1,
-            modifier = Modifier.weight(1f)
-        )
-        Text(value, fontSize = 13.sp, color = p.ink3)
+        Row(
+            Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            NavIconView(icon, tint)
+            Column(Modifier.weight(1f)) {
+                Text(
+                    title,
+                    fontSize = FontSizes.body.sp,
+                    color = if (danger) p.clay else p.ink1
+                )
+                if (subtitle != null) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(subtitle, fontSize = FontSizes.caption.sp, color = p.ink3)
+                }
+            }
+            if (value != null) {
+                Text(
+                    value,
+                    fontSize = FontSizes.caption.sp,
+                    color = if (danger) p.clay else p.ink3,
+                    maxLines = 1
+                )
+            }
+            // chevron：iOS 用 SF Symbol chevron.right 12pt semibold。
+            // 这里用两个线段画一个「>」，省一个依赖，视觉上等价。
+            Canvas(Modifier.size(12.dp)) {
+                val sw = 1.6.dp.toPx()
+                val w = size.width
+                val h = size.height
+                drawLine(p.ink3, Offset(w * 0.35f, h * 0.2f), Offset(w * 0.65f, h * 0.5f),
+                    strokeWidth = sw, cap = StrokeCap.Round)
+                drawLine(p.ink3, Offset(w * 0.65f, h * 0.5f), Offset(w * 0.35f, h * 0.8f),
+                    strokeWidth = sw, cap = StrokeCap.Round)
+            }
+        }
     }
 }

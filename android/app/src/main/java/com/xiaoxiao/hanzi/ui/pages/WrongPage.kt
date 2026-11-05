@@ -69,11 +69,6 @@ fun WrongPage(app: AppState) {
                 app.nav.switchTab(Screen.Practice)
             }
         } else {
-            HanziButton("重练这些字", style = BtnStyle.Primary) {
-                app.nav.push(Screen.Quiz("wrong", app.currentBook, null))
-            }
-            Spacer(Modifier.height(14.dp))
-
             items.forEach { w ->
                 val m = Repo.meta(w.ch) ?: return@forEach
                 Surface(
@@ -133,6 +128,14 @@ fun WrongPage(app: AppState) {
                     }
                 }
                 Spacer(Modifier.height(9.dp))
+            }
+
+            // 主操作放在列表之后，与 iOS 一致：
+            // 「重练这些字」是对整份错题做的动作，理应在看完有哪些字之后出现。
+            // 之前它排在列表上方，首屏第一眼看到的就是个按钮，不知道要重练什么。
+            Spacer(Modifier.height(18.dp))
+            HanziButton("重练这些字", style = BtnStyle.Primary) {
+                app.nav.push(Screen.Quiz("wrong", app.currentBook, null))
             }
 
             Spacer(Modifier.height(10.dp))

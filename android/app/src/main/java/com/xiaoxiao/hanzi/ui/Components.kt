@@ -1,6 +1,8 @@
 package com.xiaoxiao.hanzi.ui
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -23,6 +25,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,11 +34,19 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.xiaoxiao.hanzi.data.Repo
+import kotlin.math.max
+import kotlin.math.min
 import androidx.compose.ui.unit.sp
 
 /**
@@ -45,10 +56,19 @@ import androidx.compose.ui.unit.sp
  * 搬到 Compose 就变成 @Composable 函数，命名保持一致方便对照。
  */
 
+/**
+ * 卡片。
+ *
+ * 描边色和留白都与 iOS `HanziCard` 对齐：
+ * - 边框用 `edge` 而不是 `line`。`line` 和纸底的对比度只有 1.23:1，
+ *   做分隔线可以，但作为一张卡的边界等于没画（iOS 端早已改用 edge，
+ *   Android 一直用 line@80%，两端卡片在屏幕上的「实感」不一样）。
+ * - 内边距 16 → 18，与 iOS 一致。
+ */
 @Composable
 fun HanziCard(
     modifier: Modifier = Modifier,
-    padding: Int = 16,
+    padding: Int = 18,
     content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit
 ) {
     val p = LocalPalette.current
@@ -56,13 +76,27 @@ fun HanziCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(Dimens.radiusCard.dp),
         color = p.card,
-        border = BorderStroke(1.dp, p.line.copy(alpha = 0.8f))
+        border = BorderStroke(1.dp, p.edge)
     ) {
         Column(Modifier.padding(padding.dp), content = content)
     }
 }
 
-enum class BtnStyle { Primary, Ghost, Soft }
+/**
+ * 按钮三档，与 iOS `HanziButton.Kind` 一一对应：
+ *
+ * | 这里 | iOS | 外观 |
+ * | --- | --- | --- |
+ * | `Primary` | `.primary` | jade 底、白字 |
+ * | `Secondary` | `.secondary` | 白底 + `edge` 描边 + ink1 字 |
+ * | `Ghost` | `.ghost` | 透明、jade 字、无描边 |
+ *
+ * 早先 Android 这三档的含义和 iOS 对不上：`Soft` 是 jadeSoft 水底色、
+ * 无描边（iOS 的 secondary 是白底 + 描边），`Ghost` 反而带 `line` 描边、
+ * ink2 字（iOS 的 ghost 是无描边 jade 字）。同一个「次要按钮」在两端
+ * 长得完全不一样。
+ */
+enum class BtnStyle { Primary, Secondary, Ghost }
 
 /**
  * 按钮。
@@ -83,39 +117,46 @@ fun HanziButton(
     onClick: () -> Unit
 ) {
     val p = LocalPalette.current
+    // 禁用态：iOS 是整颗按钮 opacity 0.45，这里用同义做法（底色和字色一起变淡），
+    // 而不是把底色换成灰——换灰会让人以为这是另一种按钮。
+    val dim = if (enabled) 1f else 0.45f
     val bg = when (style) {
-        BtnStyle.Primary -> if (enabled) p.jade else p.ink3.copy(alpha = 0.35f)
+        BtnStyle.Primary -> p.jade.copy(alpha = dim)
+        BtnStyle.Secondary -> p.card
         BtnStyle.Ghost -> Color.Transparent
-        BtnStyle.Soft -> p.jadeSoft
     }
     val fg = when (style) {
-        BtnStyle.Primary -> Color.White
-        BtnStyle.Ghost -> p.ink2
-        BtnStyle.Soft -> p.jadeDeep
+        BtnStyle.Primary -> Color.White.copy(alpha = dim)
+        BtnStyle.Secondary -> p.ink1.copy(alpha = dim)
+        BtnStyle.Ghost -> p.jade.copy(alpha = dim)
     }
     Surface(
         modifier = modifier
             .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
             .then(if (tag != null) Modifier.testTag(tag) else Modifier)
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(Dimens.radiusInner.dp))
             .clickable(enabled = enabled, onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(Dimens.radiusInner.dp),
         color = bg,
-        border = if (style == BtnStyle.Ghost) BorderStroke(1.dp, p.line) else null
+        // 只有 secondary 描边，且用 edge（line 太浅，做按钮边界等于没画）
+        border = if (style == BtnStyle.Secondary) BorderStroke(1.dp, p.edge) else null
     ) {
         Box(
             Modifier
-                .height(48.dp)
+                // 44 而不是 48：iOS 是上下 padding 13 + 15pt 字 = 44，
+                // 两端按钮高度差 4dp，并排出现时一眼能看出来
+                .height(44.dp)
                 .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
                 .padding(horizontal = 20.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text,
-                fontSize = 16.sp,
+                fontSize = FontSizes.body.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = fg,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                maxLines = 1
             )
         }
     }
@@ -167,21 +208,81 @@ fun ProgressBar(
     }
 }
 
+/**
+ * 环形进度，对应 iOS 的 `ProgressRing`。
+ *
+ * 首页「总进度」在 iOS 是一个 84dp 的环、百分比嵌在环心；Android 一直是
+ * 一条横向进度条 + 右边一个数字。同一个「学了百分之多少」，两端是两种
+ * 完全不同的信息图。
+ *
+ * 轨道用 track、进度用主色、圆头收尾，参数与 iOS 一一对应。
+ */
+@Composable
+fun ProgressRing(
+    value: Double,
+    modifier: Modifier = Modifier,
+    size: Int = 84,
+    lineWidth: Int = 9,
+    color: Color = LocalPalette.current.jade,
+    /** 环心内容，通常放百分比文字 */
+    content: @Composable () -> Unit = {}
+) {
+    val p = LocalPalette.current
+    val target = max(0.001, min(1.0, value)).toFloat()
+    // 与 iOS 的 .animation(.easeOut(duration: 0.5)) 同参数
+    val sweep by animateFloatAsState(
+        targetValue = target,
+        animationSpec = tween(500, easing = LinearOutSlowInEasing),
+        label = "ringSweep"
+    )
+    Box(
+        modifier.size(size.dp).testTag("progress-ring"),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(Modifier.size(size.dp)) {
+            val stroke = lineWidth.dp.toPx()
+            val d = this.size.minDimension - stroke
+            val topLeft = Offset((this.size.width - d) / 2f, (this.size.height - d) / 2f)
+            drawArc(
+                color = p.track,
+                startAngle = 0f,
+                sweepAngle = 360f,
+                useCenter = false,
+                topLeft = topLeft,
+                size = Size(d, d),
+                style = Stroke(stroke, cap = StrokeCap.Round)
+            )
+            // -90 起点：与 iOS 的 .rotationEffect(.degrees(-90)) 一致，从 12 点开始
+            drawArc(
+                color = color,
+                startAngle = -90f,
+                sweepAngle = 360f * sweep,
+                useCenter = false,
+                topLeft = topLeft,
+                size = Size(d, d),
+                style = Stroke(stroke, cap = StrokeCap.Round)
+            )
+        }
+        content()
+    }
+}
+
 /** 小标签，对应小程序里的 .pill / .chip */
 @Composable
 fun TinyPill(
     text: String,
     color: Color,
     modifier: Modifier = Modifier,
-    bg: Color = color.copy(alpha = 0.14f)
+    bg: Color = color.copy(alpha = 0.13f)
 ) {
     Box(
         modifier
             .clip(RoundedCornerShape(999.dp))
             .background(bg)
-            .padding(horizontal = 10.dp, vertical = 4.dp)
+            // 11sp / h9 v3 / α0.13，与 iOS TinyPill 一致
+            .padding(horizontal = 9.dp, vertical = 3.dp)
     ) {
-        Text(text, fontSize = 12.sp, color = color, fontWeight = FontWeight.Medium)
+        Text(text, fontSize = 11.sp, color = color, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -200,7 +301,12 @@ fun SectionHead(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = p.ink1)
+            Text(
+                title,
+                fontSize = FontSizes.sectionTitle.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = p.ink1
+            )
             if (sub != null) {
                 Spacer(Modifier.height(2.dp))
                 Text(sub, fontSize = 12.sp, color = p.ink3)
@@ -214,15 +320,22 @@ fun SectionHead(
 @Composable
 fun EmptyState(emoji: String, title: String, desc: String? = null, modifier: Modifier = Modifier) {
     val p = LocalPalette.current
+    // 与 iOS EmptyState 对齐：emoji 42 / 标题 16 semibold ink1 / 说明 13 / 上下 36
     Column(
         modifier
             .fillMaxWidth()
-            .padding(vertical = 40.dp),
+            .padding(vertical = 36.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(emoji, fontSize = 34.sp)
+        Text(emoji, fontSize = 42.sp)
         Spacer(Modifier.height(10.dp))
-        Text(title, fontSize = 15.sp, color = p.ink2, textAlign = TextAlign.Center)
+        Text(
+            title,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = p.ink1,
+            textAlign = TextAlign.Center
+        )
         if (desc != null) {
             Spacer(Modifier.height(6.dp))
             Text(desc, fontSize = 13.sp, color = p.ink3, textAlign = TextAlign.Center)
@@ -287,8 +400,115 @@ fun HairLine(modifier: Modifier = Modifier) {
         modifier
             .fillMaxWidth()
             .height(1.dp)
-            .background(LocalPalette.current.lineSoft)
+            // 与 iOS HairLine 一致用 line：lineSoft 在白底卡上几乎看不见，
+            // 分隔线就失去了意义
+            .background(LocalPalette.current.line)
     )
+}
+
+/**
+ * 「我的」页九行入口的小图标。
+ *
+ * iOS 用 SF Symbols（单色、跟随 tint），Android 这边没有图标库——
+ * 引入 `material-icons-extended` 会给 APK 多塞几百 KB，和这个项目
+ * 「零依赖、包体尽量小」的取舍冲突。
+ *
+ * 所以用 Canvas 画一组极简几何图标：只用直线、矩形、圆，
+ * 线条统一 1.6dp、跟文字同色。风格上贴近 SF Symbols 的细线单色，
+ * 而不用彩色 emoji——emoji 在两端根本对不上（同一个概念在
+ * iOS/Android/各家 ROM 上长得都不一样）。
+ */
+enum class NavIcon { Chart, Ruler, Bubble, Grid, Pencil, Grid3, Book, Info, Trash }
+
+@Composable
+fun NavIconView(icon: NavIcon, tint: Color, size: Int = 20) {
+    Canvas(Modifier.size(size.dp)) {
+        val w = this.size.width
+        val h = this.size.height
+        val sw = 1.6.dp.toPx()
+        val stroke = Stroke(width = sw, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        fun line(x1: Float, y1: Float, x2: Float, y2: Float) =
+            drawLine(tint, Offset(x1 * w, y1 * h), Offset(x2 * w, y2 * h),
+                strokeWidth = sw, cap = StrokeCap.Round)
+        fun rect(x: Float, y: Float, rw: Float, rh: Float) =
+            drawRoundRect(
+                tint, Offset(x * w, y * h), Size(rw * w, rh * h),
+                CornerRadius(sw), style = stroke
+            )
+
+        when (icon) {
+            // 柱状图
+            NavIcon.Chart -> {
+                line(0.15f, 0.85f, 0.85f, 0.85f)
+                line(0.3f, 0.85f, 0.3f, 0.55f)
+                line(0.5f, 0.85f, 0.5f, 0.35f)
+                line(0.7f, 0.85f, 0.7f, 0.48f)
+            }
+            // 尺子
+            NavIcon.Ruler -> {
+                rect(0.12f, 0.35f, 0.76f, 0.3f)
+                line(0.32f, 0.35f, 0.32f, 0.5f)
+                line(0.5f, 0.35f, 0.5f, 0.45f)
+                line(0.68f, 0.35f, 0.68f, 0.5f)
+            }
+            // 感叹号气泡
+            NavIcon.Bubble -> {
+                rect(0.1f, 0.15f, 0.8f, 0.6f)
+                line(0.35f, 0.75f, 0.28f, 0.9f)
+                line(0.28f, 0.9f, 0.5f, 0.75f)
+                line(0.5f, 0.3f, 0.5f, 0.5f)
+                drawCircle(tint, radius = sw * 0.7f, center = Offset(0.5f * w, 0.62f * h))
+            }
+            // 2x2 网格
+            NavIcon.Grid -> {
+                rect(0.12f, 0.12f, 0.34f, 0.34f)
+                rect(0.54f, 0.12f, 0.34f, 0.34f)
+                rect(0.12f, 0.54f, 0.34f, 0.34f)
+                rect(0.54f, 0.54f, 0.34f, 0.34f)
+            }
+            // 方框 + 铅笔
+            NavIcon.Pencil -> {
+                rect(0.1f, 0.25f, 0.62f, 0.65f)
+                line(0.45f, 0.8f, 0.92f, 0.33f)
+                line(0.45f, 0.8f, 0.6f, 0.88f)
+            }
+            // 3x3 网格
+            NavIcon.Grid3 -> {
+                for (i in 0..2) {
+                    val x = 0.12f + i * 0.29f
+                    line(x, 0.12f, x, 0.88f)
+                    line(0.12f, x, 0.88f, x)
+                }
+            }
+            // 打开的书
+            NavIcon.Book -> {
+                line(0.5f, 0.25f, 0.5f, 0.85f)
+                line(0.12f, 0.25f, 0.5f, 0.3f)
+                line(0.88f, 0.25f, 0.5f, 0.3f)
+                line(0.12f, 0.25f, 0.12f, 0.8f)
+                line(0.88f, 0.25f, 0.88f, 0.8f)
+                line(0.12f, 0.8f, 0.5f, 0.85f)
+                line(0.88f, 0.8f, 0.5f, 0.85f)
+            }
+            // 圆形信息
+            NavIcon.Info -> {
+                drawCircle(tint, radius = 0.4f * w,
+                    center = Offset(0.5f * w, 0.5f * h), style = stroke)
+                line(0.5f, 0.42f, 0.5f, 0.68f)
+                drawCircle(tint, radius = sw * 0.7f, center = Offset(0.5f * w, 0.28f * h))
+            }
+            // 垃圾桶
+            NavIcon.Trash -> {
+                line(0.15f, 0.28f, 0.85f, 0.28f)
+                line(0.4f, 0.28f, 0.4f, 0.18f)
+                line(0.6f, 0.28f, 0.6f, 0.18f)
+                line(0.4f, 0.18f, 0.6f, 0.18f)
+                line(0.25f, 0.28f, 0.3f, 0.88f)
+                line(0.75f, 0.28f, 0.7f, 0.88f)
+                line(0.3f, 0.88f, 0.7f, 0.88f)
+            }
+        }
+    }
 }
 
 /** 圆形图标按钮（返回键用） */

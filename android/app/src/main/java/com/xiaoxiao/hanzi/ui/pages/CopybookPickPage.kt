@@ -109,9 +109,13 @@ fun CopybookPickPage(app: AppState) {
         }
     }
 
+    // 导出按钮固定在底部，与 iOS 的 .safeAreaInset(edge: .bottom) 一致。
+    // 选字页会一直往下加字格，导出按钮原本跟着滚到最下面，
+    // 选到一半想导出还得先滑到底。
+    Column(Modifier.fillMaxSize()) {
     Column(
         Modifier
-            .fillMaxSize()
+            .weight(1f)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = Dimens.pagePad.dp)
     ) {
@@ -227,39 +231,45 @@ fun CopybookPickPage(app: AppState) {
             }
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(24.dp))
+    }
 
-        HanziButton(
-            if (busy) "正在排版…" else "导出字帖（${chosen.size} 个字）",
-            enabled = chosen.isNotEmpty() && !busy,
-            tag = "选字-导出"
-        ) {
-            if (chosen.isNotEmpty()) {
-                busy = true
-                // 按候选列表的顺序导出：错题 / 弱笔在前的顺序是有意义的，
-                // 打印出来家长按这个顺序陪练
-                val names = items.map { it.ch }.filter { it in chosen }
-                exportCopybook(ctx, names) { ok ->
-                    busy = false
-                    if (!ok) {
-                        android.widget.Toast.makeText(
-                            ctx, "导出失败了，再试一次", android.widget.Toast.LENGTH_SHORT
-                        ).show()
+        Surface(color = p.paper, shadowElevation = 8.dp) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Dimens.pagePad.dp, vertical = 12.dp)
+            ) {
+                HanziButton(
+                    if (busy) "正在排版…" else "导出字帖（${chosen.size} 个字）",
+                    enabled = chosen.isNotEmpty() && !busy,
+                    tag = "选字-导出"
+                ) {
+                    if (chosen.isNotEmpty()) {
+                        busy = true
+                        // 按候选列表的顺序导出：错题 / 弱笔在前的顺序是有意义的，
+                        // 打印出来家长按这个顺序陪练
+                        val names = items.map { it.ch }.filter { it in chosen }
+                        exportCopybook(ctx, names) { ok ->
+                            busy = false
+                            if (!ok) {
+                                android.widget.Toast.makeText(
+                                    ctx, "导出失败了，再试一次", android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
                     }
                 }
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "导出的是一张 A4 字帖，一页六个字，可以反复描。",
+                    modifier = Modifier.fillMaxWidth(),
+                    fontSize = 11.sp,
+                    color = p.ink3,
+                    textAlign = TextAlign.Center
+                )
             }
         }
-
-        Spacer(Modifier.height(10.dp))
-        Text(
-            "导出的是一张 A4 字帖，一页六个字，可以反复描。",
-            modifier = Modifier.fillMaxWidth(),
-            fontSize = 11.sp,
-            color = p.ink3,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(Modifier.height(24.dp))
     }
 }
 

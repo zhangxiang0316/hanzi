@@ -102,44 +102,69 @@ fun VocabPage(app: AppState) {
         picked = null
     }
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = Dimens.pagePad.dp)
-    ) {
-        Spacer(Modifier.height(8.dp))
-        when (stage) {
-            Stage.Intro -> IntroStage(onStart = { start() })
-            Stage.Test -> {
-                val t = test
-                if (t == null) {
-                    IntroStage(onStart = { start() })
-                } else {
-                    TestStage(
-                        t = t,
-                        qIndex = qIndex,
-                        picked = picked,
-                        onPick = { answer(t, it) }
-                    )
+    // 主操作固定在底部，与 iOS 的 .safeAreaInset(edge: .bottom) 一致。
+    // 之前按钮跟着内容滚，「开始测」浮在屏幕中间，看着像忘了排版，
+    // 手机上手指也不容易够到。
+    Column(Modifier.fillMaxSize()) {
+        Column(
+            Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = Dimens.pagePad.dp)
+        ) {
+            Spacer(Modifier.height(24.dp))
+            when (stage) {
+                Stage.Intro -> IntroStage()
+                Stage.Test -> {
+                    val t = test
+                    if (t == null) {
+                        IntroStage()
+                    } else {
+                        TestStage(
+                            t = t,
+                            qIndex = qIndex,
+                            picked = picked,
+                            onPick = { answer(t, it) }
+                        )
+                    }
+                }
+                Stage.Result -> {
+                    val est = result
+                    if (est == null) IntroStage()
+                    else ResultStage(est = est)
                 }
             }
-            Stage.Result -> {
-                val est = result
-                if (est == null) IntroStage(onStart = { start() })
-                else ResultStage(
-                    est = est,
-                    onRestart = { start() },
-                    onDone = { app.nav.back() }
-                )
+            Spacer(Modifier.height(24.dp))
+        }
+
+        // 底部操作条：只有 intro / result 两个阶段有按钮，测试中不占位
+        if (stage != Stage.Test) {
+            val p = LocalPalette.current
+            Surface(color = p.paper, shadowElevation = 8.dp) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Dimens.pagePad.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (stage == Stage.Intro) {
+                        HanziButton("开始测", tag = "识字量-开始") { start() }
+                    } else {
+                        HanziButton("再测一次", tag = "识字量-再测") { start() }
+                        HanziButton(
+                            "回到我的",
+                            style = BtnStyle.Secondary,
+                            tag = "识字量-回到我的"
+                        ) { app.nav.back() }
+                    }
+                }
             }
         }
-        Spacer(Modifier.height(24.dp))
     }
 }
 
 @Composable
-private fun IntroStage(onStart: () -> Unit) {
+private fun IntroStage() {
     val p = LocalPalette.current
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Spacer(Modifier.height(32.dp))
@@ -173,8 +198,6 @@ private fun IntroStage(onStart: () -> Unit) {
             }
         }
     }
-    Spacer(Modifier.height(20.dp))
-    HanziButton("开始测", tag = "识字量-开始") { onStart() }
 }
 
 @Composable
@@ -281,7 +304,7 @@ private fun TestStage(
 }
 
 @Composable
-private fun ResultStage(est: Vocab.Estimate, onRestart: () -> Unit, onDone: () -> Unit) {
+private fun ResultStage(est: Vocab.Estimate) {
     val p = LocalPalette.current
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Spacer(Modifier.height(28.dp))
@@ -334,8 +357,4 @@ private fun ResultStage(est: Vocab.Estimate, onRestart: () -> Unit, onDone: () -
         }
     }
 
-    Spacer(Modifier.height(18.dp))
-    HanziButton("再测一次", tag = "识字量-再测") { onRestart() }
-    Spacer(Modifier.height(10.dp))
-    HanziButton("回到我的", style = BtnStyle.Soft) { onDone() }
 }

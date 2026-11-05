@@ -41,6 +41,7 @@ import com.xiaoxiao.hanzi.ui.HanziButton
 import com.xiaoxiao.hanzi.ui.Stars
 import com.xiaoxiao.hanzi.ui.Dimens
 import com.xiaoxiao.hanzi.ui.LocalPalette
+import com.xiaoxiao.hanzi.ui.ProgressBar
 import com.xiaoxiao.hanzi.ui.Screen
 
 /**
@@ -111,6 +112,16 @@ fun DictationPage(app: AppState, levelName: String, book: String) {
                 Text("平均 $avg 分", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = p.jade)
             }
         }
+
+        Spacer(Modifier.height(8.dp))
+        // 进度条，与 iOS 一致（那边一直有，这边漏了）。
+        // 听写是「一批字连着写」，没有进度条时孩子不知道还剩多少，
+        // 家长也没法判断快结束了没有。
+        ProgressBar(
+            pct = if (items.isEmpty()) 0
+            else (index * 100) / items.size,
+            height = 6
+        )
 
         Spacer(Modifier.height(12.dp))
 

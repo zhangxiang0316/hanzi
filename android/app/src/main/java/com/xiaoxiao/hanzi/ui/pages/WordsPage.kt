@@ -1,8 +1,10 @@
 package com.xiaoxiao.hanzi.ui.pages
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -189,9 +192,36 @@ fun WordsPage(app: AppState) {
                         )
                     }
                 }
-                items(g.words, key = { "${g.bookId}-${it.word}" }) { line ->
-                    WordLineRow(line) { ch ->
-                        if (Repo.hasChar(ch)) app.nav.push(Screen.Detail(ch, Repo.meta(ch)?.lesson))
+                // 整册的词语包在一张卡里，行间用缩进 16 的细线分隔——
+                // 与 iOS 一致。之前这里是完全平铺的行，没有任何容器，
+                // 一屏几十个词连成一片，家长看不出「这一册到哪儿结束」。
+                item(key = "card-${g.bookId}") {
+                    Surface(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 14.dp),
+                        shape = RoundedCornerShape(Dimens.radiusCard.dp),
+                        color = p.card,
+                        border = BorderStroke(1.dp, p.line)
+                    ) {
+                        Column {
+                            g.words.forEachIndexed { i, line ->
+                                WordLineRow(line) { ch ->
+                                    if (Repo.hasChar(ch)) {
+                                        app.nav.push(Screen.Detail(ch, Repo.meta(ch)?.lesson))
+                                    }
+                                }
+                                if (i < g.words.size - 1) {
+                                    Box(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(start = 16.dp)
+                                            .height(1.dp)
+                                            .background(p.line)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -273,7 +303,7 @@ private fun WordLineRow(line: WordLine, onChar: (String) -> Unit) {
         Modifier
             .fillMaxWidth()
             .testTag("word-row-${line.word}")
-            .padding(vertical = 7.dp),
+            .padding(horizontal = 16.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {

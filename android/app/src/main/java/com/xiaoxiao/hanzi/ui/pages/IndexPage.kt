@@ -37,11 +37,14 @@ import com.xiaoxiao.hanzi.logic.DayUtil
 import com.xiaoxiao.hanzi.logic.Plan
 import com.xiaoxiao.hanzi.ui.AppState
 import com.xiaoxiao.hanzi.ui.Dimens
+import com.xiaoxiao.hanzi.ui.FontSizes
 import com.xiaoxiao.hanzi.ui.HanziCard
 import com.xiaoxiao.hanzi.ui.HanziColors
 import com.xiaoxiao.hanzi.ui.LocalPalette
 import com.xiaoxiao.hanzi.ui.ProgressBar
 import com.xiaoxiao.hanzi.ui.Screen
+import com.xiaoxiao.hanzi.ui.ProgressRing
+import com.xiaoxiao.hanzi.ui.TinyPill
 import com.xiaoxiao.hanzi.ui.SectionHead
 
 /**
@@ -78,7 +81,7 @@ fun IndexPage(app: AppState) {
             Column(Modifier.weight(1f)) {
                 Text(
                     DayUtil.greeting() + "，小朋友",
-                    fontSize = 22.sp,
+                    fontSize = FontSizes.pageTitle.sp,
                     fontWeight = FontWeight.Bold,
                     color = p.ink1
                 )
@@ -155,17 +158,37 @@ fun IndexPage(app: AppState) {
         }
 
         Spacer(Modifier.height(14.dp))
+        // 与 iOS 一致：环 + 环心百分比 + 右侧文字与两枚标签。
+        // 之前是一条横条加一个靠右的数字，同一个「学了百分之多少」
+        // 在两端是两种完全不同的信息图。
         HanziCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("已认识 $learned 个字", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = p.ink1)
-                    Spacer(Modifier.height(2.dp))
-                    Text("全库 $total 字", fontSize = 12.sp, color = p.ink3)
+                ProgressRing(value = pct / 100.0) {
+                    Text(
+                        "$pct%",
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = p.jade
+                    )
                 }
-                Text("$pct%", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = p.jade)
+                Spacer(Modifier.width(20.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        "已认识 $learned 个字",
+                        fontSize = FontSizes.body.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = p.ink1
+                    )
+                    Spacer(Modifier.height(5.dp))
+                    Text("全库 $total 字", fontSize = FontSizes.caption.sp, color = p.ink3)
+                    Spacer(Modifier.height(4.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        TinyPill("已掌握 ${app.progress.totalMastered()}", p.jade)
+                        val due = app.progress.allDue().size
+                        if (due > 0) TinyPill("待复习 $due", p.clay)
+                    }
+                }
             }
-            Spacer(Modifier.height(10.dp))
-            ProgressBar(pct)
         }
 
         SectionHead("跟课本学", gradeSpan())

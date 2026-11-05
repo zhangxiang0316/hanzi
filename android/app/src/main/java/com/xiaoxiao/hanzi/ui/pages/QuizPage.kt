@@ -52,6 +52,7 @@ import com.xiaoxiao.hanzi.ui.AppState
 import com.xiaoxiao.hanzi.ui.BtnStyle
 import com.xiaoxiao.hanzi.ui.Dimens
 import com.xiaoxiao.hanzi.ui.HanziButton
+import com.xiaoxiao.hanzi.ui.HanziGlyph
 import com.xiaoxiao.hanzi.ui.LocalPalette
 import com.xiaoxiao.hanzi.ui.Motion
 import com.xiaoxiao.hanzi.ui.ProgressBar
@@ -217,7 +218,9 @@ fun QuizPage(app: AppState, mode: String, bookId: String, lessonId: String?) {
                             else -> p.card
                         }
                         val borderTarget = when {
-                            !answered -> p.line
+                            // 未作答时用 edge：line 和纸底对比度只有 1.23:1，
+                            // 作为「可以点」的边界等于没画。iOS 答题选项也用 edge。
+                            !answered -> p.edge
                             isCorrect -> p.jade
                             isPicked -> p.clay
                             else -> p.line
@@ -281,17 +284,26 @@ fun QuizPage(app: AppState, mode: String, bookId: String, lessonId: String?) {
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.Center
                             ) {
-                                Text(
-                                    opt.label,
-                                    fontSize = when (q.type) {
-                                        "pinyin2char" -> 28.sp
-                                        "char2word", "fillWord" -> 22.sp
-                                        else -> 19.sp
-                                    },
-                                    fontWeight = if (q.type == "pinyin2char") FontWeight.Normal
-                                    else FontWeight.Medium,
-                                    color = p.ink1
-                                )
+                                // 汉字选项配一个字形图，与 iOS 一致。
+                                //
+                                // iOS 的选项文字一律 17 medium，靠一个 42pt 的
+                                // HanziView 把汉字放大——而不是把文字本身撑到 28。
+                                // Android 之前没有字形图，只能靠字号（28/22/19）
+                                // 硬顶，结果同一个选项框在不同题型下字差一倍。
+                                // 现在文字统一 17，汉字另外画字形。
+                                // 汉字选项：只画字形、不再排一遍文字，
+                                // 否则同一个字会出现两次。
+                                // 其它选项（拼音、词语、笔画数）照常排文字。
+                                if (opt.label.length == 1 && isHanzi(opt.label)) {
+                                    HanziGlyph(opt.label, Modifier.size(30.dp))
+                                } else {
+                                    Text(
+                                        opt.label,
+                                        fontSize = 17.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = p.ink1
+                                    )
+                                }
                                 // ✓/✕ 淡入并轻微放大，避免"突然多出一个符号"的跳变
                                 AnimatedVisibility(
                                     visible = answered && isCorrect,
@@ -375,4 +387,11 @@ fun QuizPage(app: AppState, mode: String, bookId: String, lessonId: String?) {
 
         Spacer(Modifier.height(24.dp))
     }
+}
+
+/** 判断一个字符是不是汉字（用于决定要不要画字形而不是直接排字） */
+private fun isHanzi(s: String): Boolean {
+    if (s.isEmpty()) return false
+    val c = s[0]
+    return c.code in 0x4E00..0x9FFF
 }

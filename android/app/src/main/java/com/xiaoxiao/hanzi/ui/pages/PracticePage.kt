@@ -37,6 +37,7 @@ import com.xiaoxiao.hanzi.logic.Words
 import com.xiaoxiao.hanzi.logic.Plan
 import com.xiaoxiao.hanzi.ui.AppState
 import com.xiaoxiao.hanzi.ui.Dimens
+import com.xiaoxiao.hanzi.ui.FontSizes
 import com.xiaoxiao.hanzi.ui.HanziCard
 import com.xiaoxiao.hanzi.ui.HanziColors
 import com.xiaoxiao.hanzi.ui.LocalPalette
@@ -73,7 +74,12 @@ fun PracticePage(app: AppState) {
             .padding(horizontal = Dimens.pagePad.dp)
     ) {
         Spacer(Modifier.height(10.dp))
-        Text("练一练", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = p.ink1)
+        Text(
+            "练一练",
+            fontSize = FontSizes.pageTitle.sp,
+            fontWeight = FontWeight.Bold,
+            color = p.ink1
+        )
         Spacer(Modifier.height(4.dp))
         Text("今天的复习，都是你学过的字", fontSize = 13.sp, color = p.ink3)
         Spacer(Modifier.height(16.dp))
