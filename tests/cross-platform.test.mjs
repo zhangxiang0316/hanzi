@@ -586,3 +586,42 @@ test('结果页的正确率圆环三端都有', () => {
   const mp = stripComments(read('miniprogram/pages/result/result.wxml'));
   assert.match(mp, /class="ring"/, '小程序结果页应有正确率圆环');
 });
+
+test('答题反馈的文案与配色三端一致', () => {
+  // 同一屏上说两遍：选项格子上已经用 ✓/✕ 标出正确答案，
+  // iOS 原来还在反馈条上重复写「答案是「X」」。
+  const ios = stripComments(read('ios/HanziPad/Pages/QuizPageView.swift'));
+  const android = stripComments(read('android/app/src/main/java/com/xiaoxiao/hanzi/ui/pages/QuizPage.kt'));
+  const mp = stripComments(read('miniprogram/pages/quiz/quiz.wxml'));
+
+  for (const [name, src] of [['iOS', ios], ['Android', android], ['小程序', mp]]) {
+    assert.ok(src.includes('答对啦！'), `${name} 的答对文案应为「答对啦！」`);
+    assert.ok(src.includes('再想一想'), `${name} 的答错文案应为「再想一想」`);
+  }
+
+  // 答错底色：clay 是两端通用的「错」语义色。
+  //
+  // 断言必须盯住**反馈卡那一处**，不能只搜 "claySoft"——iOS 文件里
+  // 别的地方（选项格底色）也用了 claySoft，第一次写宽了就抓不到回退。
+  assert.match(
+    ios,
+    /picked == q\.answer \? Palette\.jadeSoft : Palette\.claySoft/,
+    'iOS 答错反馈底色应为 claySoft（与 Android 一致）'
+  );
+  assert.match(
+    android,
+    /picked == q\.answer\) p\.jadeSoft else p\.claySoft/,
+    'Android 答错反馈底色应为 claySoft'
+  );
+});
+
+test('答题反馈的继续按钮文案三端一致', () => {
+  const ios = stripComments(read('ios/HanziPad/Pages/QuizPageView.swift'));
+  const android = stripComments(read('android/app/src/main/java/com/xiaoxiao/hanzi/ui/pages/QuizPage.kt'));
+  const mp = stripComments(read('miniprogram/pages/quiz/quiz.wxml'));
+
+  for (const [name, src] of [['iOS', ios], ['Android', android], ['小程序', mp]]) {
+    assert.ok(src.includes('看结果'), `${name} 最后一题应写「看结果」`);
+    assert.ok(!src.includes('下一题'), `${name} 不该同时出现「下一题」（应为「继续」）`);
+  }
+});

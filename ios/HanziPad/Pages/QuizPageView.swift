@@ -286,12 +286,16 @@ struct QuizPageView: View {
 
     private func feedback(_ q: Quiz.Question) -> some View {
         VStack(spacing: 12) {
+            // 文案与小程序 quiz.wxml、Android QuizPage 一致：
+            // 🎉/💪 +「答对啦！」/「再想一想」。
+            // 原来 iOS 写「答案是「X」」——但选项格子上已经用 ✓/✕ 标出了
+            // 正确答案（三端都标），同一屏上说两遍。
             HStack(spacing: 8) {
-                Image(systemName: picked == q.answer ? "checkmark.seal.fill" : "info.circle.fill")
-                    .foregroundStyle(picked == q.answer ? Palette.jade : Palette.amber)
-                Text(picked == q.answer ? "答对了！" : "答案是「\(q.answer)」")
-                    .font(Fonts.s(15, .semibold, .body))
-                    .foregroundStyle(Palette.ink1)
+                Text(picked == q.answer ? "🎉" : "💪")
+                    .font(Fonts.s(16, .regular, .body))
+                Text(picked == q.answer ? "答对啦！" : "再想一想")
+                    .font(Fonts.s(15, .bold, .body))
+                    .foregroundStyle(picked == q.answer ? Palette.jadeDeep : Palette.clay)
                 Spacer()
             }
             Text(q.explain)
@@ -312,7 +316,7 @@ struct QuizPageView: View {
 
                 Spacer()
 
-                HanziButton(title: index + 1 < questions.count ? "下一题" : "看结果") {
+                HanziButton(title: index + 1 < questions.count ? "继续" : "看结果") {
                     advance()
                 }
             }
@@ -320,7 +324,10 @@ struct QuizPageView: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
-                .fill(picked == q.answer ? Palette.jadeSoft : Palette.amberSoft)
+                // 答错用 claySoft，与 Android 一致：clay 在两端都是「错」
+                // 的语义色（错题本、错字卡）。原来 iOS 用 amberSoft，
+                // 于是同一个「答错」状态在两端是两个颜色。
+                .fill(picked == q.answer ? Palette.jadeSoft : Palette.claySoft)
         )
         .frame(maxWidth: 640)
         .transition(.opacity.combined(with: .move(edge: .bottom)))
