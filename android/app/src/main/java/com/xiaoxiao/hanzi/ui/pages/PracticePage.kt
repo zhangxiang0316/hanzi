@@ -492,22 +492,19 @@ private fun ActionCard(
     // 尺寸与 iOS modeCard 对齐：radiusCard 20、padding 16、emoji 28、标题 16 bold。
     // 原来是 radiusInner 14 / padding 14 / emoji 22 / 标题 14——练习页是入口页，
     // 卡片做得比其他页小一号，点起来也更容易点错。
+    // 描边用模式色 35%：练习页有八九张卡并排，全都一个灰边时
+    // 分不清哪张是哪张；淡彩边让人一眼认出「错题本是红的、多音字是橙的」。
+    // 形状/圆角/内边距/底色仍走 HanziCard，只把颜色这一个自由度放出去。
     val dim = if (enabled) 1f else 0.5f
-    Surface(
-        modifier
-            .clip(RoundedCornerShape(Dimens.radiusCard.dp))
+    HanziCard(
+        modifier = modifier
+            .graphicsLayer(alpha = dim)
             .clickable(enabled = enabled, onClick = onClick),
-        shape = RoundedCornerShape(Dimens.radiusCard.dp),
-        color = p.card,
-        // 描边用模式色 35%：练习页有八九张卡并排，全都一个灰边时
-        // 分不清哪张是哪张；淡彩边让人一眼认出「错题本是红的、多音字是橙的」
-        border = BorderStroke(
-            1.dp,
-            if (enabled) (accent ?: p.line).copy(alpha = 0.35f) else p.line
-        )
+        padding = 16,
+        borderColor = if (enabled) (accent ?: p.edge).copy(alpha = 0.35f) else p.line
     ) {
-        Box(Modifier.graphicsLayer(alpha = dim)) {
-            Column(Modifier.padding(16.dp)) {
+        Box {
+            Column {
                 Text(emoji, fontSize = 28.sp)
                 Spacer(Modifier.height(9.dp))
                 Text(

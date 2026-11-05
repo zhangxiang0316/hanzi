@@ -70,6 +70,14 @@ import androidx.compose.ui.unit.sp
 fun HanziCard(
     modifier: Modifier = Modifier,
     padding: Int = 18,
+    /**
+     * 描边色。默认 `edge`。
+     *
+     * 有些卡需要自己的强调色（练习页每个模式一张卡，用模式色 35% 区分
+     * 错题本/多音字/形近字）。但**形状、圆角、内边距、底色仍然必须
+     * 由 HanziCard 统一**——只放开颜色这一个自由度，卡片样式就不会分叉。
+     */
+    borderColor: Color? = null,
     content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit
 ) {
     val p = LocalPalette.current
@@ -77,7 +85,7 @@ fun HanziCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(Dimens.radiusCard.dp),
         color = p.card,
-        border = BorderStroke(1.dp, p.edge)
+        border = BorderStroke(1.dp, borderColor ?: p.edge)
     ) {
         Column(Modifier.padding(padding.dp), content = content)
     }
