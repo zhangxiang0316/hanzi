@@ -436,7 +436,7 @@ test('错题本主按钮在列表之后（两端一致）', () => {
   const ios = stripComments(read('ios/HanziPad/Pages/WrongPageView.swift'));
   // iOS: list 在前，HanziButton 在后
   const iosList = ios.indexOf('list');
-  const iosBtn = ios.indexOf('练一遍错题');
+  const iosBtn = ios.indexOf('重练这些字');
   assert.ok(iosList >= 0 && iosBtn > iosList,
     'iOS 错题本主按钮应排在列表之后');
 
@@ -624,4 +624,28 @@ test('答题反馈的继续按钮文案三端一致', () => {
     assert.ok(src.includes('看结果'), `${name} 最后一题应写「看结果」`);
     assert.ok(!src.includes('下一题'), `${name} 不该同时出现「下一题」（应为「继续」）`);
   }
+});
+
+test('错题本的按钮文案与顺序三端一致', () => {
+  // 主操作「重练这些字」在列表之后，次要「清空错题本」再往下。
+  // iOS 原来写「练一遍错题」，且把「清空」放进导航栏——
+  // 同一个页面两端按钮的文案和位置都不同。
+  const ios = stripComments(read('ios/HanziPad/Pages/WrongPageView.swift'));
+  const android = stripComments(read('android/app/src/main/java/com/xiaoxiao/hanzi/ui/pages/WrongPage.kt'));
+  const mp = stripComments(read('miniprogram/pages/wrong/wrong.wxml'));
+
+  for (const [name, src] of [['iOS', ios], ['Android', android], ['小程序', mp]]) {
+    assert.ok(src.includes('重练这些字'), `${name} 主操作应为「重练这些字」`);
+    assert.ok(src.includes('清空错题本'), `${name} 次要操作应为「清空错题本」`);
+  }
+  // 清空不该出现在导航栏里（小程序和 Android 都放在内容末尾）
+  assert.ok(!/ToolbarItem[\s\S]{0,120}清空/.test(ios), 'iOS 的「清空」不应放在导航栏');
+});
+
+test('错题本空状态不额外放「去练习」按钮', () => {
+  // 底部标签栏本来就有「练习」，空状态再放一个是重复入口。
+  const ios = stripComments(read('ios/HanziPad/Pages/WrongPageView.swift'));
+  const android = stripComments(read('android/app/src/main/java/com/xiaoxiao/hanzi/ui/pages/WrongPage.kt'));
+  assert.ok(!android.includes('去练习'), 'Android 空状态不该有「去练习」按钮');
+  assert.ok(!ios.includes('去练习'), 'iOS 空状态不该有「去练习」按钮');
 });

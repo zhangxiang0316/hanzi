@@ -15,9 +15,16 @@ struct WrongPageView: View {
                                    desc: "做练习时答错的字会收进这里")
                     } else {
                         list
-                        HanziButton(title: "练一遍错题", fullWidth: true) {
+                        // 与小程序 wrong.wxml、Android WrongPage 一致：
+                        // 主操作「重练这些字」+ 次要「清空错题本」。
+                        // 原来 iOS 写「练一遍错题」，而「清空」放在导航栏——
+                        // 同一页面两端的按钮文案和位置都不一样。
+                        HanziButton(title: "重练这些字", fullWidth: true) {
                             app.push(AppState.QuizPayload(mode: "wrong",
                                                           book: app.currentBook, lesson: nil))
+                        }
+                        HanziButton(title: "清空错题本", kind: .ghost, fullWidth: true) {
+                            app.progress.clearWrong()
                         }
                     }
                 }
@@ -30,15 +37,7 @@ struct WrongPageView: View {
         }
         .navigationTitle("错题本")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if app.progress.wrongCount > 0 {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("清空", role: .destructive) {
-                        app.progress.clearWrong()
-                    }
-                }
-            }
-        }
+
     }
 
     private var header: some View {

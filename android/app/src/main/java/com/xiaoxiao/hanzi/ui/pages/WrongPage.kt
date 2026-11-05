@@ -63,11 +63,9 @@ fun WrongPage(app: AppState) {
         Spacer(Modifier.height(16.dp))
 
         if (items.isEmpty()) {
+            // 空状态不带按钮：小程序 wrong.wxml 和 iOS 都没有，
+            // 而且底部标签栏本来就有「练习」，再放一个「去练习」是重复入口。
             EmptyState("🎈", "错题本是空的", "去练一练，答错的字会自动收进来")
-            Spacer(Modifier.height(12.dp))
-            HanziButton("去练习", style = BtnStyle.Primary) {
-                app.nav.switchTab(Screen.Practice)
-            }
         } else {
             items.forEach { w ->
                 val m = Repo.meta(w.ch) ?: return@forEach
