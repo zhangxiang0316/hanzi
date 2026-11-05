@@ -650,6 +650,24 @@ test('错题本空状态不额外放「去练习」按钮', () => {
   assert.ok(!ios.includes('去练习'), 'iOS 空状态不该有「去练习」按钮');
 });
 
+test('课文页的主操作是「开始/继续学习」，练习与描红降为次要', () => {
+  // 小程序 lesson.wxml 的底部条只有一颗「开始学习 · 字」，Android 也是。
+  // iOS 原来把「本课练习」「整课描红」并排当主操作——进到一课的第一件事
+  // 不是开始学，而是去测验，顺序反了。
+  const ios = stripComments(read('ios/HanziPad/Pages/LessonPageView.swift'));
+  const android = stripComments(read('android/app/src/main/java/com/xiaoxiao/hanzi/ui/pages/LessonPage.kt'));
+  const mp = stripComments(read('miniprogram/pages/lesson/lesson.wxml'));
+
+  for (const [name, src] of [['iOS', ios], ['Android', android], ['小程序', mp]]) {
+    assert.ok(src.includes('开始学习'), `${name} 应有「开始学习」主操作`);
+    assert.ok(src.includes('继续学习'), `${name} 应有「继续学习」状态文案`);
+  }
+  // iOS 的「本课练习」必须出现在主按钮之后
+  const main = ios.indexOf('开始学习');
+  const quiz = ios.indexOf('本课练习');
+  assert.ok(main >= 0 && quiz > main, 'iOS 的「本课练习」应排在「开始学习」之后');
+});
+
 test('听写页的跳过按钮文案与 Android 一致', () => {
   // iOS 原来写 `justFinished ? "下一个" : "放弃这个字"`，
   // 但两个分支做的事完全一样（都是 next(plan)）——同一颗按钮

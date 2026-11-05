@@ -88,18 +88,36 @@ struct LessonPageView: View {
         }
     }
 
+    /// 主操作是「开始 / 继续学习」，次操作才是「本课练习」「整课描红」。
+    ///
+    /// 小程序 lesson.wxml 的底部条只有一颗「开始学习 · 字」，
+    /// Android 也是。iOS 原来把「本课练习」「整课描红」并排当主操作，
+    /// 于是进到这一课的第一件事不是开始学，而是去测验——
+    /// 顺序反了。练习和描红仍然保留，只是降到第二排。
     private func actionRow(_ lesson: Lesson) -> some View {
-        HStack(spacing: 12) {
-            HanziButton(title: "本课练习", fullWidth: true) {
-                app.push(AppState.QuizPayload(mode: "lesson", book: lesson.book,
-                                              lesson: lessonId))
-            }
-            HanziButton(title: "整课描红", kind: .secondary, fullWidth: true) {
-                // 描红从第一个「会写」的字开始，没有会写字就从第一个生字开始
-                let first = lesson.write.first ?? lesson.chars.first
-                if let first { app.push(AppState.WriteRoute(ch: first)) }
+        VStack(spacing: 10) {
+            let next = lesson.chars.first { !app.progress.hasLearned($0) } ?? lesson.chars.first
+            HanziButton(
+                title: (lesson.chars.contains { app.progress.hasLearned($0) } ? "继续学习" : "开始学习")
+                    + (next.map { " · \($0)" } ?? ""),
+                fullWidth: true
+            ) {
+                if let next { app.push(AppState.CharRoute(ch: next, lesson: lessonId)) }
             }
             .disabled(lesson.chars.isEmpty)
+
+            HStack(spacing: 12) {
+                HanziButton(title: "本课练习", kind: .secondary, fullWidth: true) {
+                    app.push(AppState.QuizPayload(mode: "lesson", book: lesson.book,
+                                                  lesson: lessonId))
+                }
+                HanziButton(title: "整课描红", kind: .ghost, fullWidth: true) {
+                    // 描红从第一个「会写」的字开始，没有会写字就从第一个生字开始
+                    let first = lesson.write.first ?? lesson.chars.first
+                    if let first { app.push(AppState.WriteRoute(ch: first)) }
+                }
+                .disabled(lesson.chars.isEmpty)
+            }
         }
     }
 }
