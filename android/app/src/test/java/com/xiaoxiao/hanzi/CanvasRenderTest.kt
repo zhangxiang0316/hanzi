@@ -4,7 +4,19 @@ import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.core.app.ApplicationProvider
@@ -12,7 +24,9 @@ import com.xiaoxiao.hanzi.data.Repo
 import com.xiaoxiao.hanzi.ui.AppState
 import com.xiaoxiao.hanzi.ui.HanziColors
 import com.xiaoxiao.hanzi.ui.HanziPainter
+import com.xiaoxiao.hanzi.ui.HanziGlyph
 import com.xiaoxiao.hanzi.ui.HanziTheme
+import com.xiaoxiao.hanzi.ui.LocalPalette
 import com.xiaoxiao.hanzi.ui.Root
 import com.xiaoxiao.hanzi.ui.Screen
 import org.junit.Assert.assertTrue
@@ -318,6 +332,120 @@ class StrokeGlyphRenderTest {
         assertTrue(
             "三格墨点数完全相同 $inkEach，说明画的是同一笔（index 没生效）",
             inkEach.toSet().size > 1
+        )
+    }
+}
+
+/**
+ * 汉字题干的画法：笔形 vs 系统字体。
+ *
+ * iOS 侧 `promptView` 对 promptKind == "char" 用的是 HanziView（笔顺轮廓），
+ * 其它类型才是文字。Android 之前一律是系统字体 + 62sp，同一个字在详情页
+ * 是笔形、在题干里是宋体。
+ *
+ * ⚠️ 这里**不能**通过「打开题库页再截图」来测：`Quiz.build` 的 seed 默认是
+ * `System.currentTimeMillis()`，每次跑抽到的题型都不一样——有时是拼音题、
+ * 有时是词语题，题干根本不是汉字。我第一版就是这么写的，结果同一份代码
+ * 两次跑出 15853 和 0 两个墨点数。
+ *
+ * 所以拆成两层：
+ *   - 这里做**组件级**像素比对，确定性；
+ *   - 「题库页确实用了 HanziGlyph」由 tests/cross-platform.test.mjs 的
+ *     源码扫描守（结构断言，不受随机影响）。
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(qualifiers = "w411dp-h2400dp-xxhdpi", sdk = [34])
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+class HanziGlyphRenderTest {
+
+    @get:Rule
+    val compose = createAndroidComposeRule<ComponentActivity>()
+
+    private fun inkPixels(bmp: Bitmap, l: Int, t: Int, r: Int, b: Int): Int {
+        val target = 0x25332D
+        val tr = (target shr 16) and 0xFF
+        val tg = (target shr 8) and 0xFF
+        val tb = target and 0xFF
+        var n = 0
+        for (y in maxOf(0, t) until minOf(bmp.height, b)) {
+            for (x in maxOf(0, l) until minOf(bmp.width, r)) {
+                val c = bmp.getPixel(x, y)
+                if (abs(((c shr 16) and 0xFF) - tr) <= 45 &&
+                    abs(((c shr 8) and 0xFF) - tg) <= 45 &&
+                    abs((c and 0xFF) - tb) <= 45
+                ) n++
+            }
+        }
+        return n
+    }
+
+    /**
+     * 笔形是**画**出来的，不是排出来的。
+     *
+     * 判据不是墨量——我试过：拿「一」量，笔形 420 个墨点、62sp 文字也差不多，
+     * 两者根本拉不开差距（更早那版还写了个 200 的阈值，把实现改回 Text
+     * 之后断言照样通过，等于没测）。
+     *
+     * 真正稳定可辨的差别在**语义树**里：
+     *   - 走 HanziPainter 画出来的笔形 → 没有对应的文字节点；
+     *   - 用 Text 排出来的汉字       → 一定能按文字找到它。
+     * 所以「找不到文字节点」恰好证明这个字是画出来的。
+     */
+    @Test
+    fun `HanziGlyph 是画出来的，不会产生文字节点`() {
+        // 必须先把 Repo 的 assets 载进来。不载的话 strokes 表是空的，
+        // HanziGlyph 会走「没有笔顺数据 → 退回系统字体」那条兜底分支，
+        // 于是字符串节点照样出现，看起来像是「笔形没实现」。
+        Repo.ensureLoaded(ApplicationProvider.getApplicationContext())
+        compose.setContent {
+            HanziTheme {
+                Box(Modifier.size(130.dp).testTag("probe")) {
+                    HanziGlyph("一", Modifier.size(130.dp))
+                }
+            }
+        }
+        compose.waitForIdle()
+
+        // 关键断言：语义树里没有「一」这个文字节点
+        compose.onAllNodesWithText("一").assertCountEquals(0)
+
+        // 并且确实画出了东西（墨量 > 0 就够，形状细节由 StrokeGlyphRenderTest 管）
+        val r = rectOf("probe")
+        val ink = inkPixels(capture(), r.left, r.top, r.right, r.bottom)
+        assertTrue("笔形区域一个墨色像素都没有，画布没画出来", ink > 0)
+    }
+
+    /** 对照组：同样的字用 Text 排版，一定能在语义树里找到 */
+    @Test
+    fun `对照：用 Text 排汉字会产生文字节点`() {
+        Repo.ensureLoaded(ApplicationProvider.getApplicationContext())
+        compose.setContent {
+            HanziTheme {
+                Box(Modifier.size(130.dp).testTag("probe"), contentAlignment = Alignment.Center) {
+                    Text("一", fontSize = 62.sp, color = LocalPalette.current.ink1)
+                }
+            }
+        }
+        compose.waitForIdle()
+        compose.onNodeWithText("一").assertExists()
+    }
+
+    private fun capture(): Bitmap {
+        compose.waitForIdle()
+        val view = compose.activity.window.decorView
+        val w = if (view.width > 0) view.width else 1080
+        val h = if (view.height > 0) view.height else 2400
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        compose.runOnUiThread { view.draw(Canvas(bmp)) }
+        return bmp
+    }
+
+    private fun rectOf(tag: String): android.graphics.Rect {
+        val b = compose.onNodeWithTag(tag).getBoundsInRoot()
+        val d = compose.activity.resources.displayMetrics.density
+        return android.graphics.Rect(
+            (b.left.value * d).toInt(), (b.top.value * d).toInt(),
+            (b.right.value * d).toInt(), (b.bottom.value * d).toInt()
         )
     }
 }

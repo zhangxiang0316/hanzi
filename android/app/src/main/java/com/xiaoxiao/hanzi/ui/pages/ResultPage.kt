@@ -206,23 +206,28 @@ fun ResultPage(
 
         Spacer(Modifier.height(24.dp))
 
-        HanziButton(
-            if (wrongChars.isNotEmpty()) "再练这几个字" else "再来一组",
-            style = BtnStyle.Primary
-        ) {
-            val next = Screen.Quiz(if (wrongChars.isNotEmpty()) "wrong" else mode, bookId, null)
-            app.nav.replace(next)
-        }
-        Spacer(Modifier.height(9.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+        // 两个按钮并排，与 iOS 一致：左边「返回」次要、右边「再练」主要。
+        //
+        // 原来是三个：主按钮整宽在上，下面再挂「去练习页」「回首页」两个。
+        // 结果页只该有两件事——走，还是再来一遍。多出来的两个出口
+        // 把最有用的「再练几个」挤得更靠上，反而不如 iOS 清爽。
+        // 「返回」回到来的地方（练习页或课文页），比写死「去练习页」更准。
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(Modifier.weight(1f)) {
-                HanziButton("去练习页", style = BtnStyle.Ghost) {
-                    app.nav.switchTab(Screen.Practice)
+                HanziButton("返回", style = BtnStyle.Secondary, tag = "result-back") {
+                    app.nav.back()
                 }
             }
             Box(Modifier.weight(1f)) {
-                HanziButton("回首页", style = BtnStyle.Secondary) {
-                    app.nav.switchTab(Screen.Index)
+                HanziButton(
+                    if (wrongChars.isNotEmpty()) "再练这几个字" else "再练一组",
+                    style = BtnStyle.Primary,
+                    tag = "result-again"
+                ) {
+                    val next = Screen.Quiz(
+                        if (wrongChars.isNotEmpty()) "wrong" else mode, bookId, null
+                    )
+                    app.nav.replace(next)
                 }
             }
         }

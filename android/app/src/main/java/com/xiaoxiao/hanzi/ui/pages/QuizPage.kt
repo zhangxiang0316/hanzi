@@ -182,22 +182,36 @@ fun QuizPage(app: AppState, mode: String, bookId: String, lessonId: String?) {
         Box(
             Modifier
                 .fillMaxWidth()
+                .testTag("quiz-prompt")
                 .clip(RoundedCornerShape(Dimens.radiusCard.dp))
                 .background(p.card)
                 .padding(vertical = 26.dp),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                q.prompt,
-                fontSize = when (q.promptKind) {
-                    "pinyin" -> 38.sp
-                    "word" -> 40.sp
-                    else -> if (q.type == "strokeCount") 52.sp else 62.sp
-                },
-                fontWeight = if (q.promptKind == "pinyin") FontWeight.Bold else FontWeight.Normal,
-                color = p.ink1,
-                textAlign = TextAlign.Center
-            )
+            // 与 iOS promptView 一致：
+            // - 拼音题干 46sp 中黑 jadeDeep（原来 38 Bold ink1，颜色和字重都不对）
+            // - 汉字题干用笔画轮廓画（HanziGlyph），不是系统字体。
+            //   同一个字在详情页是笔形、在题库题干里是宋体，看着像两个 App。
+            when {
+                q.promptKind == "pinyin" -> Text(
+                    q.prompt,
+                    fontSize = 46.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = p.jadeDeep,
+                    textAlign = TextAlign.Center
+                )
+                q.promptKind == "char" && q.prompt.length == 1 -> HanziGlyph(
+                    q.prompt,
+                    Modifier.size(130.dp)
+                )
+                else -> Text(
+                    q.prompt,
+                    fontSize = if (q.type == "strokeCount") 52.sp else 40.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = p.ink1,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
 
         Spacer(Modifier.height(18.dp))

@@ -514,3 +514,26 @@ test('iOS Pages/ 的 Swift 文件括号配平', () => {
   }
   assert.deepEqual(bad, [], `这些文件的括号不配平：${bad.join(', ')}`);
 });
+
+test('题库的汉字题干用笔形画，不是系统字体', () => {
+  // iOS 的 promptView 对 promptKind == "char" 用 HanziView（笔顺轮廓），
+  // Android 曾经一律 Text + 62sp —— 同一个字在详情页是笔形、
+  // 在题干里是宋体，看着像两个 App。
+  //
+  // 为什么是源码扫描而不是截图断言：Quiz.build 的 seed 默认取
+  // System.currentTimeMillis()，每次跑抽到的题型都不同，
+  // 有时题干根本不是汉字。像素断言会时绿时红——我踩过。
+  const android = stripComments(read('android/app/src/main/java/com/xiaoxiao/hanzi/ui/pages/QuizPage.kt'));
+  assert.match(
+    android,
+    /promptKind == "char"[\s\S]{0,200}HanziGlyph\(/,
+    'Android 题库页的汉字题干应当走 HanziGlyph，而不是 Text'
+  );
+
+  const ios = stripComments(read('ios/HanziPad/Pages/QuizPageView.swift'));
+  assert.match(
+    ios,
+    /case "char":[\s\S]{0,300}HanziView\(/,
+    'iOS 题库页的汉字题干应当走 HanziView'
+  );
+});
