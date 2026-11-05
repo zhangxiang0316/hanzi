@@ -147,7 +147,7 @@ class WritePageTest {
         val n = Repo.strokes(ch)!!.count
         for (i in 0 until n) traceStroke(ch, i)
 
-        assertTrue("写完全部笔画后应出现完成卡片", hasText("再写一次"))
+        assertTrue("写完全部笔画后应出现完成卡片", hasText("再写一遍"))
 
         val (ink, hint) = probeCoverage(ch, n - 1)
         assertTrue("最后一笔应是实心墨迹，实际 $ink", ink > 400)
@@ -168,7 +168,7 @@ class WritePageTest {
 
             val n = Repo.strokes(ch)!!.count
             for (i in 0 until n) traceStroke(ch, i)
-            assertTrue("$ch 应该能写完 $n 笔", hasText("再写一次"))
+            assertTrue("$ch 应该能写完 $n 笔", hasText("再写一遍"))
         }
     }
 
@@ -185,7 +185,7 @@ class WritePageTest {
             val n = Repo.strokes(ch)!!.count
             // 每个采样点抖 ±6px（画布边长约 1100px，约 0.5%）
             for (i in 0 until n) traceStroke(ch, i, noise = 6f)
-            assertTrue("$ch 抖动描红后仍应写完 $n 笔", hasText("再写一次"))
+            assertTrue("$ch 抖动描红后仍应写完 $n 笔", hasText("再写一遍"))
         }
     }
 
@@ -229,14 +229,14 @@ class WritePageTest {
 
         val n = Repo.strokes("三")!!.count
         for (i in 0 until n) traceStroke("三", i)
-        assertTrue("应写完", hasText("再写一次"))
+        assertTrue("应写完", hasText("再写一遍"))
 
         compose.onNodeWithText("退一笔").performClick()
         compose.waitForIdle()
 
         // 退回后应停在最后一笔：头部显示「第 3 笔」，且完成卡片消失
         assertTrue("退一笔后应提示第 $n 笔", hasText("第 $n 笔"))
-        assertTrue("退一笔后完成卡片应消失", !hasText("再写一次"))
+        assertTrue("退一笔后完成卡片应消失", !hasText("再写一遍"))
     }
 
     @Test
@@ -370,7 +370,7 @@ class WritePageTest {
         // 先写掉前两笔，制造「写了一半」的状态
         traceStroke("三", 0)
         traceStroke("三", 1)
-        assertFalse("还没写完时不该出现完成卡片", hasText("再写一次"))
+        assertFalse("还没写完时不该出现完成卡片", hasText("再写一遍"))
 
         app.nav.replace(Screen.Write("大"))
         compose.waitForIdle()

@@ -513,7 +513,8 @@ fun WritePage(
                         textAlign = TextAlign.Center
                     )
                     Spacer(Modifier.height(16.dp))
-                    HanziButton("再写一次", style = BtnStyle.Primary) {
+                    // 文案与 iOS 一致：「再写一遍」
+                    HanziButton("再写一遍", style = BtnStyle.Primary) {
                         strokeIndex = 0
                         scores.clear()
                         current.clear()

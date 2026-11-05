@@ -97,7 +97,7 @@ class E2ETest {
         val record = app.progress.writeRecord("一")
         assertNotNull("描红成绩应已存档", record)
         assertTrue("描红次数应 >= 1", record!!.tries >= 1)
-        compose.onNodeWithText("再写一次").assertExists()
+        compose.onNodeWithText("再写一遍").assertExists()
     }
 
     @Test
