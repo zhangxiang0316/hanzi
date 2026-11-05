@@ -374,7 +374,11 @@ class AppUiTest {
         app.nav.push(Screen.About)
         compose.waitForIdle()
 
-        compose.onNodeWithText("关于小小识字家").assertExists()
+        // 标题「关于小小识字家」换成 iOS 同款的 hero：绿色立方块 + 名字。
+        // 名字现在是「小小识字家」（导航栏标题才是「关于」）。
+        compose.onNodeWithTag("about-hero-icon").assertExists()
+        compose.onNodeWithText("小小识字家").assertExists()
+        compose.onNodeWithText("陪一二年级的小朋友，一笔一画认汉字").assertExists()
         compose.onNodeWithText("数据来源").assertExists()
         compose.onNodeWithText("隐私").assertExists()
     }

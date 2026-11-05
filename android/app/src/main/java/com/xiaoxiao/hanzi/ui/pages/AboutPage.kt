@@ -22,6 +22,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.xiaoxiao.hanzi.data.Repo
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextAlign
+import com.xiaoxiao.hanzi.ui.HanziGlyph
 import com.xiaoxiao.hanzi.ui.Dimens
 import com.xiaoxiao.hanzi.ui.FontSizes
 import com.xiaoxiao.hanzi.ui.HanziCard
@@ -42,9 +52,47 @@ fun AboutPage() {
             .padding(horizontal = Dimens.pagePad.dp)
     ) {
         Spacer(Modifier.height(8.dp))
-        Text("关于小小识字家", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = p.ink1)
-        Spacer(Modifier.height(6.dp))
-        Text("陪一二年级的小朋友认字、写字", fontSize = 12.sp, color = p.ink3)
+
+        // hero：与 iOS 一致——绿底圆角方块里一个白色的「字」，
+        // 下面是名字 / 版本 / 一句话。
+        // 原来这里只有两行字，摆在一起时 iOS 像「产品页」、
+        // Android 像「设置项」。
+        Column(
+            Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                Modifier
+                    .size(88.dp)
+                    .testTag("about-hero-icon")
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(p.jade, p.jadeDeep),
+                            start = Offset.Zero,
+                            end = Offset(200f, 200f)
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                HanziGlyph("字", Modifier.size(62.dp), inkColor = Color.White)
+            }
+            Spacer(Modifier.height(10.dp))
+            Text("小小识字家", fontSize = 21.sp, fontWeight = FontWeight.Bold, color = p.ink1)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "v${BuildConfig.VERSION_NAME}",
+                fontSize = FontSizes.caption.sp,
+                color = p.ink3
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "陪一二年级的小朋友，一笔一画认汉字",
+                fontSize = FontSizes.bodySmall.sp,
+                color = p.ink2,
+                textAlign = TextAlign.Center
+            )
+        }
 
         Spacer(Modifier.height(18.dp))
 

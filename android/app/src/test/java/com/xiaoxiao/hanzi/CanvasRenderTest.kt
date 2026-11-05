@@ -449,3 +449,94 @@ class HanziGlyphRenderTest {
         )
     }
 }
+
+/**
+ * 关于页的 hero 图标：绿底方块里有一个**白色**的「字」。
+ *
+ * 这条专门验证 inkColor 参数生效。不加这个参数时，HanziGlyph 用默认墨色，
+ * 画在深绿底上几乎看不见——但那不会让任何布局断言失败，
+ * 节点树里也没有异常。只能看像素。
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(qualifiers = "w411dp-h2400dp-xxhdpi", sdk = [34])
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+class AboutHeroRenderTest {
+
+    @get:Rule
+    val compose = createAndroidComposeRule<ComponentActivity>()
+
+    private fun capture(): Bitmap {
+        compose.waitForIdle()
+        val view = compose.activity.window.decorView
+        val w = if (view.width > 0) view.width else 1080
+        val h = if (view.height > 0) view.height else 2400
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        compose.runOnUiThread { view.draw(Canvas(bmp)) }
+        return bmp
+    }
+
+    private fun near(bmp: Bitmap, l: Int, t: Int, r: Int, b: Int,
+                     rgb: Int, tol: Int): Int {
+        val tr = (rgb shr 16) and 0xFF
+        val tg = (rgb shr 8) and 0xFF
+        val tb = rgb and 0xFF
+        var n = 0
+        for (y in maxOf(0, t) until minOf(bmp.height, b)) {
+            for (x in maxOf(0, l) until minOf(bmp.width, r)) {
+                val c = bmp.getPixel(x, y)
+                if (abs(((c shr 16) and 0xFF) - tr) <= tol &&
+                    abs(((c shr 8) and 0xFF) - tg) <= tol &&
+                    abs((c and 0xFF) - tb) <= tol
+                ) n++
+            }
+        }
+        return n
+    }
+
+    @Test
+    fun `绿底上的字是白色笔形`() {
+        Repo.ensureLoaded(ApplicationProvider.getApplicationContext())
+        val app = AppState(ApplicationProvider.getApplicationContext())
+        compose.setContent { HanziTheme { Root(app) } }
+        app.nav.push(Screen.About)
+        compose.waitForIdle()
+
+        val bmp = capture()
+        val d = compose.activity.resources.displayMetrics.density
+        val b = compose.onNodeWithTag("about-hero-icon").getBoundsInRoot()
+        val l = (b.left.value * d).toInt()
+        val t = (b.top.value * d).toInt()
+        val r = (b.right.value * d).toInt()
+        val bt = (b.bottom.value * d).toInt()
+
+        // 只在**方块中心**数，避开圆角。
+        //
+        // 这条测试错了三次，都是「哪里算白色」没想清楚：
+        // 1) 第一版按「屏幕顶部中间一片」数、容差 40——纸色 #FBF6EC
+        //    与纯白只差 (4,9,19)，落在容差内，于是**没有 hero 的页面**
+        //    也能数出足够多「白色」。假绿。
+        // 2) 第二版量方块内部，纸色排除了，但**圆角以外**露出的纸色仍被
+        //    计入：实测 white=3526，而圆角面积 (4-π)·r² ≈ 0.858·66² ≈ 3738
+        //    几乎一一对应。
+        // 3) 还有一层：光看「有白色」区分不了「白笔形」和「白底」，
+        //    所以同时断言绿底还在，且白色没有占满中心。
+        // 半径 22dp 占 88dp 的 25%，取中心 50% 区域是纯绿底 + 笔形。
+        val inset = (r - l) / 4
+        val cl = l + inset
+        val ct = t + inset
+        val cr = r - inset
+        val cb = bt - inset
+        val white = near(bmp, cl, ct, cr, cb, 0xFFFFFF, 20)
+        val green = near(bmp, cl, ct, cr, cb, 0x3E8E7E, 60)
+        val center = (cr - cl) * (cb - ct)
+
+        assertTrue("方块中心没有白色笔形（white=$white / $center）", white > 200)
+        assertTrue(
+            "方块中心绿色像素过少（green=$green），说明底色或坐标不对",
+            green > 500
+        )
+        // 白色不该占满中心——那说明绿底没画上
+        assertTrue("方块中心白色占比过高（$white/$center），绿底没画上", white < center / 2)
+    }
+}
+

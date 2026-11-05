@@ -579,13 +579,17 @@ fun RoundIconButton(onClick: () -> Unit, content: @Composable () -> Unit) {
  * 与 iOS `HanziView(showGrid: false, showGhost: false)` 对应。
  */
 @Composable
-fun HanziGlyph(ch: String, modifier: Modifier = Modifier) {
-    val p = LocalPalette.current
+fun HanziGlyph(
+    ch: String,
+    modifier: Modifier = Modifier,
+    /** 笔形颜色。默认墨色；深色底上（如关于页的绿底图标）要传白色 */
+    inkColor: Color = LocalPalette.current.ink1
+) {
     val strokes = remember(ch) { Repo.strokes(ch) }
     if (strokes == null) {
         // 没有笔顺数据：退回系统字体，至少不显示空白
         Box(modifier, contentAlignment = Alignment.Center) {
-            Text(ch, fontSize = 26.sp, color = p.ink1)
+            Text(ch, fontSize = 26.sp, color = inkColor)
         }
         return
     }
@@ -594,7 +598,10 @@ fun HanziGlyph(ch: String, modifier: Modifier = Modifier) {
         val ox = (size.width - box) / 2f
         val oy = (size.height - box) / 2f
         drawIntoCanvas { c ->
-            HanziPainter.drawStrokes(c.nativeCanvas, strokes, box, ox, oy, completed = strokes.count)
+            HanziPainter.drawStrokes(
+                c.nativeCanvas, strokes, box, ox, oy,
+                completed = strokes.count, inkColor = inkColor.toArgb()
+            )
         }
     }
 }
