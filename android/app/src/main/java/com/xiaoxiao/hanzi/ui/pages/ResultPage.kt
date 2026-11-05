@@ -159,7 +159,10 @@ fun ResultPage(
                     Surface(
                         shape = RoundedCornerShape(14.dp),
                         color = p.card,
-                        border = BorderStroke(1.dp, p.line),
+                        // 错字卡用 clay 35%，与 iOS 一致：这一块列的是
+                        // 「你写错的字」，用中性描边和下面的其它卡片混在一起，
+                        // 家长扫一眼分不清哪些是错字
+                        border = BorderStroke(1.dp, p.clay.copy(alpha = 0.35f)),
                         modifier = Modifier.clickable {
                             app.nav.push(Screen.Detail(ch, m?.lesson))
                         }

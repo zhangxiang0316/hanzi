@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.xiaoxiao.hanzi.data.Repo
 import com.xiaoxiao.hanzi.ui.Dimens
+import com.xiaoxiao.hanzi.ui.FontSizes
+import com.xiaoxiao.hanzi.ui.HanziCard
 import com.xiaoxiao.hanzi.ui.LocalPalette
 
 /** 关于与数据来源，对应小程序 pages/about/about */
@@ -88,20 +90,29 @@ fun AboutPage() {
     }
 }
 
+/**
+ * 一张信息卡。
+ *
+ * 这里原本是手写的一份 Surface + 圆角 + 描边，等于把 `HanziCard` 又抄了一遍，
+ * 而且抄漏了——它还在用 `line` 描边、16 内边距，而 `HanziCard` 已经改成
+ * `edge` + 18 了。iOS 的 AboutPage 一直用的就是 `HanziCard`。
+ * 直接复用组件，以后改卡片样式只改一处。
+ */
 @Composable
-private fun InfoCard(title: String, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+private fun InfoCard(
+    title: String,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit
+) {
     val p = LocalPalette.current
-    Surface(
-        Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(Dimens.radiusCard.dp),
-        color = p.card,
-        border = BorderStroke(1.dp, p.line)
-    ) {
-        Column(Modifier.padding(16.dp)) {
-            Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = p.ink1)
-            Spacer(Modifier.height(10.dp))
-            content()
-        }
+    HanziCard {
+        Text(
+            title,
+            fontSize = FontSizes.sectionTitle.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = p.ink1
+        )
+        Spacer(Modifier.height(10.dp))
+        content()
     }
 }
 

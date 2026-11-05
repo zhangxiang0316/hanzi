@@ -320,8 +320,19 @@ Android 之前没有字号 token，267 处 `fontSize = N.sp` 硬编码，
 - `android/app/src/test/.../LayoutTest.kt` 的 `StyleParityTest`（6 条几何断言）：
   九行入口是独立卡片且间距 12dp、每行高度 ≥48dp、两个主按钮真的贴屏幕底、
   主按钮高 44dp、首页进度是 84dp 正圆环。
-- `tests/cross-platform.test.mjs`（5 条源码扫描）：三端钉底的页面集合一致、
-  课文页三端都钉底、错题本主按钮位置一致。
+- `tests/cross-platform.test.mjs`（7 条源码扫描）：三端钉底的页面集合一致、
+  课文页三端都钉底、错题本主按钮位置一致、没有页面自己手搓卡片组件、
+  **iOS `Pages/` 的括号配平**。
+
+最后那条看起来无关，但它补的正是这块最大的验证盲区：
+`ios/Package.swift` 只把 `Data/`、`Logic/`、少数 `UI/` 文件放进 `HanziCore`
+target，**`Pages/` 因为依赖 SwiftUI 根本不在里面**。所以 `swift test`
+不编译页面代码——368 个用例全绿，页面里写坏一个括号也照样「通过」。
+
+这不是假设：改 `CopybookPageView` 的汇总卡时多删了一个 `}`，
+`swift test` 368 全绿，`xcodebuild` 却报 4 个
+`Attribute 'private' can only be used in a non-local scope`，
+页面代码那时是编译不过的。**iOS 侧的改动必须跑 `xcodebuild` 才算验证过。**
 
 #### 没有对齐的部分（有意保留）
 

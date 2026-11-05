@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import com.xiaoxiao.hanzi.data.Repo
 import com.xiaoxiao.hanzi.ui.AppState
 import com.xiaoxiao.hanzi.ui.Dimens
+import com.xiaoxiao.hanzi.ui.HanziCard
 import com.xiaoxiao.hanzi.logic.CopybookPDF
 import com.xiaoxiao.hanzi.ui.HanziButton
 import com.xiaoxiao.hanzi.ui.HanziGlyph
@@ -162,13 +163,9 @@ fun CopybookPage(app: AppState) {
 @Composable
 private fun SummaryCard(total: Int, stars: Int, hist: Map<Int, Int>) {
     val p = LocalPalette.current
-    Surface(
-        Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(Dimens.radiusCard.dp),
-        color = p.card,
-        border = androidx.compose.foundation.BorderStroke(1.dp, p.line)
-    ) {
-        Column(Modifier.padding(16.dp)) {
+    // 用 HanziCard 而不是手写一份圆角+描边：手写的那份会和
+    // 其它卡片慢慢分叉（这里就还是 line 描边、16 内边距）。
+    HanziCard {
             Row(verticalAlignment = Alignment.Bottom) {
                 Text("$total", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = p.ink1)
                 Spacer(Modifier.size(5.dp))
@@ -203,7 +200,6 @@ private fun SummaryCard(total: Int, stars: Int, hist: Map<Int, Int>) {
                     }
                 }
             }
-        }
     }
 }
 

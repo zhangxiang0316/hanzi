@@ -447,3 +447,70 @@ test('错题本主按钮在列表之后（两端一致）', () => {
   assert.ok(aLoop >= 0 && aBtn > aLoop,
     'Android 错题本主按钮应排在列表之后（之前跑到了列表上方）');
 });
+
+test('没有页面自己定义一个卡片组件来替掉 HanziCard', () => {
+  // AboutPage 曾经有一个 `private fun InfoCard(...)`，里面自己写
+  // Surface + radiusCard + 描边 + 内边距，等于把 HanziCard 抄了一遍，
+  // 而且抄漏了（还在用 line 描边、16 内边距，HanziCard 已经是 edge + 18）。
+  // iOS 的 AboutPage 一直用的就是 HanziCard。
+  //
+  // 卡片样式一旦按页分叉，改一处不会全局生效——这正是「两端样式不统一」
+  // 反复出现的原因。所以这里禁掉「自定义一个圆角+描边的卡片函数」这种写法。
+  const dir = 'android/app/src/main/java/com/xiaoxiao/hanzi/ui/pages';
+  const offenders = [];
+  for (const f of readDir(dir).filter((x) => x.endsWith('.kt'))) {
+    const src = stripComments(read(dir + '/' + f));
+    // 找到每个 private 函数的签名 + 前 400 字符正文，看是不是手搓卡片
+    const re = /private fun (\w*(?:Card|Panel|Box)\w*)\s*\([\s\S]{0,400}?\{([\s\S]{0,400})/g;
+    for (const m of src.matchAll(re)) {
+      const body = m[2];
+      if (/RoundedCornerShape\(Dimens\.radiusCard\.dp\)/.test(body) &&
+          /BorderStroke\(/.test(body)) {
+        offenders.push(`${f}:${m[1]}`);
+      }
+    }
+  }
+  assert.deepEqual(offenders, [],
+    `这些自定义卡片函数应当直接用 HanziCard：${offenders.join(', ')}`);
+});
+
+test('iOS Pages/ 的 Swift 文件括号配平', () => {
+  // 为什么需要这一条：`ios/Package.swift` 只把 Data/Logic/UI 里少数纯 Swift
+  // 文件放进 HanziCore target，**Pages/ 因为依赖 SwiftUI 不在里面**。
+  // 所以 `swift test` 根本不编译 Pages/——那 368 个用例全绿，
+  // 页面里写坏一个括号也照样「通过」，只有 xcodebuild 才会报错。
+  //
+  // 这条检查很便宜，但正好抓住用脚本批量改页面时最常见的破坏：括号不配平。
+  // 真的发生过：把 CopybookPageView 的汇总卡改成 HanziCard 时多删了一个 `}`，
+  // swift test 368 全绿，xcodebuild 报 4 个 "Attribute 'private' can only be
+  // used in a non-local scope"。
+  const dir = 'ios/HanziPad';
+  const files = [];
+  const walk = (d) => {
+    for (const e of fs.readdirSync(path.join(ROOT, d), { withFileTypes: true })) {
+      const rel = d + '/' + e.name;
+      if (e.isDirectory()) walk(rel);
+      else if (e.name.endsWith('.swift')) files.push(rel);
+    }
+  };
+  walk(dir);
+  assert.ok(files.length > 20, `只找到 ${files.length} 个 Swift 文件，样本不对`);
+
+  const bad = [];
+  for (const f of files) {
+    let src = read(f);
+    // 去掉字符串字面量与注释，避免里面的花括号干扰计数
+    src = src.replace(/"""[\s\S]*?"""/g, '""');
+    src = src.replace(/"(?:[^"\\\n]|\\.)*"/g, '""');
+    src = src.replace(/\/\*[\s\S]*?\*\//g, '');
+    src = src.replace(/^\s*\/\/.*$/gm, '');
+    let depth = 0;
+    for (const ch of src) {
+      if (ch === '{') depth++;
+      else if (ch === '}') depth--;
+      if (depth < 0) break;
+    }
+    if (depth !== 0) bad.push(`${f} (差 ${depth})`);
+  }
+  assert.deepEqual(bad, [], `这些文件的括号不配平：${bad.join(', ')}`);
+});

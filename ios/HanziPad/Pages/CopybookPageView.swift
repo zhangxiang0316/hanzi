@@ -175,51 +175,46 @@ struct CopybookPageView: View {
     private var summaryCard: some View {
         let hist = app.progress.writeStarsHistogram()
         let total = app.progress.writeCount
-        return VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text("\(total)")
-                    .font(Fonts.s(34, .bold, .largeTitle, maxScale: 2.2))
-                    .foregroundStyle(Palette.ink1)
-                Text("个字写过")
-                    .font(Fonts.s(13, .regular, .footnote))
-                    .foregroundStyle(Palette.ink3)
-                Spacer()
-                Text("共 \(app.progress.writeStarsTotal) 颗星")
-                    .font(Fonts.s(13, .semibold, .footnote))
-                    .foregroundStyle(Palette.amber)
-            }
+        // 用 HanziCard 而不是手写圆角+描边：手写的那份会和其它卡片分叉
+        // （这里原来还是 Palette.line 描边、16 内边距，而 HanziCard 已是
+        // edge + 18）。Android 侧同步改成复用 HanziCard。
+        return HanziCard {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text("\(total)")
+                        .font(Fonts.s(34, .bold, .largeTitle, maxScale: 2.2))
+                        .foregroundStyle(Palette.ink1)
+                    Text("个字写过")
+                        .font(Fonts.s(13, .regular, .footnote))
+                        .foregroundStyle(Palette.ink3)
+                    Spacer()
+                    Text("共 \(app.progress.writeStarsTotal) 颗星")
+                        .font(Fonts.s(13, .semibold, .footnote))
+                        .foregroundStyle(Palette.amber)
+                }
 
-            // 星级分布：一眼看出「写得好的有多少、还需要练的有多少」
-            HStack(spacing: 10) {
-                ForEach([3, 2, 1, 0], id: \.self) { s in
-                    let n = hist[s] ?? 0
-                    VStack(spacing: 3) {
-                        Text("\(n)")
-                            .font(Fonts.s(16, .bold, .body))
-                            .foregroundStyle(n > 0 ? starColor(s) : Palette.ink3.opacity(0.4))
-                        Text(s == 0 ? "待练" : "\(s) 星")
-                            .font(Fonts.s(10, .regular, .caption2))
-                            .foregroundStyle(Palette.ink3)
+                // 星级分布：一眼看出「写得好的有多少、还需要练的有多少」
+                HStack(spacing: 10) {
+                    ForEach([3, 2, 1, 0], id: \.self) { s in
+                        let n = hist[s] ?? 0
+                        VStack(spacing: 3) {
+                            Text("\(n)")
+                                .font(Fonts.s(16, .bold, .body))
+                                .foregroundStyle(n > 0 ? starColor(s) : Palette.ink3.opacity(0.4))
+                            Text(s == 0 ? "待练" : "\(s) 星")
+                                .font(Fonts.s(10, .regular, .caption2))
+                                .foregroundStyle(Palette.ink3)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
+                                .fill(Palette.track)
+                        )
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: Dimens.radiusInner, style: .continuous)
-                            .fill(Palette.track)
-                    )
                 }
             }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: Dimens.radiusCard, style: .continuous)
-                .fill(Palette.card)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: Dimens.radiusCard, style: .continuous)
-                .strokeBorder(Palette.line, lineWidth: 1)
-        )
     }
 
     private func starColor(_ s: Int) -> Color {
