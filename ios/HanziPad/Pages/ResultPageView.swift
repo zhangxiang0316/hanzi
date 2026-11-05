@@ -158,11 +158,21 @@ struct ResultPageView: View {
             HanziButton(title: "返回", kind: .secondary, fullWidth: true) {
                 dismiss()
             }
-            HanziButton(title: "再练一组", fullWidth: true) {
-                // 回到答题页重建一套新题
+            // 有错字时按钮写「再练这几个字」，与 Android 一致：
+            // 这时候重练的**不是**同一套题，而是那几个错字，
+            // 写成「再练一组」会让人以为是随机再来一轮。
+            HanziButton(
+                title: payload.wrong.isEmpty ? "再练一组" : "再练这几个字",
+                fullWidth: true
+            ) {
                 dismiss()
-                app.push(AppState.QuizPayload(mode: payload.mode,
-                                              book: payload.book, lesson: nil))
+                if payload.wrong.isEmpty {
+                    app.push(AppState.QuizPayload(mode: payload.mode,
+                                                  book: payload.book, lesson: nil))
+                } else {
+                    app.push(AppState.QuizPayload(mode: "wrong",
+                                                  book: payload.book, lesson: nil))
+                }
             }
         }
     }

@@ -681,6 +681,18 @@ test('详情页的写字按钮文案两端一致', () => {
   assert.ok(!ios.includes('开始描红'), 'iOS 不该再出现「开始描红」');
 });
 
+test('结果页有错字时的按钮文案两端一致', () => {
+  // 有错字时重练的是**那几个错字**，不是同一套题；
+  // 一律写「再练一组」会让人以为是随机再来一轮。
+  const ios = stripComments(read('ios/HanziPad/Pages/ResultPageView.swift'));
+  const android = stripComments(read('android/app/src/main/java/com/xiaoxiao/hanzi/ui/pages/ResultPage.kt'));
+
+  for (const [name, src] of [['iOS', ios], ['Android', android]]) {
+    assert.ok(src.includes('再练这几个字'), `${name} 有错字时应写「再练这几个字」`);
+    assert.ok(src.includes('再练一组'), `${name} 无错字时应写「再练一组」`);
+  }
+});
+
 test('听写页的跳过按钮文案与 Android 一致', () => {
   // iOS 原来写 `justFinished ? "下一个" : "放弃这个字"`，
   // 但两个分支做的事完全一样（都是 next(plan)）——同一颗按钮
