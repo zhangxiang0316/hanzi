@@ -275,6 +275,12 @@ SDK 路径（已 gitignore）。
 | `SectionHead` | 17sp Bold | 17sp SemiBold |
 | `EmptyState` | emoji 34 / 标题 15 ink2 / 上下 40 | emoji 42 / 标题 16 ink1 / 上下 36 |
 | `HairLine` | `lineSoft`（白卡上不可见） | `line` |
+| 练习页入口卡 | 14sp / radiusInner 14 / 灰边 | 16sp Bold / radiusCard 20 / 模式色 35% 描边 |
+| 首页册卡 | 年级首字方块 + 13sp 册名 | 年级大字 15 + 学期胶囊 + 「N 课 · M 字 · 已学 K」 |
+| 详情页笔画表 | 数字装在 32dp 圆点里 | 44dp 格子画笔形（其余笔浅色打底） |
+| 题库汉字题干 | `Text` 62sp 系统字体 | `HanziGlyph` 130dp 笔形画布 |
+| 部首格子 | 全部铺开 | 固定 176dp 高 + 内部滚动 |
+| 我的页 | 九行平铺 | 「学习」/「设置」两组 |
 
 `BtnStyle` 同时改名：`Soft` → `Secondary`，三档含义（Primary/Secondary/Ghost）
 现在与 iOS 的 `.primary/.secondary/.ghost` 一一对应。
@@ -344,7 +350,14 @@ target，**`Pages/` 因为依赖 SwiftUI 根本不在里面**。所以 `swift te
 - **左右留白**：iOS `pagePad(width)` 在宽屏增到 28/36，Android 固定 20。
   只在 ≥500dp 时有差别，属于平板适配问题。
 - **朗读设置**：iOS「我的」页有「朗读」开关和 0.3–1.7 的语速滑杆，
-  Android 完全没有。这是**功能缺失**，需要单独实现。
+  Android 没有这两个设置项（TTS 本身两端都接了，见下一节）。
+  这不是样式差异——Android 侧没有 `speakEnabled` / `speechRate` 字段，
+  摆一个无效开关只会更糟。要做需要先补 Progress 的字段。
+- **写字页的工具条**：Android 是「看这一笔 / 退一笔 / 擦掉重写」，
+  iOS 是「重写 / 跳过一笔 / 完成」。两边各有对方没有的能力
+  （Android 能单步回退和提示当前笔，iOS 能跳过卡住的一笔）。
+  这是**产品取舍**，不是谁写错了；为了「看起来一样」而增删功能
+  是本末倒置。要统一得先定「写字页到底该有哪几个动作」。
 
 ### 朗读：已接入，但三端不一致
 
