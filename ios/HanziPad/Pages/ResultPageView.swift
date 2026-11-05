@@ -12,10 +12,15 @@ struct ResultPageView: View {
         payload.total > 0 ? Int((Double(payload.correct) / Double(payload.total) * 100).rounded()) : 0
     }
 
+    /// 星级判据与小程序 `result.wxml` 完全一致：60 / 85 / 100。
+    ///
+    /// 之前 iOS 是 90/70/50、Android 是 60/85/100、小程序是 60/85/100——
+    /// 同一场测验在 iOS 上亮 2 星、在 Android 上亮 1 星。
+    /// 这不是配色差异，是**同一个分数得出不同结论**。
     private var stars: Int {
-        if rate >= 90 { return 3 }
-        if rate >= 70 { return 2 }
-        if rate >= 50 { return 1 }
+        if rate >= 100 { return 3 }
+        if rate >= 85 { return 2 }
+        if rate >= 60 { return 1 }
         return 0
     }
 
@@ -48,6 +53,30 @@ struct ResultPageView: View {
                 .font(Fonts.s(22, .bold, .title2))
                 .foregroundStyle(Palette.ink1)
 
+            // 正确率圆环：小程序和 Android 都有，iOS 之前只有文字。
+            // 环形价值在于「一眼看出满不满」——纯数字要读，圆环瞥一下就知道。
+            ProgressRing(
+                value: Double(rate) / 100,
+                lineWidth: 11,
+                size: LayoutRules.scaled(112, by: dt.layoutScale, cap: 1.5)
+            )
+            .overlay {
+                VStack(spacing: 0) {
+                    HStack(alignment: .firstTextBaseline, spacing: 1) {
+                        Text("\(rate)")
+                            .font(Fonts.s(30, .bold, .title))
+                            .foregroundStyle(Palette.jade)
+                        Text("%")
+                            .font(Fonts.s(13, .semibold, .caption))
+                            .foregroundStyle(Palette.jade)
+                    }
+                    Text("正确率")
+                        .font(Fonts.s(10, .regular, .caption2))
+                        .foregroundStyle(Palette.ink3)
+                }
+            }
+            .padding(.vertical, 2)
+
             Text(praise)
                 .font(Fonts.body)
                 .foregroundStyle(Palette.ink2)
@@ -65,23 +94,23 @@ struct ResultPageView: View {
         )
     }
 
+    /// 与小程序的 mood 判据一致：100 / 80 / 60
     private var emoji: String {
         switch rate {
         case 100: return "🏆"
-        case 90...: return "🎉"
-        case 70...: return "👍"
-        case 50...: return "💪"
+        case 80...: return "🎉"
+        case 60...: return "👍"
         default: return "🌱"
         }
     }
 
+    /// 与小程序的 message 判据一致：100 / 80 / 60
     private var praise: String {
         switch rate {
-        case 100: return "全对！太厉害了"
-        case 90...: return "非常棒，只差一点点"
-        case 70...: return "做得不错，再练一次就更熟了"
-        case 50...: return "有进步空间，我们再来一遍"
-        default: return "没关系，慢慢来，多练几次就会了"
+        case 100: return "全对！今天的你特别棒。"
+        case 80...: return "很稳！只差一点点就全对了。"
+        case 60...: return "不错哦，把错的字再读两遍。"
+        default: return "慢慢来，多练几次就记住啦。"
         }
     }
 

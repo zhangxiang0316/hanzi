@@ -554,3 +554,35 @@ test('界面上显示的版本号都从构建产物读，不硬编码', () => {
   }
   assert.deepEqual(bad, [], `这些页面把版本号写死了：${bad.join(', ')}`);
 });
+
+test('结果页的星级与评语判据三端一致', () => {
+  // 同一场测验在不同端亮不同数量的星，不是配色差异，
+  // 是同一个分数得出不同结论。第三次核对时发现：
+  //   小程序 60/85/100，Android 60/85/100，iOS 90/70/50。
+  const ios = stripComments(read('ios/HanziPad/Pages/ResultPageView.swift'));
+  const android = stripComments(read('android/app/src/main/java/com/xiaoxiao/hanzi/ui/pages/ResultPage.kt'));
+
+  assert.match(ios, /rate >= 100[\s\S]{0,60}return 3/, 'iOS 三星阈值应为 100');
+  assert.match(ios, /rate >= 85[\s\S]{0,60}return 2/, 'iOS 二星阈值应为 85');
+  assert.match(ios, /rate >= 60[\s\S]{0,60}return 1/, 'iOS 一星阈值应为 60');
+
+  assert.match(android, /rate >= 100 -> 3/, 'Android 三星阈值应为 100');
+  assert.match(android, /rate >= 85 -> 2/, 'Android 二星阈值应为 85');
+  assert.match(android, /rate >= 60 -> 1/, 'Android 一星阈值应为 60');
+
+  const mp = stripComments(read('miniprogram/pages/result/result.wxml'));
+  assert.match(mp, /rate >= 60/, '小程序一星阈值应为 60');
+  assert.match(mp, /rate >= 85/, '小程序二星阈值应为 85');
+  assert.match(mp, /rate >= 100/, '小程序三星阈值应为 100');
+});
+
+test('结果页的正确率圆环三端都有', () => {
+  const ios = stripComments(read('ios/HanziPad/Pages/ResultPageView.swift'));
+  assert.match(ios, /ProgressRing\(/, 'iOS 结果页应有正确率圆环');
+
+  const android = stripComments(read('android/app/src/main/java/com/xiaoxiao/hanzi/ui/pages/ResultPage.kt'));
+  assert.match(android, /ProgressRing\(/, 'Android 结果页应有正确率圆环');
+
+  const mp = stripComments(read('miniprogram/pages/result/result.wxml'));
+  assert.match(mp, /class="ring"/, '小程序结果页应有正确率圆环');
+});

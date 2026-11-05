@@ -287,7 +287,8 @@ class AppUiTest {
         app.nav.push(Screen.Result(3, 5, listOf("人", "口"), "review", "1a"))
         compose.waitForIdle()
 
-        compose.onNodeWithText("3 / 5 题").assertExists()
+        // 文案与 iOS 统一为「答对 N / M 题」（原来只有「3 / 5 题」）
+        compose.onNodeWithText("答对 3 / 5 题").assertExists()
         // 圆环里「60」和「%」是两个 Text（字号不同），分开断言
         compose.onNodeWithText("60").assertExists()
         compose.onNodeWithText("正确率").assertExists()

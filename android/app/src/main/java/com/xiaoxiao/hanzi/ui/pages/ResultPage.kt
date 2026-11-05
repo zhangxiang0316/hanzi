@@ -35,6 +35,8 @@ import com.xiaoxiao.hanzi.data.Repo
 import com.xiaoxiao.hanzi.ui.AppState
 import com.xiaoxiao.hanzi.ui.BtnStyle
 import com.xiaoxiao.hanzi.ui.Dimens
+import com.xiaoxiao.hanzi.ui.ProgressRing
+import com.xiaoxiao.hanzi.ui.HanziCard
 import com.xiaoxiao.hanzi.ui.HanziButton
 import com.xiaoxiao.hanzi.ui.LocalPalette
 import com.xiaoxiao.hanzi.ui.Screen
@@ -89,37 +91,28 @@ fun ResultPage(
     ) {
         Spacer(Modifier.height(24.dp))
 
-        Column(
-            Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(mood, fontSize = 46.sp)
-            Spacer(Modifier.height(10.dp))
-            Text(title, fontSize = 21.sp, fontWeight = FontWeight.Bold, color = p.ink1)
-            Spacer(Modifier.height(5.dp))
-            Text("$correct / $total 题", fontSize = 13.sp, color = p.ink3)
-            Spacer(Modifier.height(10.dp))
-            Stars(stars, size = 22)
-            Spacer(Modifier.height(6.dp))
-            Text(message, fontSize = 12.sp, color = p.ink3)
-
-            Spacer(Modifier.height(20.dp))
-
-            // 正确率圆环：Compose 用两个同心圆 + 进度弧模拟
-            Box(
-                Modifier
-                    .size(120.dp)
-                    .clip(CircleShape)
-                    .background(p.jadeSoft),
-                contentAlignment = Alignment.Center
+        HanziCard(padding = 20) {
+            Column(
+                Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Box(
-                    Modifier
-                        .size(98.dp)
-                        .clip(CircleShape)
-                        .background(p.card),
-                    contentAlignment = Alignment.Center
-                ) {
+                // 顺序与 iOS / 小程序一致：
+                // 表情 → 星级 → 「答对 N / M 题」→ 圆环 → 一句话
+                Text(mood, fontSize = 46.sp)
+                Spacer(Modifier.height(10.dp))
+                Stars(stars, size = 22)
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "答对 $correct / $total 题",
+                    fontSize = 21.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = p.ink1
+                )
+                Spacer(Modifier.height(12.dp))
+
+                // 真进度环。原来这里是「实心淡绿圆 + 内白圆」——颜色写死，
+                // 答对 30% 和 100% 长得一模一样，环这个形状毫无信息量。
+                ProgressRing(value = rate / 100.0, size = 112, lineWidth = 11) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Row(verticalAlignment = Alignment.Bottom) {
                             Text(
@@ -128,11 +121,24 @@ fun ResultPage(
                                 fontWeight = FontWeight.Bold,
                                 color = p.jade
                             )
-                            Text("%", fontSize = 13.sp, color = p.jade)
+                            Text(
+                                "%",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = p.jade
+                            )
                         }
                         Text("正确率", fontSize = 10.sp, color = p.ink3)
                     }
                 }
+
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    message,
+                    fontSize = 12.sp,
+                    color = p.ink3,
+                    textAlign = TextAlign.Center
+                )
             }
         }
 
